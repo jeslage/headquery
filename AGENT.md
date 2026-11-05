@@ -54,6 +54,8 @@ spec/
   ir/schema-v1.json                   JSON Schema of the IR — THE cross-language contract
   statamic/fixtures/schema.json       realistic IR used by JS and PHP tests
 playgrounds/statamic/                 local Statamic install (gitignored except setup files)
+playgrounds/statamic-client/          private JS package: runs @headquery/statamic against the playground
+playgrounds/statamic-next/            private Next.js app (App Router) using the client: blog list + /blog/[slug]
 .github/workflows/                    ci.yml, release.yml (changesets → npm), split.yml (→ Packagist)
 ```
 
@@ -66,6 +68,12 @@ pnpm test:js               # vitest + tsc --noEmit for every JS package
 pnpm test:php              # runs `composer test` in PHP packages (needs `composer install` there first)
 pnpm --filter @headquery/statamic test     # one package
 pnpm changeset             # REQUIRED for user-facing changes to published JS packages
+
+# against a running playground (HEADQUERY_BASE_URL in playgrounds/statamic-client/.env)
+pnpm --filter @headquery-internal/playground-statamic-client types      # regenerate src/cms.ts
+pnpm --filter @headquery-internal/playground-statamic-client try        # scratch script
+pnpm --filter @headquery-internal/playground-statamic-client test:e2e   # codegen + e2e tests + tsc
+pnpm --filter @headquery-internal/playground-statamic-next dev          # Next.js app (env in .env.local)
 ```
 
 PHP package directly:
@@ -125,14 +133,16 @@ does not understand.
 
 The playground targets Statamic 6 (the addon supports `^5.0 || ^6.0`).
 
-- `LIST_SEPARATOR = "|"` for `in`/`not_in` filters (packages/js/statamic/src/query.ts).
 - `SchemaExporter` has been run manually against Statamic 6.40 in the seeded playground
   (output validates against `schema-v1.json`), but has no automated tests yet — only
   `FieldMapper` is unit-tested. It does not export navigations or asset containers yet.
 - Bard output type (`HqRichText`) depends on field config (HTML string without sets, array
   of blocks with sets); the IR doesn't carry that distinction yet.
 
-Verified against Statamic 6 responses (keep in sync with `packages/js/codegen/src/statamic.ts`):
+Verified against Statamic 6 responses (keep in sync with `packages/js/codegen/src/statamic.ts`;
+guarded by `playgrounds/statamic-client/tests/e2e.test.ts`):
+`LIST_SEPARATOR = "|"` for `in`/`not_in` filters; filters outside `allowed_filters` return 422;
+unpublished entries are hidden from lists and 404 as single items;
 select-like fields return `{ key, value, label }` (all `null` when empty, `[]` when multiple);
 toggles are always boolean; grid/replicator/multi relations return `[]`, but
 list/taggable/table return `null` when empty; assets use `max_files` (not `max_items`).

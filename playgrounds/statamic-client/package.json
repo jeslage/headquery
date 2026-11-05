@@ -1,0 +1,19 @@
+{
+  "name": "@headquery-internal/playground-statamic-client",
+  "private": true,
+  "type": "module",
+  "description": "Runs @headquery/statamic against the local Statamic playground (manual script + e2e tests).",
+  "scripts": {
+    "types": "tsx src/codegen.ts",
+    "try": "tsx src/try.ts",
+    "test:e2e": "tsx src/codegen.ts && vitest run && tsc --noEmit",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@headquery/codegen": "workspace:^",
+    "@headquery/statamic": "workspace:^"
+  },
+  "devDependencies": {
+    "tsx": "^4.20.0"
+  }
+}

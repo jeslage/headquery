@@ -23,3 +23,6 @@ playgrounds/statamic/*
 
 # Statamic install inside the playground (re-ignore after the !.env.example rule above)
 playgrounds/statamic/.env.example
+
+# JS playground client: generated types
+playgrounds/statamic-client/src/cms.ts

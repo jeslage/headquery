@@ -92,3 +92,49 @@ node packages/js/codegen/dist/cli.js --from $BASE/api/headquery/schema --token d
 
 In a consuming project the CLI is the `headquery-codegen` bin of `@headquery/codegen`
 (`npx headquery-codegen …`).
+
+## Test the JS client
+
+`playgrounds/statamic-client` is a private workspace package that runs `@headquery/statamic`
+against this site. Point it at the running playground once:
+
+```bash
+cp playgrounds/statamic-client/.env.example playgrounds/statamic-client/.env
+# edit HEADQUERY_BASE_URL (local: http://127.0.0.1:8000, DDEV: https://headquery-statamic.ddev.site)
+pnpm build
+```
+
+Then, from the repo root:
+
+```bash
+pnpm --filter @headquery-internal/playground-statamic-client types     # generate src/cms.ts from the live schema
+pnpm --filter @headquery-internal/playground-statamic-client try       # run src/try.ts (your scratch pad)
+pnpm --filter @headquery-internal/playground-statamic-client test:e2e  # types + e2e tests + tsc
+```
+
+`src/try.ts` prints each query's URL next to its JSON response. Edit it to try out
+queries. `tests/e2e.test.ts` checks the client against the seed content, so update it if
+you change `seed/`. The e2e tests skip when `HEADQUERY_BASE_URL` is unset, and `pnpm test:js`
+never runs them.
+
+**DDEV / HTTPS:** the package trusts the OS certificate store at startup, so DDEV's mkcert
+certificate works without extra flags on Node ≥ 22.19. On older Node, set
+`NODE_EXTRA_CA_CERTS="$(mkcert -CAROOT)/rootCA.pem"`.
+
+## Try it in Next.js
+
+`playgrounds/statamic-next` is a small Next.js (App Router) app built on the client: a
+homepage that lists blog posts and a `/blog/[slug]` page for each post (pre-rendered with
+`generateStaticParams`, `notFound()` on 404, `revalidate: 60` through `fetchOptions`).
+
+```bash
+cp playgrounds/statamic-next/.env.example playgrounds/statamic-next/.env.local  # set HEADQUERY_BASE_URL
+pnpm build                                                                      # build the JS packages
+pnpm --filter @headquery-internal/playground-statamic-next dev                  # http://localhost:3000
+pnpm --filter @headquery-internal/playground-statamic-next build                # SSG against the live site
+```
+
+`dev` and `build` first regenerate `lib/cms.ts` from the live schema, so the site must be
+running. The app trusts the OS certificate store (`lib/trust-system-ca.ts`), so DDEV's HTTPS
+works without extra flags. After you change the `@headquery/*` packages, rebuild them
+(`pnpm build`, or `pnpm dev` at the root for watch mode).

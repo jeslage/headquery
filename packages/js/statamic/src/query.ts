@@ -11,7 +11,7 @@ import type {
 
 /**
  * Separator Statamic uses for multiple values in `in` / `not_in` filters.
- * TODO(verify): confirm against the Statamic version you target; tags use `|`.
+ * Verified against Statamic 6 (playgrounds/statamic-client e2e tests).
  */
 export const LIST_SEPARATOR = "|";
 

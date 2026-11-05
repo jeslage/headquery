@@ -1,6 +1,8 @@
 packages:
   - "packages/js/*"
   - "packages/php/*"
+  - "playgrounds/statamic-client"
+  - "playgrounds/statamic-next"
 
 onlyBuiltDependencies:
   - esbuild

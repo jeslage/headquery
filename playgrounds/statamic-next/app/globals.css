@@ -1,0 +1,13 @@
+:root { color-scheme: light dark; --muted: #888; }
+body { font: 16px/1.6 system-ui, sans-serif; max-width: 42rem; margin: 0 auto; padding: 2rem 1rem; }
+header, footer { display: flex; gap: 1rem; padding: 1rem 0; }
+header a { font-weight: 700; text-decoration: none; }
+footer { border-top: 1px solid #8884; margin-top: 3rem; font-size: 0.9rem; }
+.posts { list-style: none; padding: 0; }
+.posts li { margin: 1rem 0; }
+.posts small, .meta { display: block; color: var(--muted); font-size: 0.9rem; }
+.badge { margin-left: 0.5rem; font-size: 0.75rem; padding: 0.1rem 0.4rem; border-radius: 4px; background: #8883; }
+.debug { margin-top: 3rem; font-size: 0.8rem; color: var(--muted); word-break: break-all; }
+.hero, .gallery img { width: 100%; height: auto; border-radius: 8px; }
+.gallery { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+blockquote { border-left: 3px solid #8886; margin: 1.5rem 0; padding-left: 1rem; font-style: italic; }

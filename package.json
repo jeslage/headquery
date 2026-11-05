@@ -6,12 +6,12 @@
     "node": ">=20"
   },
   "scripts": {
-    "build": "turbo run build",
+    "build": "turbo run build --filter=./packages/**",
     "test": "turbo run test",
     "test:js": "turbo run test --filter=./packages/js/*",
     "test:php": "turbo run test --filter=./packages/php/*",
-    "typecheck": "turbo run typecheck",
-    "dev": "turbo run dev --parallel",
+    "typecheck": "turbo run typecheck --filter=./packages/**",
+    "dev": "turbo run dev --parallel --filter=./packages/**",
     "changeset": "changeset",
     "version-packages": "changeset version",
     "release": "turbo run build --filter=./packages/js/* && changeset publish"
