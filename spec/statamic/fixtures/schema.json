@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 1,
+  "cms": { "name": "statamic", "version": "5.0.0" },
+  "generatedAt": "2026-11-05T10:00:00Z",
+  "resources": {
+    "blog": {
+      "kind": "collection",
+      "title": "Blog",
+      "fields": {
+        "title": { "type": "string", "required": true, "filterable": true, "cmsType": "text" },
+        "slug": { "type": "string", "required": true, "filterable": true, "cmsType": "slug" },
+        "date": { "type": "date", "withTime": false, "cmsType": "date" },
+        "featured": { "type": "boolean", "filterable": true, "cmsType": "toggle" },
+        "reading_time": { "type": "number", "integer": true, "cmsType": "integer" },
+        "stage": { "type": "enum", "values": ["draft", "review", "live"], "cmsType": "select" },
+        "tags": { "type": "relation", "to": "term", "resources": ["tags"], "multiple": true, "cmsType": "terms" },
+        "author": { "type": "relation", "to": "user", "multiple": false, "cmsType": "users" },
+        "hero": { "type": "asset", "multiple": false, "cmsType": "assets" },
+        "content": { "type": "richtext", "cmsType": "bard" },
+        "sections": {
+          "type": "blocks",
+          "cmsType": "replicator",
+          "sets": {
+            "quote": {
+              "text": { "type": "string", "cmsType": "textarea" },
+              "cite": { "type": "string", "cmsType": "text" }
+            },
+            "gallery": {
+              "images": { "type": "asset", "multiple": true, "cmsType": "assets" }
+            }
+          }
+        },
+        "seo": { "type": "unknown", "cmsType": "seo_pro" }
+      }
+    },
+    "tags": {
+      "kind": "taxonomy",
+      "title": "Tags",
+      "fields": {
+        "title": { "type": "string", "required": true, "filterable": true, "cmsType": "text" },
+        "slug": { "type": "string", "required": true, "cmsType": "slug" }
+      }
+    },
+    "settings": {
+      "kind": "global",
+      "title": "Settings",
+      "fields": {
+        "site_name": { "type": "string", "cmsType": "text" },
+        "social": {
+          "type": "array",
+          "cmsType": "grid",
+          "items": {
+            "type": "object",
+            "fields": {
+              "network": { "type": "enum", "values": ["mastodon", "github"] },
+              "url": { "type": "string" }
+            }
+          }
+        }
+      }
+    }
+  }
+}

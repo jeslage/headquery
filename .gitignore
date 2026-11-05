@@ -1,0 +1,25 @@
+node_modules/
+dist/
+.turbo/
+coverage/
+*.log
+.DS_Store
+
+# PHP
+vendor/
+composer.lock
+.phpunit.cache/
+.phpunit.result.cache
+
+# Playground: only setup files are committed, the Statamic install itself is local
+playgrounds/statamic/*
+!playgrounds/statamic/README.md
+!playgrounds/statamic/setup.sh
+!playgrounds/statamic/seed/
+
+.env
+.env.*
+!.env.example
+
+# Statamic install inside the playground (re-ignore after the !.env.example rule above)
+playgrounds/statamic/.env.example

@@ -1,0 +1,10 @@
+site_name: 'headquery playground'
+social:
+  -
+    id: s1a2b3c4
+    network: github
+    url: 'https://github.com/headquery'
+  -
+    id: s2a2b3c4
+    network: mastodon
+    url: 'https://mastodon.social/@headquery'

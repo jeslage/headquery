@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://headquery.dev/schema/ir-v1.json",
+  "title": "headquery intermediate schema (IR), version 1",
+  "description": "CMS-neutral content model exported by headquery CMS plugins and consumed by @headquery/codegen. Keep in sync with packages/js/schema/src/index.ts and the PHP exporters.",
+  "type": "object",
+  "required": ["schemaVersion", "cms", "resources"],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "cms": {
+      "type": "object",
+      "required": ["name"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "version": { "type": "string" }
+      }
+    },
+    "generatedAt": { "type": "string", "format": "date-time" },
+    "resources": {
+      "type": "object",
+      "additionalProperties": { "$ref": "#/$defs/resource" }
+    }
+  },
+  "$defs": {
+    "resource": {
+      "type": "object",
+      "required": ["kind", "fields"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "enum": ["collection", "taxonomy", "global", "navigation", "assetContainer"] },
+        "title": { "type": "string" },
+        "fields": { "$ref": "#/$defs/fieldMap" }
+      }
+    },
+    "fieldMap": {
+      "type": "object",
+      "additionalProperties": { "$ref": "#/$defs/field" }
+    },
+    "field": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": {
+          "enum": ["string", "number", "boolean", "date", "enum", "array", "object", "relation", "asset", "richtext", "blocks", "unknown"]
+        },
+        "required": { "type": "boolean" },
+        "filterable": { "type": "boolean" },
+        "cmsType": { "type": "string" },
+        "description": { "type": "string" },
+        "integer": { "type": "boolean" },
+        "withTime": { "type": "boolean" },
+        "values": { "type": "array", "items": { "type": "string" } },
+        "multiple": { "type": "boolean" },
+        "items": { "$ref": "#/$defs/field" },
+        "fields": { "$ref": "#/$defs/fieldMap" },
+        "to": { "enum": ["entry", "term", "user", "asset"] },
+        "resources": { "type": "array", "items": { "type": "string" } },
+        "sets": {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/$defs/fieldMap" }
+        }
+      },
+      "allOf": [
+        { "if": { "properties": { "type": { "const": "enum" } } }, "then": { "required": ["values"] } },
+        { "if": { "properties": { "type": { "const": "array" } } }, "then": { "required": ["items"] } },
+        { "if": { "properties": { "type": { "const": "object" } } }, "then": { "required": ["fields"] } },
+        { "if": { "properties": { "type": { "const": "relation" } } }, "then": { "required": ["to"] } },
+        { "if": { "properties": { "type": { "const": "blocks" } } }, "then": { "required": ["sets"] } }
+      ],
+      "additionalProperties": false
+    }
+  }
+}

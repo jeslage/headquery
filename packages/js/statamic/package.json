@@ -1,0 +1,32 @@
+{
+  "name": "@headquery/statamic",
+  "version": "0.0.0",
+  "description": "Typed, cacheable client for the Statamic REST Content API.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "keywords": ["statamic", "headless", "cms", "rest", "sdk", "typescript"],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "vitest run && tsc --noEmit",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@headquery/core": "workspace:^"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

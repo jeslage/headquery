@@ -1,0 +1,62 @@
+# Mirrors each Composer package into its own read-only repo, which Packagist reads.
+#
+# - Every push to main updates the split repo's main branch.
+# - Releases: tag the monorepo with "<prefix>/vX.Y.Z" (e.g. php-statamic/v0.1.0);
+#   the split repo receives the plain tag "vX.Y.Z".
+#
+# Setup: create github.com/headquery/statamic (empty), register it on Packagist,
+# add a SPLIT_TOKEN secret (fine-grained PAT with contents:write on the split repos).
+
+name: Split PHP packages
+
+on:
+  push:
+    branches: [main]
+    paths: ["packages/php/**"]
+    tags: ["php-*/v*"]
+
+jobs:
+  split:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        package:
+          - dir: statamic
+            repo: statamic
+            tag_prefix: php-statamic/
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve tag for this package
+        id: tag
+        shell: bash
+        run: |
+          ref="${GITHUB_REF_NAME}"
+          prefix="${{ matrix.package.tag_prefix }}"
+          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            if [[ "$ref" == "$prefix"* ]]; then
+              echo "tag=${ref#"$prefix"}" >> "$GITHUB_OUTPUT"
+              echo "run=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "run=false" >> "$GITHUB_OUTPUT"   # tag belongs to another package
+            fi
+          else
+            echo "tag=" >> "$GITHUB_OUTPUT"
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - if: steps.tag.outputs.run == 'true'
+        uses: danharrin/monorepo-split-github-action@v2
+        with:
+          package_directory: packages/php/${{ matrix.package.dir }}
+          repository_organization: headquery
+          repository_name: ${{ matrix.package.repo }}
+          branch: main
+          tag: ${{ steps.tag.outputs.tag }}
+          user_name: github-actions[bot]
+          user_email: 41898282+github-actions[bot]@users.noreply.github.com
+        env:
+          GITHUB_TOKEN: ${{ secrets.SPLIT_TOKEN }}

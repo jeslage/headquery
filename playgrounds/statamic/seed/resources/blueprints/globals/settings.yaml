@@ -1,0 +1,30 @@
+tabs:
+  main:
+    display: Main
+    sections:
+      -
+        fields:
+          -
+            handle: site_name
+            field:
+              type: text
+          -
+            handle: social
+            field:
+              type: grid
+              fields:
+                -
+                  handle: network
+                  field:
+                    type: select
+                    options:
+                      -
+                        key: mastodon
+                        value: Mastodon
+                      -
+                        key: github
+                        value: GitHub
+                -
+                  handle: url
+                  field:
+                    type: text

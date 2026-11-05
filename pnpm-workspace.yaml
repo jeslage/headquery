@@ -1,0 +1,6 @@
+packages:
+  - "packages/js/*"
+  - "packages/php/*"
+
+onlyBuiltDependencies:
+  - esbuild

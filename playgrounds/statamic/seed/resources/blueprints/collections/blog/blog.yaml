@@ -1,0 +1,113 @@
+title: Blog
+tabs:
+  main:
+    display: Main
+    sections:
+      -
+        fields:
+          -
+            handle: title
+            field:
+              type: text
+              validate:
+                - required
+          -
+            handle: content
+            field:
+              type: bard
+              buttons:
+                - h2
+                - bold
+                - italic
+                - unorderedlist
+                - anchor
+          -
+            handle: sections
+            field:
+              type: replicator
+              sets:
+                main:
+                  display: Main
+                  sets:
+                    quote:
+                      display: Quote
+                      fields:
+                        -
+                          handle: text
+                          field:
+                            type: textarea
+                        -
+                          handle: cite
+                          field:
+                            type: text
+                    gallery:
+                      display: Gallery
+                      fields:
+                        -
+                          handle: images
+                          field:
+                            type: assets
+                            container: assets
+  sidebar:
+    display: Sidebar
+    sections:
+      -
+        fields:
+          -
+            handle: slug
+            field:
+              type: slug
+              validate:
+                - required
+          -
+            handle: date
+            field:
+              type: date
+              mode: single
+              time_enabled: false
+          -
+            handle: featured
+            field:
+              type: toggle
+          -
+            handle: reading_time
+            field:
+              type: integer
+              instructions: 'Estimated reading time in minutes.'
+          -
+            handle: stage
+            field:
+              type: select
+              options:
+                -
+                  key: draft
+                  value: Draft
+                -
+                  key: review
+                  value: Review
+                -
+                  key: live
+                  value: Live
+          -
+            handle: tags
+            field:
+              type: terms
+              taxonomies:
+                - tags
+          -
+            handle: author
+            field:
+              type: users
+              max_items: 1
+          -
+            handle: hero
+            field:
+              type: assets
+              container: assets
+              max_files: 1
+          -
+            handle: related
+            field:
+              type: entries
+              collections:
+                - blog

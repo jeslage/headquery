@@ -1,0 +1,18 @@
+{
+  "name": "headquery/monorepo-dev",
+  "description": "Development-only root manifest. Not published.",
+  "type": "project",
+  "license": "MIT",
+  "minimum-stability": "dev",
+  "prefer-stable": true,
+  "repositories": [
+    {
+      "type": "path",
+      "url": "packages/php/*",
+      "options": { "symlink": true }
+    }
+  ],
+  "require-dev": {
+    "headquery/statamic": "@dev"
+  }
+}
