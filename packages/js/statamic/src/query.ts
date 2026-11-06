@@ -1,7 +1,11 @@
 import type { Compilable, CoreClient, QueryParams, RequestSpec, RunOptions } from "@headquery/core";
 import type {
+  DataList,
+  KeysOfUnion,
   ListCondition,
+  NavTree,
   Paginated,
+  PickedUnion,
   PresenceCondition,
   Scalar,
   ScalarCondition,
@@ -145,6 +149,86 @@ export class SingleQuery<Item, Picked extends keyof Item = keyof Item> implement
   }
 
   get(options?: RunOptions): Promise<Single<Pick<Item, Picked>>> {
+    return this.client.run(this, options);
+  }
+}
+
+/**
+ * Navigation tree (`GET /navs/{handle}/tree`). Pages are a union of plain links (`entry_id: null`)
+ * and linked entries (`entry_id: string`, with the entry's fields).
+ */
+export class TreeQuery<Page, Picked extends KeysOfUnion<Page> = KeysOfUnion<Page>>
+  implements Compilable<NavTree<PickedUnion<Page, Picked>>>
+{
+  declare readonly __result?: NavTree<PickedUnion<Page, Picked>>;
+
+  constructor(
+    private readonly client: CoreClient,
+    private readonly path: string,
+    private readonly state: { maxDepth?: number; site?: string; fields?: string[] } = {},
+  ) {}
+
+  /** `max_depth=n`: only return pages up to this depth (1 = top level). */
+  maxDepth(depth: number): TreeQuery<Page, Picked> {
+    return new TreeQuery(this.client, this.path, { ...this.state, maxDepth: depth });
+  }
+
+  /** Multi-site: `site=<handle>`. */
+  site(handle: string): TreeQuery<Page, Picked> {
+    return new TreeQuery(this.client, this.path, { ...this.state, site: handle });
+  }
+
+  /**
+   * Only return these page fields; narrows the page type. Keep `entry_id` to tell
+   * links and entries apart.
+   */
+  fields<P extends KeysOfUnion<Page> & string>(fields: P[]): TreeQuery<Page, P> {
+    return new TreeQuery<Page, P>(this.client, this.path, { ...this.state, fields });
+  }
+
+  toRequest(): RequestSpec {
+    const query: QueryParams = {};
+    if (this.state.maxDepth !== undefined) query.max_depth = this.state.maxDepth;
+    if (this.state.site) query.site = this.state.site;
+    if (this.state.fields?.length) query.fields = this.state.fields;
+    return { method: "GET", path: this.path, query };
+  }
+
+  url(): string {
+    return this.client.url(this.toRequest());
+  }
+
+  get(options?: RunOptions): Promise<NavTree<PickedUnion<Page, Picked>>> {
+    return this.client.run(this, options);
+  }
+}
+
+/** Unpaginated list of all resources of a kind (`GET /globals`, `GET /navs`). */
+export class IndexQuery<Item> implements Compilable<DataList<Item>> {
+  declare readonly __result?: DataList<Item>;
+
+  constructor(
+    private readonly client: CoreClient,
+    private readonly path: string,
+    private readonly state: { site?: string } = {},
+  ) {}
+
+  /** Multi-site: `site=<handle>`. */
+  site(handle: string): IndexQuery<Item> {
+    return new IndexQuery(this.client, this.path, { ...this.state, site: handle });
+  }
+
+  toRequest(): RequestSpec {
+    const query: QueryParams = {};
+    if (this.state.site) query.site = this.state.site;
+    return { method: "GET", path: this.path, query };
+  }
+
+  url(): string {
+    return this.client.url(this.toRequest());
+  }
+
+  get(options?: RunOptions): Promise<DataList<Item>> {
     return this.client.run(this, options);
   }
 }

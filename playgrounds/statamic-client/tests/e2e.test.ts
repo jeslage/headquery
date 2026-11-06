@@ -102,5 +102,47 @@ describe.skipIf(!baseUrl)(`Statamic playground (${baseUrl})`, () => {
         { key: "mastodon", value: "mastodon", label: "Mastodon" },
       ]);
     });
+
+    it("lists all global sets, told apart by handle", async () => {
+      const { data } = await cms.globals().get();
+      expect(data.map((g) => g.handle)).toEqual(["settings"]);
+      const settings = data.find((g) => g.handle === "settings");
+      expect(settings?.site_name).toBe("headquery playground");
+    });
+  });
+
+  describe("navigation", () => {
+    const main = cms.nav("main").tree();
+
+    it("returns entry pages with the entry's fields and link pages with entry_id null", async () => {
+      const { data } = await main.get();
+      expect(data.map((i) => [i.page.title, i.depth])).toEqual([
+        ["Hello headquery", 1],
+        ["GitHub", 1],
+      ]);
+      const [entry, link] = data.map((i) => i.page);
+      if (!entry || entry.entry_id === null) throw new Error("expected an entry page first");
+      // id is the nav item's id; the entry id is in entry_id
+      expect(entry.id).not.toBe(entry.entry_id);
+      expect(entry.slug).toBe("hello-headquery");
+      expect(entry.icon).toBeNull();
+      expect(link).toMatchObject({ entry_id: null, url: "https://github.com/headquery", icon: "github" });
+      expect(data[0]?.children.map((c) => [c.page.title, c.depth])).toEqual([["Cacheable GET requests", 2]]);
+    });
+
+    it("limits the depth", async () => {
+      const { data } = await main.maxDepth(1).get();
+      expect(data.every((i) => i.children.length === 0)).toBe(true);
+    });
+
+    it("narrows pages to the requested fields", async () => {
+      const { data } = await main.fields(["title", "entry_id"]).get();
+      expect(Object.keys(data[0]?.page ?? {}).sort()).toEqual(["entry_id", "title"]);
+    });
+
+    it("lists navigations", async () => {
+      const { data } = await cms.navs().get();
+      expect(data).toEqual([expect.objectContaining({ handle: "main", title: "Main", max_depth: 2 })]);
+    });
   });
 });

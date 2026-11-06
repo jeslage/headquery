@@ -102,11 +102,28 @@ export interface HqTermBase {
   updated_by: HqUser | null;
 }
 
-/** Fields Statamic adds to every global set. */
-export interface HqGlobalBase {
-  handle: string;
+/** Fields Statamic adds to every global set. `handle` tells sets apart in `cms.globals()`. */
+export interface HqGlobalBase<H extends string = string> {
+  handle: H;
   api_url: string;
 }
+
+/** Properties every navigation page has. `id` is the nav item's id, not the entry's. */
+export interface HqNavPageBase {
+  id: string;
+  title: string | null;
+  url: string | null;
+  uri: string | null;
+  permalink: string | null;
+}
+
+/** A navigation page that is a plain link or text (not linked to an entry). */
+export type HqNavLink<F> = HqNavPageBase & F & { entry_id: null };
+
+/** A navigation page linked to an entry: the entry's fields, the nav fields and `entry_id`. */
+export type HqNavEntry<E, F> = Omit<E, keyof HqNavPageBase | keyof F | "entry_id"> &
+  HqNavPageBase &
+  F & { entry_id: string };
 
 export interface BlogEntry extends Omit<HqEntryBase, "date" | "slug" | "title"> {
   /** CMS field type: `users` */
@@ -135,19 +152,29 @@ export interface BlogEntry extends Omit<HqEntryBase, "date" | "slug" | "title"> 
   title: string;
 }
 
-export interface SettingsGlobal extends HqGlobalBase {
-  /** CMS field type: `text` */
-  site_name: string | null;
-  /** CMS field type: `grid` */
-  social: Array<{ id: string; network: HqOption<"mastodon" | "github"> | HqEmptyOption; url: string | null }>;
-}
-
 export interface TagsTerm extends Omit<HqTermBase, "slug" | "title"> {
   /** CMS field type: `slug` */
   slug: string;
   /** CMS field type: `text` */
   title: string;
 }
+
+export interface SettingsGlobal extends HqGlobalBase<"settings"> {
+  /** CMS field type: `text` */
+  site_name: string | null;
+  /** CMS field type: `grid` */
+  social: Array<{ id: string; network: HqOption<"mastodon" | "github"> | HqEmptyOption; url: string | null }>;
+}
+
+export interface MainNavFields {
+  /** CMS field type: `text` */
+  icon: string | null;
+}
+
+/** Page of the `Main` navigation (max depth 2). */
+export type MainNavPage =
+  | HqNavLink<MainNavFields>
+  | HqNavEntry<BlogEntry, MainNavFields>;
 
 export interface Schema {
   collections: {
@@ -158,6 +185,9 @@ export interface Schema {
   };
   globals: {
     settings: SettingsGlobal;
+  };
+  navigations: {
+    main: { page: MainNavPage };
   };
 }
 

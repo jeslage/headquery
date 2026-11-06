@@ -14,17 +14,40 @@ export interface IrSchema {
   schemaVersion: typeof SCHEMA_VERSION;
   cms: { name: string; version?: string };
   generatedAt?: string;
-  resources: Record<string, IrResource>;
+  /** Resources grouped by kind, each keyed by handle. Handles only need to be unique within a kind. */
+  resources: IrResources;
 }
 
-export type IrResourceKind = "collection" | "taxonomy" | "global" | "navigation" | "assetContainer";
+export interface IrResources {
+  collection?: Record<string, IrResource>;
+  taxonomy?: Record<string, IrResource>;
+  global?: Record<string, IrResource>;
+  navigation?: Record<string, IrNavigation>;
+  assetContainer?: Record<string, IrResource>;
+}
+
+export type IrResourceKind = keyof IrResources;
+
+export const IR_RESOURCE_KINDS: readonly IrResourceKind[] = [
+  "collection",
+  "taxonomy",
+  "global",
+  "navigation",
+  "assetContainer",
+];
 
 export interface IrResource {
-  kind: IrResourceKind;
   /** Human-readable title from the CMS. */
   title?: string;
   /** Fields keyed by handle. For collections this is the union of all entry blueprints. */
   fields: Record<string, IrField>;
+}
+
+/** A navigation tree. `fields` are the navigation blueprint's fields, present on every page. */
+export interface IrNavigation extends IrResource {
+  /** Handles of collections whose entries can be linked as pages. */
+  collections?: string[];
+  maxDepth?: number;
 }
 
 interface IrFieldBase {
@@ -73,13 +96,19 @@ export function assertIrSchema(input: unknown): asserts input is IrSchema {
     throw new IrSchemaError("Schema is missing cms.name");
   }
   if (!isObject(input.resources)) throw new IrSchemaError("Schema is missing resources");
-  for (const [handle, resource] of Object.entries(input.resources)) {
-    if (!isObject(resource) || typeof resource.kind !== "string" || !isObject(resource.fields)) {
-      throw new IrSchemaError(`Resource "${handle}" must have a kind and fields`);
+  for (const [kind, resources] of Object.entries(input.resources)) {
+    if (!(IR_RESOURCE_KINDS as readonly string[]).includes(kind)) {
+      throw new IrSchemaError(`Unknown resource kind "${kind}" (expected one of ${IR_RESOURCE_KINDS.join(", ")})`);
     }
-    for (const [field, def] of Object.entries(resource.fields)) {
-      if (!isObject(def) || typeof def.type !== "string") {
-        throw new IrSchemaError(`Field "${handle}.${field}" must have a type`);
+    if (!isObject(resources)) throw new IrSchemaError(`resources.${kind} must be an object of handle → resource`);
+    for (const [handle, resource] of Object.entries(resources)) {
+      if (!isObject(resource) || !isObject(resource.fields)) {
+        throw new IrSchemaError(`Resource "${kind}.${handle}" must have fields`);
+      }
+      for (const [field, def] of Object.entries(resource.fields)) {
+        if (!isObject(def) || typeof def.type !== "string") {
+          throw new IrSchemaError(`Field "${kind}.${handle}.${field}" must have a type`);
+        }
       }
     }
   }

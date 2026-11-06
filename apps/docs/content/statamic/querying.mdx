@@ -108,7 +108,7 @@ const { data } = await cms.collection("blog").entries().fields(["title", "hero"]
 //      ^?
 ```
 
-## Taxonomies and globals
+## Taxonomies
 
 ```ts twoslash
 import "./generated/cms.generated";
@@ -117,9 +117,70 @@ const cms = createStatamicClient({ baseUrl: "https://cms.example.com" });
 // ---cut---
 const tags = await cms.taxonomy("tags").terms().where("title", "starts_with", "j").get();
 const tag = await cms.taxonomy("tags").term("javascript").get();
+```
+
+## Globals
+
+`global(handle)` fetches one global set (`GET /globals/{handle}`), `globals()` all of them
+(`GET /globals`). In the list, `handle` tells the sets apart:
+
+```ts twoslash
+import "./generated/cms.generated";
+import { createStatamicClient } from "@headquery/statamic";
+const cms = createStatamicClient({ baseUrl: "https://cms.example.com" });
+// ---cut---
 const settings = await cms.global("settings").get();
 settings.data.site_name;
 //            ^?
+
+const all = await cms.globals().get();
+for (const set of all.data) {
+  if (set.handle === "settings") set.social;
+}
+```
+
+## Navigation
+
+`nav(handle).tree()` fetches a navigation tree (`GET /navs/{handle}/tree`). Enable it in
+`config/statamic/api.php` under `resources.navs`.
+
+Each page is either a plain link (`entry_id: null`) or a linked entry: Statamic then returns
+all of the entry's fields, and `entry_id` holds the entry's id (`id` is the nav item's id).
+Fields of the navigation's blueprint are on every page.
+
+```ts twoslash
+import "./generated/cms.generated";
+import { createStatamicClient } from "@headquery/statamic";
+const cms = createStatamicClient({ baseUrl: "https://cms.example.com" });
+// ---cut---
+const { data } = await cms.nav("main").tree().maxDepth(2).get();
+
+for (const { page, depth, children } of data) {
+  if (page.entry_id !== null) {
+    page.reading_time; // an entry of a linked collection
+    //   ^?
+  } else {
+    page.url; // a plain link
+  }
+}
+```
+
+- `.maxDepth(n)` sends `max_depth`, `.site(handle)` picks a site.
+- `.fields([...])` narrows the pages; keep `entry_id` if you need to tell links and entries apart.
+- `cms.navs()` lists all navigations (`GET /navs`).
+
+To fetch several resources for a layout, start the requests together. Each is a plain,
+cacheable GET:
+
+```ts twoslash
+import "./generated/cms.generated";
+import { createStatamicClient } from "@headquery/statamic";
+const cms = createStatamicClient({ baseUrl: "https://cms.example.com" });
+// ---cut---
+const [navigation, settings] = await Promise.all([
+  cms.nav("main").tree().fields(["title", "url", "entry_id"]).get(),
+  cms.global("settings").get(),
+]);
 ```
 
 ## Immutability

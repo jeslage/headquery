@@ -27,8 +27,15 @@ describe("spec/ir/schema-v1.json", () => {
     const ok = validate({
       schemaVersion: 1,
       cms: { name: "statamic" },
-      resources: { blog: { kind: "collection", fields: { status: { type: "enum" } } } },
+      resources: { collection: { blog: { fields: { state: { type: "enum" } } } } },
     });
     expect(ok).toBe(false);
+  });
+
+  it("rejects the old flat resources shape and unknown navigation properties", () => {
+    const base = { schemaVersion: 1, cms: { name: "statamic" } };
+    expect(validate({ ...base, resources: { blog: { kind: "collection", fields: {} } } })).toBe(false);
+    expect(validate({ ...base, resources: { navigation: { main: { fields: {}, depth: 2 } } } })).toBe(false);
+    expect(validate({ ...base, resources: { navigation: { main: { fields: {}, collections: ["blog"], maxDepth: 2 } } } })).toBe(true);
   });
 });

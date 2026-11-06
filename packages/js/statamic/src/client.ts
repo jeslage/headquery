@@ -1,6 +1,6 @@
 import { type ClientOptions, type CoreClient, createCoreClient } from "@headquery/core";
-import { ListQuery, SingleQuery } from "./query";
-import type { RegisteredSchema, StatamicSchemaShape } from "./types";
+import { IndexQuery, ListQuery, SingleQuery, TreeQuery } from "./query";
+import type { NavInfo, RegisteredSchema, StatamicSchemaShape } from "./types";
 
 export interface StatamicClient<S extends StatamicSchemaShape> {
   /** The underlying CMS-agnostic client (use for framework adapters or raw requests). */
@@ -28,6 +28,19 @@ export interface StatamicClient<S extends StatamicSchemaShape> {
 
   /** `GET /globals/{handle}` */
   global<K extends Extract<keyof S["globals"], string>>(handle: K): SingleQuery<S["globals"][K]>;
+
+  /** `GET /globals`: all global sets; tell them apart by `handle`. */
+  globals(): IndexQuery<S["globals"][keyof S["globals"]]>;
+
+  nav<K extends Extract<keyof S["navigations"], string>>(
+    handle: K,
+  ): {
+    /** `GET /navs/{handle}/tree` */
+    tree(): TreeQuery<S["navigations"][K]["page"]>;
+  };
+
+  /** `GET /navs`: all navigations (handle, title, max depth). */
+  navs(): IndexQuery<NavInfo>;
 }
 
 /**
@@ -63,5 +76,10 @@ export function createStatamicClient<S extends StatamicSchemaShape = RegisteredS
     global(handle) {
       return new SingleQuery(core, `/globals/${seg(handle)}`);
     },
+    globals: () => new IndexQuery(core, "/globals"),
+    nav(handle) {
+      return { tree: () => new TreeQuery(core, `/navs/${seg(handle)}/tree`) };
+    },
+    navs: () => new IndexQuery(core, "/navs"),
   };
 }

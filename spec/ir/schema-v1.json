@@ -19,19 +19,49 @@
     },
     "generatedAt": { "type": "string", "format": "date-time" },
     "resources": {
+      "description": "Resources grouped by kind; each kind maps handle → resource. Handles only need to be unique within a kind.",
       "type": "object",
-      "additionalProperties": { "$ref": "#/$defs/resource" }
+      "additionalProperties": false,
+      "properties": {
+        "collection": { "$ref": "#/$defs/resourceMap" },
+        "taxonomy": { "$ref": "#/$defs/resourceMap" },
+        "global": { "$ref": "#/$defs/resourceMap" },
+        "navigation": {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/$defs/navigation" }
+        },
+        "assetContainer": { "$ref": "#/$defs/resourceMap" }
+      }
     }
   },
   "$defs": {
+    "resourceMap": {
+      "type": "object",
+      "additionalProperties": { "$ref": "#/$defs/resource" }
+    },
     "resource": {
       "type": "object",
-      "required": ["kind", "fields"],
+      "required": ["fields"],
       "additionalProperties": false,
       "properties": {
-        "kind": { "enum": ["collection", "taxonomy", "global", "navigation", "assetContainer"] },
         "title": { "type": "string" },
         "fields": { "$ref": "#/$defs/fieldMap" }
+      }
+    },
+    "navigation": {
+      "description": "A navigation tree. `fields` are the navigation blueprint's fields, present on every page.",
+      "type": "object",
+      "required": ["fields"],
+      "additionalProperties": false,
+      "properties": {
+        "title": { "type": "string" },
+        "fields": { "$ref": "#/$defs/fieldMap" },
+        "collections": {
+          "description": "Handles of collections whose entries can be linked as pages.",
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "maxDepth": { "type": "integer", "minimum": 1 }
       }
     },
     "fieldMap": {

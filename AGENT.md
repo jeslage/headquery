@@ -99,10 +99,13 @@ Notes:
 ## The IR (intermediate schema)
 
 - Defined in `spec/ir/schema-v1.json`, mirrored in `packages/js/schema/src/index.ts`.
+- `resources` is grouped by kind (`collection taxonomy global navigation assetContainer`),
+  each a map handle → resource, because Statamic handles are only unique per kind.
+  Navigations also carry `collections` (linkable collections) and `maxDepth`.
 - Field types: `string number boolean date enum array object relation asset richtext blocks unknown`.
 - `filterable: true` mirrors Statamic's `allowed_filters` — codegen turns it into the
   `filterable` union that restricts `.where()`.
-- Empty field maps must encode as JSON `{}` (PHP: cast to `(object)`).
+- Empty field maps and resource maps must encode as JSON `{}` (PHP: cast to `(object)`).
 
 **Changing the IR** requires, in one PR: JSON Schema, TS types, codegen, all PHP mappers,
 fixtures, and the codegen snapshot (`packages/js/codegen/tests/__generated__/`). Breaking
@@ -138,12 +141,13 @@ does not understand.
 
 - REST API base: `/{statamic.api.route}` (default `/api`). Endpoints used:
   `/collections/{c}/entries`, `/collections/{c}/entries/{id}`, `/taxonomies/{t}/terms`,
-  `/taxonomies/{t}/terms/{slug}`, `/globals/{handle}`.
+  `/taxonomies/{t}/terms/{slug}`, `/globals`, `/globals/{handle}`, `/navs`, `/navs/{n}/tree`.
 - Filters: `filter[field:condition]=value`; only fields in `allowed_filters` are accepted
   by Statamic. Sort: `sort=a,-b`. Also `fields=`, `limit=`, `page=`, `site=`.
-- Response: `{ data, links, meta }` for lists, `{ data }` for single items.
+- Response: `{ data, links, meta }` for entry/term lists, `{ data }` for single items and for
+  the unpaginated `/globals`, `/navs` and nav trees. Trees also accept `max_depth=`.
 - Addon pieces: `FieldMapper` (pure, unit-tested; maps fieldtype+config → IR),
-  `SchemaExporter` (walks collections/taxonomies/globals, respects `statamic.api.resources`
+  `SchemaExporter` (walks collections/taxonomies/globals/navs, respects `statamic.api.resources`
   and `allowed_filters`), `ExportSchemaCommand` (`php please headquery:schema --out=…`),
   `SchemaController` + `AuthorizeSchemaRequest` (`GET /api/headquery/schema`).
 - Schema endpoint security: off unless `HEADQUERY_SCHEMA_ROUTE=true` **and**
@@ -156,7 +160,7 @@ The playground targets Statamic 6 (the addon supports `^5.0 || ^6.0`).
 
 - `SchemaExporter` has been run manually against Statamic 6.40 in the seeded playground
   (output validates against `schema-v1.json`), but has no automated tests yet — only
-  `FieldMapper` is unit-tested. It does not export navigations or asset containers yet.
+  `FieldMapper` is unit-tested. It does not export asset containers yet.
 - Bard output type (`HqRichText`) depends on field config (HTML string without sets, array
   of blocks with sets); the IR doesn't carry that distinction yet.
 
@@ -168,6 +172,10 @@ select-like fields return `{ key, value, label }` (all `null` when empty, `[]` w
 toggles are always boolean; grid/replicator/multi relations return `[]`, but
 list/taggable/table return `null` when empty; assets use `max_files` (not `max_items`).
 System fields of entries/terms/globals are modelled as `HqEntryBase`/`HqTermBase`/`HqGlobalBase`.
+Nav tree items are `{ page, depth, children }` (depth 1 = top level). Pages linked to an entry
+contain all of the entry's fields plus `entry_id`; their `id` is the nav item id, not the entry id.
+Plain link pages only have `id title url uri permalink` and `entry_id: null`. Nav blueprint
+fields are on every page (`null` when empty). Modelled as `HqNavLink`/`HqNavEntry`.
 `status` is a reserved field handle in Statamic (it's the entry's publish status) — don't use
 it for blueprint fields in fixtures or the seed.
 
@@ -204,7 +212,8 @@ it for blueprint fields in fixtures or the seed.
    against real Statamic; verify the unverified assumptions above; add Testbench-based
    tests for exporter, command and route.
 2. Contract/e2e tests: JS client against the running playground in CI.
-3. Remaining Statamic resources: navigation trees, assets, users; multi-site helpers.
+3. Remaining Statamic resources: assets, users; multi-site helpers. (Navigation trees and
+   the globals list are done.)
 4. Codegen: `--check` in docs/CI recipes, ETag-aware fetch. (Config file `headquery.config.ts`
    is done: `packages/js/codegen/src/config.ts`.)
 5. Framework adapters: `@headquery/vue` (composables), `@headquery/react` (hooks),

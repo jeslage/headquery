@@ -5,6 +5,7 @@ namespace Headquery\Statamic\Schema;
 use Illuminate\Support\Collection as LaravelCollection;
 use Statamic\Facades\Collection;
 use Statamic\Facades\GlobalSet;
+use Statamic\Facades\Nav;
 use Statamic\Facades\Taxonomy;
 use Statamic\Fields\Field;
 use Statamic\Fields\Fields;
@@ -12,6 +13,7 @@ use Statamic\Statamic;
 
 /**
  * Builds the headquery IR (see spec/ir/schema-v1.json) from the Statamic site.
+ * Resources are grouped by kind, so handles only need to be unique per kind.
  *
  * Only resources that are enabled in config/statamic/api.php are exported, and
  * only fields listed in `allowed_filters` are marked filterable — the schema
@@ -31,7 +33,7 @@ class SchemaExporter
 
     public function export(): array
     {
-        $resources = [];
+        $resources = ['collection' => [], 'taxonomy' => [], 'global' => [], 'navigation' => []];
 
         if (! config('statamic.api.enabled', false)) {
             return $this->envelope($resources);
@@ -42,8 +44,7 @@ class SchemaExporter
             if ($config === null) {
                 continue;
             }
-            $resources[$collection->handle()] = [
-                'kind' => 'collection',
+            $resources['collection'][$collection->handle()] = [
                 'title' => (string) $collection->title(),
                 'fields' => $this->mergeBlueprints($collection->entryBlueprints(), $config),
             ];
@@ -54,8 +55,7 @@ class SchemaExporter
             if ($config === null) {
                 continue;
             }
-            $resources[$taxonomy->handle()] = [
-                'kind' => 'taxonomy',
+            $resources['taxonomy'][$taxonomy->handle()] = [
                 'title' => (string) $taxonomy->title(),
                 'fields' => $this->mergeBlueprints($taxonomy->termBlueprints(), $config),
             ];
@@ -67,14 +67,28 @@ class SchemaExporter
                 continue;
             }
             $blueprint = $set->blueprint();
-            $resources[$set->handle()] = [
-                'kind' => 'global',
+            $resources['global'][$set->handle()] = [
                 'title' => (string) $set->title(),
                 'fields' => $this->mergeBlueprints($blueprint ? collect([$blueprint]) : collect(), []),
             ];
         }
 
-        ksort($resources);
+        foreach (Nav::all() as $nav) {
+            if ($this->resourceConfig('navs', $nav->handle()) === null) {
+                continue;
+            }
+            $blueprint = $nav->blueprint();
+            $navigation = [
+                'title' => (string) $nav->title(),
+                'fields' => $this->mergeBlueprints($blueprint ? collect([$blueprint]) : collect(), []),
+                // Entries of these collections can be linked as pages; the API returns their fields too.
+                'collections' => $nav->collections()->map->handle()->sort()->values()->all(),
+            ];
+            if ($nav->maxDepth()) {
+                $navigation['maxDepth'] = (int) $nav->maxDepth();
+            }
+            $resources['navigation'][$nav->handle()] = $navigation;
+        }
 
         return $this->envelope($resources);
     }
@@ -92,7 +106,12 @@ class SchemaExporter
             'schemaVersion' => self::SCHEMA_VERSION,
             'cms' => ['name' => 'statamic', 'version' => (string) Statamic::version()],
             'generatedAt' => now()->toIso8601ZuluString(),
-            'resources' => (object) $resources,
+            // Empty maps must encode as {} in JSON, hence the object casts.
+            'resources' => (object) array_map(function (array $byHandle) {
+                ksort($byHandle);
+
+                return (object) $byHandle;
+            }, $resources),
         ];
     }
 

@@ -1,13 +1,22 @@
 export { createStatamicClient, type StatamicClient } from "./client";
-export { LIST_SEPARATOR, ListQuery, SingleQuery } from "./query";
+export { IndexQuery, LIST_SEPARATOR, ListQuery, SingleQuery, TreeQuery } from "./query";
 export type {
   Condition,
+  DataList,
+  KeysOfUnion,
   ListCondition,
   LooseItem,
+  LooseNavPage,
   LooseSchema,
+  NavigationShape,
+  NavInfo,
+  NavTree,
+  NavTreeItem,
   Paginated,
   PaginationLinks,
   PaginationMeta,
+  PickedUnion,
+  PickFromUnion,
   PresenceCondition,
   Register,
   RegisteredSchema,

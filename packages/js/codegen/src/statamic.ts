@@ -1,4 +1,4 @@
-import type { IrField, IrResource, IrSchema } from "@headquery/schema";
+import type { IrField, IrNavigation, IrResource, IrSchema } from "@headquery/schema";
 
 export interface StatamicGenerateOptions {
   /** Module to augment. Defaults to `@headquery/statamic`. */
@@ -105,11 +105,28 @@ export interface HqTermBase {
   updated_by: HqUser | null;
 }
 
-/** Fields Statamic adds to every global set. */
-export interface HqGlobalBase {
-  handle: string;
+/** Fields Statamic adds to every global set. \`handle\` tells sets apart in \`cms.globals()\`. */
+export interface HqGlobalBase<H extends string = string> {
+  handle: H;
   api_url: string;
 }
+
+/** Properties every navigation page has. \`id\` is the nav item's id, not the entry's. */
+export interface HqNavPageBase {
+  id: string;
+  title: string | null;
+  url: string | null;
+  uri: string | null;
+  permalink: string | null;
+}
+
+/** A navigation page that is a plain link or text (not linked to an entry). */
+export type HqNavLink<F> = HqNavPageBase & F & { entry_id: null };
+
+/** A navigation page linked to an entry: the entry's fields, the nav fields and \`entry_id\`. */
+export type HqNavEntry<E, F> = Omit<E, keyof HqNavPageBase | keyof F | "entry_id"> &
+  HqNavPageBase &
+  F & { entry_id: string };
 `.trim();
 
 /** Keys of the base interfaces above; blueprint fields with the same handle take precedence. */
@@ -135,35 +152,31 @@ export function generateStatamic(schema: IrSchema, options: StatamicGenerateOpti
   const collections: string[] = [];
   const taxonomies: string[] = [];
   const globals: string[] = [];
+  const navigations: string[] = [];
+  const sorted = <T>(map: Record<string, T> | undefined): Array<[string, T]> =>
+    Object.entries(map ?? {}).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
 
-  const handles = Object.keys(schema.resources).sort();
-
-  for (const handle of handles) {
-    const resource = schema.resources[handle]!;
-    switch (resource.kind) {
-      case "collection": {
-        const name = `${pascal(handle)}Entry`;
-        out.push(itemInterface(name, resource, "HqEntryBase"));
-        collections.push(`    ${key(handle)}: { item: ${name}; filterable: ${filterable(resource)} };`);
-        break;
-      }
-      case "taxonomy": {
-        const name = `${pascal(handle)}Term`;
-        out.push(itemInterface(name, resource, "HqTermBase"));
-        taxonomies.push(`    ${key(handle)}: { item: ${name}; filterable: ${filterable(resource)} };`);
-        break;
-      }
-      case "global": {
-        const name = `${pascal(handle)}Global`;
-        out.push(itemInterface(name, resource, "HqGlobalBase"));
-        globals.push(`    ${key(handle)}: ${name};`);
-        break;
-      }
-      default:
-        // navigation / assetContainer: not supported by the Statamic adapter yet
-        break;
-    }
+  for (const [handle, resource] of sorted(schema.resources.collection)) {
+    const name = `${pascal(handle)}Entry`;
+    out.push(itemInterface(name, resource, "HqEntryBase"));
+    collections.push(`    ${key(handle)}: { item: ${name}; filterable: ${filterable(resource)} };`);
   }
+  for (const [handle, resource] of sorted(schema.resources.taxonomy)) {
+    const name = `${pascal(handle)}Term`;
+    out.push(itemInterface(name, resource, "HqTermBase"));
+    taxonomies.push(`    ${key(handle)}: { item: ${name}; filterable: ${filterable(resource)} };`);
+  }
+  for (const [handle, resource] of sorted(schema.resources.global)) {
+    const name = `${pascal(handle)}Global`;
+    out.push(itemInterface(name, resource, "HqGlobalBase", JSON.stringify(handle)));
+    globals.push(`    ${key(handle)}: ${name};`);
+  }
+  for (const [handle, nav] of sorted(schema.resources.navigation)) {
+    const name = `${pascal(handle)}NavPage`;
+    out.push(...navigationTypes(name, nav, schema));
+    navigations.push(`    ${key(handle)}: { page: ${name} };`);
+  }
+  // assetContainer: not supported by the Statamic adapter yet
 
   const header = [
     "/* eslint-disable */",
@@ -178,6 +191,7 @@ export function generateStatamic(schema: IrSchema, options: StatamicGenerateOpti
     `  collections: {${block(collections)}};`,
     `  taxonomies: {${block(taxonomies)}};`,
     `  globals: {${block(globals)}};`,
+    `  navigations: {${block(navigations)}};`,
     "}",
   ].join("\n");
 
@@ -196,17 +210,40 @@ function block(lines: string[]): string {
   return lines.length ? `\n${lines.join("\n")}\n  ` : "";
 }
 
-function itemInterface(name: string, resource: IrResource, base: BaseName): string {
+function itemInterface(name: string, resource: IrResource, base: BaseName, baseArg?: string): string {
   const lines: string[] = [];
   const overridden = BASE_KEYS[base].filter((k) => k in resource.fields);
+  const baseRef = baseArg ? `${base}<${baseArg}>` : base;
   const parent = overridden.length
-    ? `Omit<${base}, ${overridden.map((k) => JSON.stringify(k)).sort().join(" | ")}>`
-    : base;
+    ? `Omit<${baseRef}, ${overridden.map((k) => JSON.stringify(k)).sort().join(" | ")}>`
+    : baseRef;
   for (const handle of Object.keys(resource.fields).sort()) {
     const field = resource.fields[handle]!;
     lines.push(`${doc(field, "  ")}  ${key(handle)}: ${fieldType(field, 1)};`);
   }
   return `export interface ${name} extends ${parent} {\n${lines.join("\n")}\n}`;
+}
+
+/**
+ * A navigation page is either a plain link or an entry of one of the linked collections
+ * (the API returns the entry's fields). Nav blueprint fields are on every page.
+ */
+function navigationTypes(name: string, nav: IrNavigation, schema: IrSchema): string[] {
+  const fieldsName = `${name.replace(/Page$/, "")}Fields`;
+  const fieldLines = Object.keys(nav.fields)
+    .sort()
+    .map((h) => `${doc(nav.fields[h]!, "  ")}  ${key(h)}: ${fieldType(nav.fields[h]!, 1)};`);
+  const fieldsType = fieldLines.length
+    ? `export interface ${fieldsName} {\n${fieldLines.join("\n")}\n}`
+    : `export interface ${fieldsName} {}`;
+
+  // Collections not in the schema (e.g. not exposed via the API) still come back as entries.
+  const entryTypes = [...new Set(nav.collections ?? [])]
+    .sort()
+    .map((c) => (schema.resources.collection?.[c] ? `${pascal(c)}Entry` : "HqEntryBase"));
+  const variants = [`HqNavLink<${fieldsName}>`, ...[...new Set(entryTypes)].map((e) => `HqNavEntry<${e}, ${fieldsName}>`)];
+  const comment = `/** Page of the \`${nav.title ?? name}\` navigation${nav.maxDepth ? ` (max depth ${nav.maxDepth})` : ""}. */`;
+  return [fieldsType, `${comment}\nexport type ${name} =\n  | ${variants.join("\n  | ")};`];
 }
 
 function filterable(resource: IrResource): string {

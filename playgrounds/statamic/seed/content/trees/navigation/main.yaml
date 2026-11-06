@@ -10,3 +10,5 @@ tree:
     id: n1a2b3c4-0000-4000-8000-000000000003
     title: GitHub
     url: 'https://github.com/headquery'
+    data:
+      icon: github

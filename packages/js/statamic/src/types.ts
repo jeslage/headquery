@@ -7,6 +7,12 @@ export interface StatamicSchemaShape {
   taxonomies: Record<string, ResourceShape>;
   // `object` rather than Record<string, unknown> so plain interfaces (no index signature) fit.
   globals: Record<string, object>;
+  navigations: Record<string, NavigationShape>;
+}
+
+export interface NavigationShape {
+  /** One page of the tree as returned by the API (link page or entry page). */
+  page: object;
 }
 
 export interface ResourceShape {
@@ -33,9 +39,13 @@ export interface LooseSchema {
   collections: Record<string, { item: LooseItem; filterable: string }>;
   taxonomies: Record<string, { item: LooseItem; filterable: string }>;
   globals: Record<string, LooseItem>;
+  navigations: Record<string, { page: LooseNavPage }>;
 }
 
 export type LooseItem = { id: string } & Record<string, unknown>;
+
+/** Nav page without generated types: `entry_id` is null for plain links, the entry id otherwise. */
+export type LooseNavPage = { id: string; entry_id: string | null } & Record<string, unknown>;
 
 export type RegisteredSchema = Register extends { schema: infer S extends StatamicSchemaShape } ? S : LooseSchema;
 
@@ -89,3 +99,38 @@ export interface Paginated<T> {
 export interface Single<T> {
   data: T;
 }
+
+/** One node of a navigation tree (`GET /navs/{handle}/tree`). */
+export interface NavTreeItem<P> {
+  page: P;
+  /** 1 for top-level pages. */
+  depth: number;
+  children: Array<NavTreeItem<P>>;
+}
+
+export interface NavTree<P> {
+  data: Array<NavTreeItem<P>>;
+}
+
+/** One navigation as listed by `GET /navs`. */
+export interface NavInfo {
+  handle: string;
+  title: string;
+  max_depth: number | null;
+  expects_root: boolean;
+  api_url: string;
+}
+
+/** Unpaginated list response (`GET /globals`, `GET /navs`). */
+export interface DataList<T> {
+  data: T[];
+}
+
+/** Keys of any member of a union (`keyof` of a union only has the shared keys). */
+export type KeysOfUnion<T> = T extends unknown ? keyof T : never;
+
+/** `Pick` applied to each union member, so e.g. nav link and entry pages stay distinguishable. */
+export type PickFromUnion<T, K extends PropertyKey> = T extends unknown ? Pick<T, Extract<K, keyof T>> : never;
+
+/** `T` itself while all keys are picked (readable hovers), otherwise `PickFromUnion`. */
+export type PickedUnion<T, K extends PropertyKey> = [KeysOfUnion<T>] extends [K] ? T : PickFromUnion<T, K>;

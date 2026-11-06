@@ -20,8 +20,14 @@ describe("assertIrSchema", () => {
       assertIrSchema({
         schemaVersion: 1,
         cms: { name: "x" },
-        resources: { blog: { kind: "collection", fields: { title: {} } } },
+        resources: { collection: { blog: { fields: { title: {} } } } },
       }),
-    ).toThrow(/blog.title/);
+    ).toThrow(/collection\.blog\.title/);
+  });
+
+  it("rejects unknown resource kinds", () => {
+    expect(() =>
+      assertIrSchema({ schemaVersion: 1, cms: { name: "x" }, resources: { blog: { kind: "collection", fields: {} } } }),
+    ).toThrow(/Unknown resource kind "blog"/);
   });
 });
