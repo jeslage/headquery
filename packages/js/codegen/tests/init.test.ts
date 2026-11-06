@@ -57,13 +57,21 @@ describe("initDefaults", () => {
 });
 
 describe("initPrompts", () => {
-  it("shows the default and its origin, or explains why there is none", () => {
+  it("pre-fills the default and says where it comes from, or explains why there is none", () => {
     const withDefault = initPrompts(initDefaults(ctx({ env: { HEADQUERY_BASE_URL: "https://cms.test" } })));
-    expect(withDefault.intro).toContain("headquery.config.ts");
-    expect(withDefault.source).toContain("e.g. https://cms.example.com");
-    expect(withDefault.source).toContain("[https://cms.test] from $HEADQUERY_BASE_URL");
-    expect(withDefault.out).toContain("[cms.generated.ts] no src/ or lib/ folder");
-    expect(initPrompts(initDefaults(ctx())).source).toContain("no default: HEADQUERY_BASE_URL isn't set");
+    expect(withDefault.intro).toBe("Creating headquery.config.ts");
+    expect(withDefault.source).toEqual({
+      message: "CMS base URL or schema file (default from $HEADQUERY_BASE_URL)",
+      initialValue: "https://cms.test",
+    });
+    expect(withDefault.out).toEqual({
+      message: "Output file for the generated types (no src/ or lib/ folder)",
+      initialValue: "cms.generated.ts",
+    });
+    const none = initPrompts(initDefaults(ctx())).source;
+    expect(none.message).toContain("no default: HEADQUERY_BASE_URL isn't set");
+    expect(none.placeholder).toBe("https://cms.example.com or ./schema.json");
+    expect(none.initialValue).toBeUndefined();
   });
 });
 
@@ -111,7 +119,7 @@ describe("renderConfig", () => {
 });
 
 describe("renderNextSteps", () => {
-  const base = { out: "src/cms.generated.ts", configFile: "headquery.config.ts", hasCodegenDependency: true };
+  const base = { out: "src/cms.generated.ts", hasCodegenDependency: true };
 
   it("prints scripts and env lines for a CMS source", () => {
     const text = renderNextSteps({ ...base, source: { baseUrl: "https://cms.test" } });

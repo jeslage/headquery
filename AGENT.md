@@ -35,6 +35,8 @@ Two halves:
    loose types (`LooseSchema`). Generated types plug in via module augmentation of
    `Register` — users should never have to pass generics manually.
 7. **Zero runtime dependencies** in published JS packages unless clearly justified.
+   CLI-only libraries (`citty`, `@clack/prompts` in `@headquery/codegen`) are devDependencies
+   that tsup bundles into `dist/cli.js`; never import them from a library entry (`src/index.ts`).
 8. **The PHP side stays tiny.** It exports the schema and (only where needed) adds small
    glue. No business logic, no query engine.
 

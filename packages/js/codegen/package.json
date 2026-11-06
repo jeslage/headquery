@@ -17,7 +17,9 @@
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
@@ -28,7 +30,9 @@
     "@headquery/schema": "workspace:^"
   },
   "devDependencies": {
-    "@headquery/statamic": "workspace:^"
+    "@clack/prompts": "1.8.1",
+    "@headquery/statamic": "workspace:^",
+    "citty": "0.2.2"
   },
   "publishConfig": {
     "access": "public"

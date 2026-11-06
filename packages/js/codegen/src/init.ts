@@ -92,18 +92,29 @@ export function initDefaults(ctx: InitContext, flags: InitFlags = {}): InitDefau
 
 const sourceLabel = (source: SchemaSource) => (typeof source === "string" ? source : source.baseUrl);
 
-/** Intro and question texts for the interactive prompts. */
-export function initPrompts(defaults: InitDefaults) {
+export interface TextPrompt {
+  message: string;
+  /** Pre-filled, editable answer (the default). */
+  initialValue?: string;
+  /** Dim hint shown while the answer is empty (only when there is no default). */
+  placeholder?: string;
+}
+
+/** Texts for the interactive prompts (rendered with @clack/prompts). */
+export function initPrompts(defaults: InitDefaults): { intro: string; source: TextPrompt; out: TextPrompt } {
   return {
-    intro: `Creating ${configFileName(defaults.format)}. Press Enter to keep the value in [brackets].\n`,
-    source: [
-      `CMS base URL, e.g. https://cms.example.com (or a schema file such as ./schema.json)`,
+    intro: `Creating ${configFileName(defaults.format)}`,
+    source:
       defaults.source !== undefined
-        ? `  [${sourceLabel(defaults.source)}] from ${defaults.sourceOrigin}`
-        : `  no default: HEADQUERY_BASE_URL isn't set (environment, .env.local or .env)`,
-      `> `,
-    ].join("\n"),
-    out: [`Output file for the generated types`, `  [${defaults.out}] ${defaults.outOrigin}`, `> `].join("\n"),
+        ? {
+            message: `CMS base URL or schema file (default from ${defaults.sourceOrigin})`,
+            initialValue: sourceLabel(defaults.source),
+          }
+        : {
+            message: "CMS base URL or schema file (no default: HEADQUERY_BASE_URL isn't set in env, .env.local or .env)",
+            placeholder: "https://cms.example.com or ./schema.json",
+          },
+    out: { message: `Output file for the generated types (${defaults.outOrigin})`, initialValue: defaults.out },
   };
 }
 
@@ -131,36 +142,32 @@ export function renderConfig(answers: { source: SchemaSource; out: string }): st
   ].join("\n");
 }
 
-/** Instructions printed after `init`. Nothing here is written to disk. */
-export function renderNextSteps(answers: {
-  source: SchemaSource;
-  out: string;
-  configFile: string;
-  hasCodegenDependency: boolean;
-}): string {
-  const lines: string[] = [`✓ wrote ${answers.configFile}`, ``, `Next steps:`, ``];
+/** Next steps printed after `init` (without a heading). Nothing here is written to disk. */
+export function renderNextSteps(answers: { source: SchemaSource; out: string; hasCodegenDependency: boolean }): string {
+  const lines: string[] = [];
   let step = 1;
   if (!answers.hasCodegenDependency) {
-    lines.push(`${step++}. Install the CLI as a dev dependency:`, ``, `     npm install -D @headquery/codegen`, ``);
+    lines.push(`${step++}. Install the CLI as a dev dependency:`, ``, `   npm install -D @headquery/codegen`, ``);
   }
   lines.push(
     `${step++}. Add scripts to package.json:`,
     ``,
-    `     "cms:types": "headquery generate",`,
-    `     "cms:types:check": "headquery generate --check"`,
+    `   "cms:types": "headquery generate",`,
+    `   "cms:types:check": "headquery generate --check"`,
     ``,
   );
   if (typeof answers.source !== "string") {
     lines.push(
       `${step++}. Add to .env.example (and set real values in your env / CI secrets):`,
       ``,
-      `     HEADQUERY_BASE_URL=${answers.source.baseUrl}`,
-      `     HEADQUERY_SCHEMA_TOKEN=`,
+      `   HEADQUERY_BASE_URL=${answers.source.baseUrl}`,
+      `   HEADQUERY_SCHEMA_TOKEN=`,
       ``,
     );
   }
   lines.push(
-    `${step++}. Run \`npx headquery generate\`, then import ${answers.out} once where you create the client.`,
+    `${step++}. Run \`npx headquery generate\`, then import`,
+    `   ${answers.out} once where you create the client.`,
   );
   return lines.join("\n");
 }

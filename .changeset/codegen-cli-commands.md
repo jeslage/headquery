@@ -12,3 +12,7 @@ The CLI bin is now `headquery` (was `headquery-codegen`) with two commands:
 - `headquery generate` does what `headquery-codegen` did (config file, flags, `--check`).
 
 Before installing, run `npx @headquery/codegen init`.
+
+The CLI is built with citty (commands, generated `--help`, `--version`) and @clack/prompts
+(interactive `init`). Both are bundled into `dist/cli.js`, so the package still has no new
+runtime dependencies. Unknown options and stray arguments are now errors.
