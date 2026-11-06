@@ -85,13 +85,13 @@ Turn the schema into types (run from the repo root after `pnpm build`):
 
 ```bash
 # from the exported file …
-node packages/js/codegen/dist/cli.js --from playgrounds/statamic/schema.json --out types/cms.ts
+node packages/js/codegen/dist/cli.js generate --from playgrounds/statamic/schema.json --out types/cms.ts
 # … or straight from the running site
-node packages/js/codegen/dist/cli.js --from $BASE/api/headquery/schema --token dev-schema-token --out types/cms.ts
+node packages/js/codegen/dist/cli.js generate --base-url $BASE --token dev-schema-token --out types/cms.ts
 ```
 
-In a consuming project the CLI is the `headquery-codegen` bin of `@headquery/codegen`
-(`npx headquery-codegen …`).
+In a consuming project the CLI is the `headquery` bin of `@headquery/codegen`
+(`npx @headquery/codegen init` once, then `npx headquery generate`).
 
 ## Test the JS client
 

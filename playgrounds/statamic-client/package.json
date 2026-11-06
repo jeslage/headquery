@@ -4,9 +4,9 @@
   "type": "module",
   "description": "Runs @headquery/statamic against the local Statamic playground (manual script + e2e tests).",
   "scripts": {
-    "types": "headquery-codegen",
+    "types": "headquery generate",
     "try": "tsx src/try.ts",
-    "test:e2e": "headquery-codegen && vitest run && tsc --noEmit",
+    "test:e2e": "headquery generate && vitest run && tsc --noEmit",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

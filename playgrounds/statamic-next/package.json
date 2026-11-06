@@ -4,9 +4,9 @@
   "type": "module",
   "description": "Next.js app that uses @headquery/statamic against the local Statamic playground.",
   "scripts": {
-    "types": "headquery-codegen",
-    "dev": "headquery-codegen && next dev",
-    "build": "headquery-codegen && next build",
+    "types": "headquery generate",
+    "dev": "headquery generate && next dev",
+    "build": "headquery generate && next build",
     "start": "next start",
     "typecheck": "tsc --noEmit"
   },

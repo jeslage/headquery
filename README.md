@@ -35,13 +35,17 @@ const posts = await cms
 ## Generate types
 
 ```bash
-# frontend in another repo (schema endpoint, see packages/php/statamic/README.md)
-npx headquery-codegen --from https://cms.example.com/api/headquery/schema \
-  --token "$HEADQUERY_SCHEMA_TOKEN" --out src/cms.generated.ts
+# once per frontend: writes headquery.config.ts, prints package.json scripts and env lines
+npx @headquery/codegen init
 
-# same project
+# then, whenever the content model changes (add --check in CI)
+npx headquery generate
+
+# without a config: schema endpoint (see packages/php/statamic/README.md) …
+npx headquery generate --base-url https://cms.example.com --out src/cms.generated.ts
+# … or an exported file from the same project
 php please headquery:schema --out=schema.json
-npx headquery-codegen --from schema.json --out src/cms.generated.ts
+npx headquery generate --from schema.json --out src/cms.generated.ts
 ```
 
 ## Development

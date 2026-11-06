@@ -4,9 +4,21 @@ The Statamic addon exports your content model (collections, taxonomies, globals,
 blueprints and `allowed_filters`) as a CMS-neutral JSON schema. `@headquery/codegen` turns
 it into a TypeScript module.
 
+The CLI is the `headquery` bin of `@headquery/codegen` and has two commands:
+
+| Command | Description |
+| --- | --- |
+| `headquery init` | Run once: asks for the CMS base URL (or a schema file) and the output path, writes `headquery.config.ts` (`.mts`/`.mjs` where needed), and prints the `package.json` scripts and `.env` lines to add. It doesn't change any other file. Flags: `--base-url`, `--from`, `--out`, `--yes` (no prompts), `--force` (overwrite). |
+| `headquery generate` | Fetches the schema and writes the types. Reads the config file; flags below override it. |
+
+Before `@headquery/codegen` is installed, run `npx @headquery/codegen init`: `npx headquery`
+would look for an npm package called `headquery`.
+
 ```bash
-npx headquery-codegen --from schema.json --out src/cms.generated.ts
+npx headquery generate --from schema.json --out src/cms.generated.ts
 ```
+
+Options of `headquery generate`:
 
 | Flag | Description |
 | --- | --- |
@@ -24,8 +36,8 @@ npx headquery-codegen --from schema.json --out src/cms.generated.ts
 ## Config file
 
 Instead of passing flags every time, add a `headquery.config.ts` next to your
-`package.json`. The CLI finds it automatically, so the command becomes just
-`npx headquery-codegen` (or `npx headquery-codegen --check` in CI).
+`package.json` (`headquery init` writes one for you). The CLI finds it automatically, so the
+command becomes just `npx headquery generate` (or `npx headquery generate --check` in CI).
 
 ```ts twoslash
 import { defineConfig } from "@headquery/codegen";

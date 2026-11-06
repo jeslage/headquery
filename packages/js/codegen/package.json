@@ -5,7 +5,7 @@
   "license": "MIT",
   "type": "module",
   "bin": {
-    "headquery-codegen": "./dist/cli.js"
+    "headquery": "./dist/cli.js"
   },
   "exports": {
     ".": {

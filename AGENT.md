@@ -46,7 +46,7 @@ packages/
     core/        @headquery/core      fetch transport, deterministic URLs, errors, types
     schema/      @headquery/schema    IR types + assertIrSchema() (dependency-free)
     statamic/    @headquery/statamic  typed builders for the Statamic REST Content API
-    codegen/     @headquery/codegen   CLI + API: IR (file or URL) → .ts with Register augmentation
+    codegen/     @headquery/codegen   `headquery` CLI (init, generate) + API: IR (file or URL) → .ts with Register augmentation
   php/
     statamic/    headquery/statamic   Statamic addon: schema exporter, CLI, schema route
                  (package.json here is only a private Turborepo wrapper, never published)

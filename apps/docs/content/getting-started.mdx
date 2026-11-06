@@ -26,27 +26,33 @@ npm install -D @headquery/codegen
 
 ### Generate types
 
+Create a `headquery.config.ts` once. `init` asks where the schema comes from and where the
+types should go, writes the config and prints the `package.json` scripts and `.env` lines to add:
+
 <Tabs items={["Same project", "Separate frontend repo"]}>
   <Tabs.Tab>
     ```bash
     php please headquery:schema --out=schema.json
-    npx headquery-codegen --from schema.json --out src/cms.generated.ts
+    npx headquery init --from schema.json
     ```
   </Tabs.Tab>
   <Tabs.Tab>
     Enable the [schema endpoint](/statamic/schema-endpoint) on the CMS, then:
 
     ```bash
-    npx headquery-codegen \
-      --base-url https://cms.example.com \
-      --token "$HEADQUERY_SCHEMA_TOKEN" \
-      --out src/cms.generated.ts
+    npx headquery init --base-url https://cms.example.com
     ```
   </Tabs.Tab>
 </Tabs>
 
-Add `--check` in CI to fail when the generated file is out of date. To skip the flags, put
-them in a [`headquery.config.ts`](/statamic/typed-schema#config-file) and run `npx headquery-codegen`.
+Then generate the types, and again whenever the content model changes:
+
+```bash
+npx headquery generate
+```
+
+Add `--check` in CI to fail when the generated file is out of date. All options are on the
+[typed schema](/statamic/typed-schema) page.
 
 ### Query
 

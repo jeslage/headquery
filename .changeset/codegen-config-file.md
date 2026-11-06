@@ -2,7 +2,7 @@
 "@headquery/codegen": minor
 ---
 
-Add config file support. `headquery-codegen` now reads `headquery.config.{ts,mts,mjs,js}` from
+Add config file support. `headquery generate` now reads `headquery.config.{ts,mts,mjs,js}` from
 the current directory (or the file given with `--config`), so it runs without flags. Use the new
 `defineConfig()` export for typed configs. Relative `from`/`out` paths resolve against the config
 file, and CLI flags override config values. `.ts` configs need Node ≥ 22.18 (native type stripping);

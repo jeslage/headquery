@@ -21,7 +21,7 @@ are exported, and only fields in `allowed_filters` are marked filterable.
 
 ```bash
 php please headquery:schema --out=../frontend/headquery.schema.json
-npx headquery-codegen --from ../frontend/headquery.schema.json --out ../frontend/src/cms.generated.ts
+npx headquery generate --from ../frontend/headquery.schema.json --out ../frontend/src/cms.generated.ts
 ```
 
 ## Export via endpoint (headless, frontend in another repo)
@@ -32,8 +32,8 @@ HEADQUERY_SCHEMA_TOKEN=a-long-random-token
 ```
 
 ```bash
-npx headquery-codegen \
-  --from https://cms.example.com/api/headquery/schema \
+npx headquery generate \
+  --base-url https://cms.example.com \
   --token "$HEADQUERY_SCHEMA_TOKEN" \
   --out src/cms.generated.ts
 ```
