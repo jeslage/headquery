@@ -180,6 +180,14 @@ it for blueprint fields in fixtures or the seed.
 - Keep `FieldMapper` free of Statamic classes so it stays unit-testable.
 - Don't commit the playground install, `vendor/`, `dist/` or lockfiles of PHP packages.
 
+## Branches
+
+- `dev` is the working branch: commit and push directly, no feature branches or PRs needed.
+  CI runs on every push to `dev`.
+- `main` is the released state. Pushes to `main` trigger the npm release workflow
+  (changesets "Version packages" PR) and the Packagist split, so only update it to release:
+  `git checkout main && git merge --ff-only dev && git push`.
+
 ## Releasing
 
 - **npm:** changesets → `release.yml` opens a "Version packages" PR → merging publishes.
