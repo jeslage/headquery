@@ -5,7 +5,12 @@ import { createStatamicClient } from "@headquery/statamic";
 import type {} from "./cms";
 
 const baseUrl = process.env.HEADQUERY_BASE_URL;
-if (!baseUrl) throw new Error("Set HEADQUERY_BASE_URL in playgrounds/statamic-next/.env.local");
+
+if (!baseUrl) {
+  throw new Error(
+    "Set HEADQUERY_BASE_URL in playgrounds/statamic-next/.env.local",
+  );
+}
 
 export const cms = createStatamicClient({
   baseUrl,

@@ -9,7 +9,11 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: data.site_name ?? "headquery playground" };
 }
 
-export default async function RootLayout({ children }: { children: ReactNode }) {
+export default async function RootLayout({
+  children,
+}: {
+  children: ReactNode;
+}) {
   const { data: settings } = await cms.global("settings").get();
   return (
     <html lang="en">

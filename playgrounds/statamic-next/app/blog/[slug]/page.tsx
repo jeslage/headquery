@@ -45,9 +45,17 @@ export default async function PostPage({ params }: Props) {
         {post.stage.label && <> · {post.stage.label}</>}
       </p>
 
-      {post.hero && <img className="hero" src={absolute(post.hero.url)} alt={post.hero.alt ?? ""} />}
+      {post.hero && (
+        <img
+          className="hero"
+          src={absolute(post.hero.url)}
+          alt={post.hero.alt ?? ""}
+        />
+      )}
 
-      {typeof post.content === "string" && <div dangerouslySetInnerHTML={{ __html: post.content }} />}
+      {typeof post.content === "string" && (
+        <div dangerouslySetInnerHTML={{ __html: post.content }} />
+      )}
 
       {post.sections.map((section, i) =>
         section.type === "quote" ? (
@@ -64,7 +72,9 @@ export default async function PostPage({ params }: Props) {
         ),
       )}
 
-      {post.tags.length > 0 && <p className="meta">Tags: {post.tags.map((t) => t.title).join(", ")}</p>}
+      {post.tags.length > 0 && (
+        <p className="meta">Tags: {post.tags.map((t) => t.title).join(", ")}</p>
+      )}
 
       {post.related.length > 0 && (
         <>

@@ -12,16 +12,25 @@ for (const f of [".env.local", ".env"]) {
 }
 // Trust the OS store so DDEV's mkcert certificate works (Node ≥ 22.19).
 if (tls.setDefaultCACertificates) {
-  tls.setDefaultCACertificates([...new Set([...tls.getCACertificates("default"), ...tls.getCACertificates("system")])]);
+  tls.setDefaultCACertificates([
+    ...new Set([
+      ...tls.getCACertificates("default"),
+      ...tls.getCACertificates("system"),
+    ]),
+  ]);
 }
 
 const base = process.env.HEADQUERY_BASE_URL?.replace(/\/+$/, "");
 if (!base) {
-  console.error("Set HEADQUERY_BASE_URL in playgrounds/statamic-next/.env.local (see .env.example).");
+  console.error(
+    "Set HEADQUERY_BASE_URL in playgrounds/statamic-next/.env.local (see .env.example).",
+  );
   process.exit(1);
 }
 const from = `${base}/api/headquery/schema`;
 const out = fileURLToPath(new URL("../lib/cms.ts", import.meta.url));
-const schema = await loadSchema(from, { token: process.env.HEADQUERY_SCHEMA_TOKEN || "dev-schema-token" });
+const schema = await loadSchema(from, {
+  token: process.env.HEADQUERY_SCHEMA_TOKEN || "dev-schema-token",
+});
 await writeFile(out, generate(schema));
 console.log(`✓ wrote lib/cms.ts from ${from}`);
