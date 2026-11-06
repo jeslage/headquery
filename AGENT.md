@@ -75,7 +75,7 @@ pnpm docs:test             # type-checks every ```ts twoslash snippet in apps/do
 pnpm docs:build            # static site → apps/docs/out (incl. Pagefind search index)
 
 # against a running playground (HEADQUERY_BASE_URL in playgrounds/statamic-client/.env)
-pnpm --filter @headquery-internal/playground-statamic-client types      # regenerate src/cms.ts
+pnpm --filter @headquery-internal/playground-statamic-client types      # regenerate src/cms.ts (headquery.config.ts)
 pnpm --filter @headquery-internal/playground-statamic-client try        # scratch script
 pnpm --filter @headquery-internal/playground-statamic-client test:e2e   # codegen + e2e tests + tsc
 pnpm --filter @headquery-internal/playground-statamic-next dev          # Next.js app (env in .env.local)
@@ -203,7 +203,8 @@ it for blueprint fields in fixtures or the seed.
    tests for exporter, command and route.
 2. Contract/e2e tests: JS client against the running playground in CI.
 3. Remaining Statamic resources: navigation trees, assets, users; multi-site helpers.
-4. Codegen: config file (`headquery.config.ts`), `--check` in docs/CI recipes, ETag-aware fetch.
+4. Codegen: `--check` in docs/CI recipes, ETag-aware fetch. (Config file `headquery.config.ts`
+   is done: `packages/js/codegen/src/config.ts`.)
 5. Framework adapters: `@headquery/vue` (composables), `@headquery/react` (hooks),
    then Nuxt/Next integrations (SSR, `revalidate`, caching keys via `query.url()`).
 6. Next CMS: Kirby. KQL is `POST /api/query` (not HTTP-cacheable) → the Kirby Composer

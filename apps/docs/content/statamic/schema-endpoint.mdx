@@ -12,7 +12,7 @@ HEADQUERY_SCHEMA_TOKEN=a-long-random-token
 
 ```bash
 npx headquery-codegen \
-  --from https://cms.example.com/api/headquery/schema \
+  --base-url https://cms.example.com \
   --token "$HEADQUERY_SCHEMA_TOKEN" \
   --out src/cms.generated.ts
 ```

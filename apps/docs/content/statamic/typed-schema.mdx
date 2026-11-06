@@ -10,12 +10,48 @@ npx headquery-codegen --from schema.json --out src/cms.generated.ts
 
 | Flag | Description |
 | --- | --- |
-| `--from` | Schema source: http(s) URL of the schema endpoint, or a local JSON file |
+| `--from` | Schema source: full http(s) URL of the schema endpoint, or a local JSON file |
+| `--base-url` | CMS origin instead of `--from`; fetches `<base-url><api-prefix><schema-path>` |
+| `--api-prefix` | API prefix of the CMS (default: `/api`) |
+| `--schema-path` | Schema route below the API prefix (default: `/headquery/schema`) |
 | `--out` | Output `.ts` file |
 | `--token` | Bearer token for the schema endpoint (default: `$HEADQUERY_SCHEMA_TOKEN`) |
 | `--target` | Adapter target (default: taken from the schema, e.g. `statamic`) |
 | `--module` | Module to augment (default: `@headquery/<target>`) |
 | `--check` | Don't write; exit 1 if the output file is out of date (for CI) |
+| `--config` | Config file (default: `headquery.config.{ts,mts,mjs,js}` in the current directory) |
+
+## Config file
+
+Instead of passing flags every time, add a `headquery.config.ts` next to your
+`package.json`. The CLI finds it automatically, so the command becomes just
+`npx headquery-codegen` (or `npx headquery-codegen --check` in CI).
+
+```ts twoslash
+import { defineConfig } from "@headquery/codegen";
+
+export default defineConfig({
+  from: { baseUrl: "https://cms.example.com" }, // → https://cms.example.com/api/headquery/schema
+  out: "src/cms.generated.ts",
+  token: process.env.HEADQUERY_SCHEMA_TOKEN,
+});
+```
+
+`from` is one of:
+
+- `{ baseUrl, apiPrefix?, schemaPath? }`: the CMS origin, like the client's `baseUrl`. `apiPrefix`
+  defaults to `/api` (as in the client) and `schemaPath` to `/headquery/schema`. Change them if
+  you changed `statamic.api.route` or `headquery.schema.path` on the CMS.
+- a full http(s) URL of the schema endpoint.
+- a local JSON file, e.g. `"./schema.json"` from `php please headquery:schema`.
+
+How the config file is found and applied:
+
+- Supported names, in order: `headquery.config.ts`, `.mts`, `.mjs`, `.js`. Use `--config` for any other path.
+- Relative `from` and `out` paths resolve against the config file's directory, so it doesn't matter where you run the CLI from.
+- Flags override the config (e.g. `--out` for a one-off run; `--from` or `--base-url` replace `from`). The token falls back to `$HEADQUERY_SCHEMA_TOKEN`.
+- The config is a regular module, so you can compute values in it. `.env` files aren't loaded automatically; call `process.loadEnvFile(".env.local")` in the config if you need them.
+- `.ts` configs are loaded by Node's built-in type stripping (Node ≥ 22.18). On older Node, name the file `headquery.config.mjs` instead.
 
 ## How registration works
 

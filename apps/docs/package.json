@@ -4,7 +4,7 @@
   "description": "headquery documentation site (Nextra). Not published.",
   "type": "module",
   "scripts": {
-    "codegen": "headquery-codegen --from ../../spec/statamic/fixtures/schema.json --out generated/cms.generated.ts",
+    "codegen": "headquery-codegen",
     "predev": "pnpm codegen",
     "dev": "next dev",
     "prebuild": "pnpm codegen",

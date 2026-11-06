@@ -2,6 +2,21 @@ import { assertIrSchema, type IrSchema } from "@headquery/schema";
 import { generateStatamic } from "./statamic";
 
 export { fieldType, generateStatamic, pascal, type StatamicGenerateOptions } from "./statamic";
+export {
+  CONFIG_FILES,
+  DEFAULT_API_PREFIX,
+  DEFAULT_SCHEMA_PATHS,
+  defineConfig,
+  findConfig,
+  loadConfig,
+  resolveOptions,
+  schemaEndpointUrl,
+  type CliFlags,
+  type HeadqueryConfig,
+  type ResolvedOptions,
+  type SchemaEndpoint,
+  type SchemaSource,
+} from "./config";
 
 export type Target = "statamic";
 
