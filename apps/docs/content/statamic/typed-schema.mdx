@@ -1,0 +1,65 @@
+# Typed schema
+
+The Statamic addon exports your content model (collections, taxonomies, globals, their
+blueprints and `allowed_filters`) as a CMS-neutral JSON schema. `@headquery/codegen` turns
+it into a TypeScript module.
+
+```bash
+npx headquery-codegen --from schema.json --out src/cms.generated.ts
+```
+
+| Flag | Description |
+| --- | --- |
+| `--from` | Schema source: http(s) URL of the schema endpoint, or a local JSON file |
+| `--out` | Output `.ts` file |
+| `--token` | Bearer token for the schema endpoint (default: `$HEADQUERY_SCHEMA_TOKEN`) |
+| `--target` | Adapter target (default: taken from the schema, e.g. `statamic`) |
+| `--module` | Module to augment (default: `@headquery/<target>`) |
+| `--check` | Don't write; exit 1 if the output file is out of date (for CI) |
+
+## How registration works
+
+The generated file declares one interface per resource (`BlogEntry`, `TagsTerm`,
+`SettingsGlobal`, …) and registers a `Schema` through module augmentation:
+
+```ts
+declare module "@headquery/statamic" {
+  interface Register {
+    schema: Schema;
+  }
+}
+```
+
+Import the file once (for example where you create the client). From then on
+`createStatamicClient()` is fully typed without generics: collection handles autocomplete,
+`.where()` only accepts filterable fields, and `.fields()` narrows results.
+
+Without a registered schema, the client falls back to loose types: any handle, any field,
+items typed as `{ id: string } & Record<string, unknown>`.
+
+You can also pass a schema explicitly, e.g. when you talk to two different CMS instances:
+
+```ts
+import type { Schema } from "./cms.generated";
+
+const cms = createStatamicClient<Schema>({ baseUrl: "https://cms.example.com" });
+```
+
+## Field mapping
+
+| Statamic | TypeScript |
+| --- | --- |
+| `text`, `textarea`, `markdown`, `slug` | `string` (`\| null` unless required) |
+| `integer`, `float`, `range` | `number` |
+| `toggle` | `boolean` (never null) |
+| `date` | ISO `string` |
+| `select`, `button_group`, `radio`, `checkboxes` | `HqOption<"a" \| "b">` (`{ key, value, label }`; all `null` when empty) |
+| `assets` | `HqAsset` or `HqAsset[]` (`max_files`) |
+| `entries`, `terms`, `users` | `HqRelatedEntry`, `HqRelatedTerm`, `HqUser` |
+| `grid`, `replicator` | arrays of typed rows/sets (`[]` when empty) |
+| `bard` | `HqRichText` (HTML string without sets, blocks with sets) |
+| unknown fieldtypes | `unknown` — see [custom fieldtypes](/statamic/custom-fieldtypes) |
+
+System fields Statamic adds to every entry, term and global set (`id`, `url`, `status`,
+`permalink`, …) come from `HqEntryBase`, `HqTermBase` and `HqGlobalBase`. Blueprint
+fields with the same handle take precedence.

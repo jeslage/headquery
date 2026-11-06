@@ -23,3 +23,10 @@ playgrounds/statamic/*
 
 # Statamic install inside the playground (re-ignore after the !.env.example rule above)
 playgrounds/statamic/.env.example
+
+# Docs (Next.js / Nextra)
+.next/
+apps/docs/out/
+apps/docs/next-env.d.ts
+apps/docs/generated/
+apps/docs/public/_pagefind/

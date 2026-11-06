@@ -1,0 +1,46 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "extends": [
+    "//"
+  ],
+  "tasks": {
+    "build": {
+      "dependsOn": [
+        "^build"
+      ],
+      "inputs": [
+        "app/**",
+        "content/**",
+        "public/**",
+        "mdx-components.tsx",
+        "next.config.mjs",
+        "package.json",
+        "tsconfig.json",
+        "$TURBO_ROOT$/spec/statamic/fixtures/**"
+      ],
+      "outputs": [
+        "out/**",
+        ".next/**",
+        "!.next/cache/**"
+      ]
+    },
+    "test": {
+      "dependsOn": [
+        "^build"
+      ],
+      "inputs": [
+        "content/**",
+        "scripts/**",
+        "package.json",
+        "$TURBO_ROOT$/spec/statamic/fixtures/**"
+      ]
+    },
+    "dev": {
+      "dependsOn": [
+        "^build"
+      ],
+      "cache": false,
+      "persistent": true
+    }
+  }
+}

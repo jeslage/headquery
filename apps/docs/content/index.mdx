@@ -1,0 +1,49 @@
+# headquery
+
+Typed, cacheable JavaScript clients for the REST APIs of headless PHP CMSs. You keep the
+CMS's own query vocabulary (filters, sort, fields) and get TypeScript types generated from
+your content model.
+
+import { Callout } from "nextra/components";
+
+<Callout type="warning">
+  Early development. Statamic is supported first; Kirby and Craft are planned.
+</Callout>
+
+```ts
+import { createStatamicClient } from "@headquery/statamic";
+import "./cms.generated"; // registers your schema's types
+
+const cms = createStatamicClient({ baseUrl: "https://cms.example.com" });
+
+const posts = await cms
+  .collection("blog")                       // collection handles autocomplete
+  .entries()
+  .where("title", "contains", "monorepo")   // only allowed_filters fields are accepted
+  .sort("-date")
+  .limit(10)
+  .fields(["title", "date", "hero"])        // narrows the result type
+  .get();
+// GET /api/collections/blog/entries?fields=title,date,hero&filter[title:contains]=monorepo&limit=10&sort=-date
+```
+
+## Principles
+
+- **Wraps the existing REST API.** headquery is a thin layer over `fetch`. It doesn't add a
+  new query engine on the server.
+- **Prefers GET with deterministic URLs.** The same query always produces the same URL, so
+  browsers, CDNs and proxies can cache responses.
+- **Works untyped, better typed.** Without generated types everything still works with
+  loose types. Run the codegen and handles, filterable fields and result shapes are checked
+  by TypeScript, without passing generics by hand.
+- **Zero runtime dependencies** in the JS packages.
+
+## Packages
+
+| Package | Registry | Purpose |
+| --- | --- | --- |
+| `@headquery/core` | npm | CMS-agnostic fetch transport with deterministic (cache-friendly) URLs |
+| `@headquery/statamic` | npm | Typed query builders for the Statamic REST Content API |
+| `@headquery/codegen` | npm | Generates TS types from a CMS schema (file or URL) |
+| `@headquery/schema` | npm | Types for the intermediate schema (IR) |
+| `headquery/statamic` | Packagist | Statamic addon: exports the content model via CLI or endpoint |

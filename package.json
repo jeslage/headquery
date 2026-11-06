@@ -6,10 +6,13 @@
     "node": ">=20"
   },
   "scripts": {
-    "build": "turbo run build",
+    "build": "turbo run build --filter=./packages/js/*",
     "test": "turbo run test",
     "test:js": "turbo run test --filter=./packages/js/*",
     "test:php": "turbo run test --filter=./packages/php/*",
+    "docs:dev": "turbo run dev --filter=@headquery-internal/docs",
+    "docs:build": "turbo run build --filter=@headquery-internal/docs",
+    "docs:test": "turbo run test --filter=@headquery-internal/docs",
     "typecheck": "turbo run typecheck",
     "dev": "turbo run dev --parallel",
     "changeset": "changeset",
