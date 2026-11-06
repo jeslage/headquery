@@ -26,3 +26,10 @@ playgrounds/statamic/.env.example
 
 # JS playground client: generated types
 playgrounds/statamic-client/src/cms.ts
+
+# Docs (Next.js / Nextra)
+.next/
+apps/docs/out/
+apps/docs/next-env.d.ts
+apps/docs/generated/
+apps/docs/public/_pagefind/

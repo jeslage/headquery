@@ -1,0 +1,22 @@
+# Custom fieldtypes
+
+Fieldtypes the addon doesn't know are exported as `unknown`. Map them in
+`config/headquery.php` (`field_types`), or register a mapper at runtime, for example in a
+service provider:
+
+```php
+use Headquery\Statamic\Schema\FieldMapper;
+
+FieldMapper::extend('seo_pro', fn (array $config) => [
+    'type' => 'object',
+    'fields' => [
+        'title' => ['type' => 'string'],
+        'description' => ['type' => 'string'],
+    ],
+]);
+```
+
+The returned array is a field definition of the intermediate schema. Available types:
+`string` `number` `boolean` `date` `enum` `array` `object` `relation` `asset` `richtext`
+`blocks` `unknown`. The full contract is
+[`spec/ir/schema-v1.json`](https://github.com/headquery/headquery/blob/main/spec/ir/schema-v1.json).

@@ -27,6 +27,21 @@ jobs:
       - run: pnpm build
       - run: pnpm test:js
 
+  docs:
+    name: Docs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # type-checks every twoslash snippet against the packages and the fixture schema
+      - run: pnpm docs:test
+      - run: pnpm docs:build
+
   php:
     name: PHP ${{ matrix.php }} / ${{ matrix.package }}
     runs-on: ubuntu-latest

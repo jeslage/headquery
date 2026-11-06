@@ -1,0 +1,46 @@
+# Caching & URLs
+
+headquery only sends `GET` requests for reads, and the same logical query always produces
+the **same URL**, regardless of the order in which you call the builder methods:
+
+- query keys are sorted
+- `undefined` / `null` values are dropped
+- arrays are joined with `,` in the given order (order matters, e.g. for `sort`)
+- `[`, `]`, `:` and `,` stay unencoded for readability
+
+So browsers, CDNs and reverse proxies can cache CMS responses without any extra setup.
+
+## Using the URL as a cache key
+
+Every query exposes its full URL without sending a request:
+
+```ts twoslash
+import "./generated/cms.generated";
+import { createStatamicClient } from "@headquery/statamic";
+const cms = createStatamicClient({ baseUrl: "https://cms.example.com" });
+// ---cut---
+const query = cms.collection("blog").entries().where("featured", true).limit(3);
+
+query.url();
+// https://cms.example.com/api/collections/blog/entries?filter[featured:is]=true&limit=3
+```
+
+Use it as the key for SWR, TanStack Query, Nuxt's `useFetch`, or your own cache.
+
+## Framework fetch options
+
+`fetchOptions` is passed through to `fetch`, including framework-specific keys:
+
+```ts twoslash
+import "./generated/cms.generated";
+import { createStatamicClient } from "@headquery/statamic";
+// ---cut---
+// Next.js: revalidate CMS data every 60 seconds
+const cms = createStatamicClient({
+  baseUrl: "https://cms.example.com",
+  fetchOptions: { next: { revalidate: 60 } },
+});
+
+// or per call
+await cms.global("settings").get({ fetchOptions: { cache: "no-store" } });
+```

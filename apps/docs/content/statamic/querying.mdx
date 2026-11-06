@@ -1,0 +1,138 @@
+# Querying
+
+`@headquery/statamic` wraps Statamic's [REST Content API](https://statamic.dev/rest-api).
+Every builder compiles to a plain `GET` request. The filter, sort and field names are the
+same ones the API itself uses.
+
+The examples on this page are type-checked against types generated from a sample schema:
+a `blog` collection, a `tags` taxonomy and a `settings` global set. Hover over the code
+to see the inferred types.
+
+## Collections
+
+```ts twoslash
+import "./generated/cms.generated";
+// ---cut---
+import { createStatamicClient } from "@headquery/statamic";
+
+const cms = createStatamicClient({ baseUrl: "https://cms.example.com" });
+
+const posts = await cms
+  .collection("blog")
+  .entries()
+  .where("featured", true)
+  .sort("-date")
+  .limit(10)
+  .get();
+
+posts.data[0]?.title;
+//             ^?
+```
+
+`GET /api/collections/blog/entries?filter[featured:is]=true&limit=10&sort=-date`
+
+A single entry, by id or slug:
+
+```ts twoslash
+import "./generated/cms.generated";
+import { createStatamicClient } from "@headquery/statamic";
+const cms = createStatamicClient({ baseUrl: "https://cms.example.com" });
+// ---cut---
+const { data: post } = await cms.collection("blog").entry("hello-world").get();
+```
+
+## Filters
+
+`.where(field, value)` means the `is` condition. Pass a condition as the second argument
+for anything else:
+
+```ts twoslash
+import "./generated/cms.generated";
+import { createStatamicClient } from "@headquery/statamic";
+const cms = createStatamicClient({ baseUrl: "https://cms.example.com" });
+// ---cut---
+cms.collection("blog").entries()
+  .where("title", "contains", "release")    // filter[title:contains]=release
+  .where("slug", "in", ["a", "b"])          // filter[slug:in]=a|b
+  .where("featured", "exists");             // filter[featured:exists]=true
+```
+
+| Kind | Conditions |
+| --- | --- |
+| Scalar | `is` `not` `contains` `doesnt_contain` `starts_with` `doesnt_start_with` `ends_with` `doesnt_end_with` `gt` `gte` `lt` `lte` |
+| List | `in` `not_in` (values joined with `\|`) |
+| Presence | `exists` `doesnt_exist` |
+
+Statamic only accepts filters on fields listed in the collection's `allowed_filters`.
+With generated types, other fields are a type error:
+
+```ts twoslash
+// @errors: 2769
+import "./generated/cms.generated";
+import { createStatamicClient } from "@headquery/statamic";
+const cms = createStatamicClient({ baseUrl: "https://cms.example.com" });
+// ---cut---
+cms.collection("blog").entries().where("reading_time", 3);
+```
+
+## Sort, pagination, sites
+
+```ts twoslash
+import "./generated/cms.generated";
+import { createStatamicClient } from "@headquery/statamic";
+const cms = createStatamicClient({ baseUrl: "https://cms.example.com" });
+// ---cut---
+const page2 = await cms.collection("blog").entries()
+  .sort("-date", "title")   // sort=-date,title (later calls replace earlier ones)
+  .limit(20)
+  .page(2)
+  .site("de")               // multi-site
+  .get();
+
+page2.meta.total;
+page2.links.next;
+```
+
+`.first()` sends `limit=1&page=1` and returns the first item or `null`.
+
+## Selecting fields
+
+`.fields()` sends `fields=` and narrows the result type to the selected fields:
+
+```ts twoslash
+import "./generated/cms.generated";
+import { createStatamicClient } from "@headquery/statamic";
+const cms = createStatamicClient({ baseUrl: "https://cms.example.com" });
+// ---cut---
+const { data } = await cms.collection("blog").entries().fields(["title", "hero"]).get();
+//      ^?
+```
+
+## Taxonomies and globals
+
+```ts twoslash
+import "./generated/cms.generated";
+import { createStatamicClient } from "@headquery/statamic";
+const cms = createStatamicClient({ baseUrl: "https://cms.example.com" });
+// ---cut---
+const tags = await cms.taxonomy("tags").terms().where("title", "starts_with", "j").get();
+const tag = await cms.taxonomy("tags").term("javascript").get();
+const settings = await cms.global("settings").get();
+settings.data.site_name;
+//            ^?
+```
+
+## Immutability
+
+Every builder method returns a new query, so a partial query can be reused safely:
+
+```ts twoslash
+import "./generated/cms.generated";
+import { createStatamicClient } from "@headquery/statamic";
+const cms = createStatamicClient({ baseUrl: "https://cms.example.com" });
+// ---cut---
+const blog = cms.collection("blog").entries().sort("-date");
+
+const featured = blog.where("featured", true).limit(3);
+const latest = blog.limit(10); // not affected by `featured`
+```

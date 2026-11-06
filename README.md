@@ -50,6 +50,7 @@ npx headquery-codegen --from schema.json --out src/cms.generated.ts
 pnpm install
 pnpm build
 pnpm test:js
+pnpm docs:dev     # documentation site (apps/docs)
 ```
 
 See [AGENT.md](./AGENT.md) for architecture, conventions and the roadmap.

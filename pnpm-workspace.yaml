@@ -3,6 +3,13 @@ packages:
   - "packages/php/*"
   - "playgrounds/statamic-client"
   - "playgrounds/statamic-next"
+  - "apps/*"
 
 onlyBuiltDependencies:
   - esbuild
+
+# Nextra 4.6.1 breaks with zod 4.6.x (Layout `children` fails as "nonoptional"); 4.3.6 verified.
+# Scoped to Nextra so nothing else is affected; drop once Nextra ships a fix.
+overrides:
+  "nextra>zod": "4.3.6"
+  "nextra-theme-docs>zod": "4.3.6"

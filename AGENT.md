@@ -50,6 +50,8 @@ packages/
   php/
     statamic/    headquery/statamic   Statamic addon: schema exporter, CLI, schema route
                  (package.json here is only a private Turborepo wrapper, never published)
+apps/
+  docs/          @headquery-internal/docs  Nextra 4 docs site (static export), never published
 spec/
   ir/schema-v1.json                   JSON Schema of the IR — THE cross-language contract
   statamic/fixtures/schema.json       realistic IR used by JS and PHP tests
@@ -63,11 +65,14 @@ playgrounds/statamic-next/            private Next.js app (App Router) using the
 
 ```bash
 pnpm install
-pnpm build                 # turbo: builds all JS packages in dependency order
+pnpm build                 # turbo: builds all JS packages in dependency order (not docs/playgrounds)
 pnpm test:js               # vitest + tsc --noEmit for every JS package
 pnpm test:php              # runs `composer test` in PHP packages (needs `composer install` there first)
 pnpm --filter @headquery/statamic test     # one package
 pnpm changeset             # REQUIRED for user-facing changes to published JS packages
+pnpm docs:dev              # docs site on localhost:3000 (builds packages first)
+pnpm docs:test             # type-checks every ```ts twoslash snippet in apps/docs/content
+pnpm docs:build            # static site → apps/docs/out (incl. Pagefind search index)
 
 # against a running playground (HEADQUERY_BASE_URL in playgrounds/statamic-client/.env)
 pnpm --filter @headquery-internal/playground-statamic-client types      # regenerate src/cms.ts
@@ -112,6 +117,20 @@ does not understand.
   and review the diff.
 - `packages/js/codegen/tests/usage.test.ts` — imports that snapshot and type-checks real
   client usage against it (registered schema, filterable fields, narrowing via `fields()`).
+
+## Docs (`apps/docs`)
+
+- Nextra 4 (App Router) with `output: "export"`; pages are MDX in `apps/docs/content/`,
+  navigation order in `_meta.ts` files.
+- Code samples marked ```` ```ts twoslash ```` are type-checked against the real workspace
+  packages and against types generated from `spec/statamic/fixtures/schema.json`
+  (`apps/docs/generated/`, gitignored, written by the `codegen` pre-script). Import them
+  with `import "./generated/cms.generated";` above a `// ---cut---` line.
+- `next build` does **not** fail on broken snippets (rehype-pretty-code swallows Twoslash
+  errors), so `pnpm docs:test` (`scripts/check-snippets.mjs`) is the guard. Expected
+  errors need `// @errors: <code>`.
+- Public API changes should update the docs in the same PR.
+- `pnpm-workspace.yaml` pins zod 4.3.6 for Nextra only: Nextra 4.6.1 breaks with zod 4.6.x (4.3.6 verified).
 
 ## Statamic specifics
 
