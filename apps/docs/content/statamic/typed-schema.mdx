@@ -8,7 +8,7 @@ The CLI is the `headquery` bin of `@headquery/codegen` and has two commands:
 
 | Command | Description |
 | --- | --- |
-| `headquery init` | Run once: asks for the CMS base URL (or a schema file) and the output path, writes `headquery.config.ts` (`.mts`/`.mjs` where needed), and prints the `package.json` scripts and `.env` lines to add. It doesn't change any other file. Flags: `--base-url`, `--from`, `--out`, `--yes` (no prompts), `--force` (overwrite). |
+| `headquery init` | Run once: asks for the CMS base URL (or a schema file; suggests `HEADQUERY_BASE_URL` from the environment, `.env.local` or `.env`) and the output path, writes `headquery.config.ts` (`.mts`/`.mjs` where needed), and prints the `package.json` scripts and `.env` lines to add. It doesn't change any other file. Flags: `--base-url`, `--from`, `--out`, `--yes` (no prompts), `--force` (overwrite). |
 | `headquery generate` | Fetches the schema and writes the types. Reads the config file; flags below override it. |
 
 Before `@headquery/codegen` is installed, run `npx @headquery/codegen init`: `npx headquery`

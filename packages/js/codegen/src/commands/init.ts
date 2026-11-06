@@ -2,11 +2,13 @@ import { existsSync } from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
 import { basename, resolve } from "node:path";
 import { createInterface } from "node:readline/promises";
+import * as util from "node:util";
 import { parseArgs } from "node:util";
 import { findConfig } from "../config";
 import {
   configFileName,
   initDefaults,
+  initPrompts,
   parseSourceInput,
   renderConfig,
   renderNextSteps,
@@ -21,7 +23,8 @@ Usage:
   headquery init --yes --base-url <cms origin> [--out <file>]
 
 Options:
-  --base-url   CMS origin, e.g. https://cms.example.com (default: $HEADQUERY_BASE_URL)
+  --base-url   CMS origin, e.g. https://cms.example.com
+               (default: $HEADQUERY_BASE_URL, else HEADQUERY_BASE_URL from .env.local or .env)
   --from       Full schema endpoint URL or local schema JSON file instead of --base-url
   --out        Output .ts file (default: src/cms.generated.ts, lib/… or ./…)
   --yes        Don't ask; use flags and defaults (also when stdin isn't a terminal)
@@ -37,6 +40,21 @@ async function readPackageJson(cwd: string): Promise<InitContext["packageJson"]>
   } catch {
     return undefined;
   }
+}
+
+/** First `HEADQUERY_BASE_URL` in .env.local or .env, as a suggestion only (nothing is loaded). */
+async function findDotenvBaseUrl(cwd: string): Promise<InitContext["dotenv"]> {
+  for (const file of [".env.local", ".env"]) {
+    try {
+      // util.parseEnv needs Node ≥ 20.12; without it there's simply no suggestion.
+      const parseEnv = (util as { parseEnv?: (content: string) => Record<string, string | undefined> }).parseEnv;
+      const baseUrl = parseEnv?.(await readFile(resolve(cwd, file), "utf8")).HEADQUERY_BASE_URL;
+      if (baseUrl) return { file, baseUrl };
+    } catch {
+      // missing or unreadable: try the next file
+    }
+  }
+  return undefined;
 }
 
 export async function initCommand(args: string[]): Promise<void> {
@@ -63,6 +81,7 @@ export async function initCommand(args: string[]): Promise<void> {
   }
 
   const packageJson = await readPackageJson(cwd);
+  const dotenv = await findDotenvBaseUrl(cwd);
   const ctx: InitContext = {
     env: process.env,
     hasSrcDir: existsSync(resolve(cwd, "src")),
@@ -70,6 +89,7 @@ export async function initCommand(args: string[]): Promise<void> {
     hasTsconfig: existsSync(resolve(cwd, "tsconfig.json")),
     ...(packageJson ? { packageJson } : {}),
     nodeStripsTypes: Boolean((process.features as { typescript?: unknown }).typescript),
+    ...(dotenv ? { dotenv } : {}),
   };
   const defaults = initDefaults(ctx, { baseUrl: values["base-url"], from: values.from, out: values.out });
 
@@ -78,22 +98,26 @@ export async function initCommand(args: string[]): Promise<void> {
   const interactive = !values.yes && process.stdin.isTTY === true;
 
   if (interactive) {
+    const prompts = initPrompts(defaults);
     const rl = createInterface({ input: process.stdin, output: process.stdout });
     try {
-      const shown = source === undefined ? "" : typeof source === "string" ? source : source.baseUrl;
+      console.log(prompts.intro);
       // Flags that were given explicitly aren't asked again.
       if (values["base-url"] === undefined && values.from === undefined) {
         for (;;) {
-          const answer = (await rl.question(`Base URL of your CMS (or path to a schema JSON file)${shown ? ` (${shown})` : ""}: `)).trim();
+          const answer = (await rl.question(prompts.source)).trim();
           if (answer) {
             source = parseSourceInput(answer);
             break;
           }
           if (source !== undefined) break;
+          console.log("A base URL or schema file is required.");
         }
+        console.log();
       }
       if (values.out === undefined) {
-        out = (await rl.question(`Output file (${out}): `)).trim() || out;
+        out = (await rl.question(prompts.out)).trim() || out;
+        console.log();
       }
     } finally {
       rl.close();

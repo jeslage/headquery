@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { loadConfig, resolveOptions } from "../src";
-import { initDefaults, parseSourceInput, renderConfig, renderNextSteps, type InitContext } from "../src/init";
+import { initDefaults, initPrompts, parseSourceInput, renderConfig, renderNextSteps, type InitContext } from "../src/init";
 
 const ctx = (overrides: Partial<InitContext> = {}): InitContext => ({
   env: {},
@@ -38,9 +38,32 @@ describe("initDefaults", () => {
     expect(initDefaults(ctx()).source).toBeUndefined();
   });
 
+  it("falls back to HEADQUERY_BASE_URL from a dotenv file and says where defaults come from", () => {
+    const dotenv = { file: ".env.local", baseUrl: "https://dotenv.test" };
+    const d = initDefaults(ctx({ dotenv, hasSrcDir: true }));
+    expect(d.source).toEqual({ baseUrl: "https://dotenv.test" });
+    expect(d.sourceOrigin).toBe("HEADQUERY_BASE_URL in .env.local");
+    expect(d.outOrigin).toBe("src/ exists");
+    // the real environment wins over the file
+    expect(initDefaults(ctx({ dotenv, env: { HEADQUERY_BASE_URL: "https://env.test" } })).sourceOrigin).toBe(
+      "$HEADQUERY_BASE_URL",
+    );
+  });
+
   it("rejects conflicting or invalid flags", () => {
     expect(() => initDefaults(ctx(), { baseUrl: "https://a.test", from: "b.json" })).toThrow(/either --from/);
     expect(() => initDefaults(ctx(), { baseUrl: "cms.test" })).toThrow(/http\(s\) URL/);
+  });
+});
+
+describe("initPrompts", () => {
+  it("shows the default and its origin, or explains why there is none", () => {
+    const withDefault = initPrompts(initDefaults(ctx({ env: { HEADQUERY_BASE_URL: "https://cms.test" } })));
+    expect(withDefault.intro).toContain("headquery.config.ts");
+    expect(withDefault.source).toContain("e.g. https://cms.example.com");
+    expect(withDefault.source).toContain("[https://cms.test] from $HEADQUERY_BASE_URL");
+    expect(withDefault.out).toContain("[cms.generated.ts] no src/ or lib/ folder");
+    expect(initPrompts(initDefaults(ctx())).source).toContain("no default: HEADQUERY_BASE_URL isn't set");
   });
 });
 

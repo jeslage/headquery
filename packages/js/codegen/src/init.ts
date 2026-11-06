@@ -18,6 +18,8 @@ export interface InitContext {
   };
   /** Whether this Node can import .ts files natively (`process.features.typescript`). */
   nodeStripsTypes: boolean;
+  /** `HEADQUERY_BASE_URL` found in a dotenv file (only used as a suggestion, nothing is loaded). */
+  dotenv?: { file: string; baseUrl: string };
 }
 
 export interface InitFlags {
@@ -27,9 +29,13 @@ export interface InitFlags {
 }
 
 export interface InitDefaults {
-  /** Source to suggest, if one is known (flag or `$HEADQUERY_BASE_URL`). */
+  /** Source to suggest, if one is known (flag, `$HEADQUERY_BASE_URL` or a dotenv file). */
   source?: SchemaSource;
+  /** Where `source` came from, for the prompt, e.g. "HEADQUERY_BASE_URL in .env.local". */
+  sourceOrigin?: string;
   out: string;
+  /** Why `out` was chosen, for the prompt. */
+  outOrigin: string;
   format: ConfigFormat;
 }
 
@@ -49,23 +55,56 @@ export function initDefaults(ctx: InitContext, flags: InitFlags = {}): InitDefau
     throw new Error(`headquery init: --base-url must be an http(s) URL, got "${flags.baseUrl}"`);
   }
   const envBaseUrl = ctx.env.HEADQUERY_BASE_URL || undefined;
-  const source: SchemaSource | undefined =
-    flags.baseUrl !== undefined
-      ? { baseUrl: flags.baseUrl.replace(/\/+$/, "") }
-      : flags.from !== undefined
-        ? flags.from
-        : envBaseUrl && isUrl(envBaseUrl)
-          ? { baseUrl: envBaseUrl.replace(/\/+$/, "") }
-          : undefined;
+  const trim = (url: string) => url.replace(/\/+$/, "");
+  let source: SchemaSource | undefined;
+  let sourceOrigin: string | undefined;
+  if (flags.baseUrl !== undefined) {
+    [source, sourceOrigin] = [{ baseUrl: trim(flags.baseUrl) }, "--base-url"];
+  } else if (flags.from !== undefined) {
+    [source, sourceOrigin] = [flags.from, "--from"];
+  } else if (envBaseUrl && isUrl(envBaseUrl)) {
+    [source, sourceOrigin] = [{ baseUrl: trim(envBaseUrl) }, "$HEADQUERY_BASE_URL"];
+  } else if (ctx.dotenv && isUrl(ctx.dotenv.baseUrl)) {
+    [source, sourceOrigin] = [{ baseUrl: trim(ctx.dotenv.baseUrl) }, `HEADQUERY_BASE_URL in ${ctx.dotenv.file}`];
+  }
 
-  const out =
-    flags.out ?? (ctx.hasSrcDir ? "src/cms.generated.ts" : ctx.hasLibDir ? "lib/cms.generated.ts" : "cms.generated.ts");
+  const [out, outOrigin] =
+    flags.out !== undefined
+      ? [flags.out, "--out"]
+      : ctx.hasSrcDir
+        ? ["src/cms.generated.ts", "src/ exists"]
+        : ctx.hasLibDir
+          ? ["lib/cms.generated.ts", "lib/ exists"]
+          : ["cms.generated.ts", "no src/ or lib/ folder"];
 
   // .ts only where Node can load it; .mts outside "type": "module" packages so Node treats it as ESM.
   const format: ConfigFormat =
     !ctx.hasTsconfig || !ctx.nodeStripsTypes ? "mjs" : ctx.packageJson?.type === "module" ? "ts" : "mts";
 
-  return { ...(source !== undefined ? { source } : {}), out, format };
+  return {
+    ...(source !== undefined ? { source } : {}),
+    ...(sourceOrigin !== undefined ? { sourceOrigin } : {}),
+    out,
+    outOrigin,
+    format,
+  };
+}
+
+const sourceLabel = (source: SchemaSource) => (typeof source === "string" ? source : source.baseUrl);
+
+/** Intro and question texts for the interactive prompts. */
+export function initPrompts(defaults: InitDefaults) {
+  return {
+    intro: `Creating ${configFileName(defaults.format)}. Press Enter to keep the value in [brackets].\n`,
+    source: [
+      `CMS base URL, e.g. https://cms.example.com (or a schema file such as ./schema.json)`,
+      defaults.source !== undefined
+        ? `  [${sourceLabel(defaults.source)}] from ${defaults.sourceOrigin}`
+        : `  no default: HEADQUERY_BASE_URL isn't set (environment, .env.local or .env)`,
+      `> `,
+    ].join("\n"),
+    out: [`Output file for the generated types`, `  [${defaults.out}] ${defaults.outOrigin}`, `> `].join("\n"),
+  };
 }
 
 export const configFileName = (format: ConfigFormat) => `headquery.config.${format}`;
