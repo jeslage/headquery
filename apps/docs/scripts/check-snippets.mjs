@@ -3,9 +3,8 @@
 // Nextra renders these blocks, but rehype-pretty-code swallows Twoslash errors and falls
 // back to plain highlighting, so a broken sample would never fail `next build`. This
 // script is the actual guard. Expected errors are declared with `// @errors: <code>`.
-import { readFile } from "node:fs/promises";
+import { glob, readFile } from "node:fs/promises";
 import { relative } from "node:path";
-import { glob } from "node:fs/promises";
 import { createTwoslasher } from "twoslash";
 
 const BLOCK = /^```(?:ts|tsx)\s+twoslash[^\n]*\n([\s\S]*?)^```/gm;

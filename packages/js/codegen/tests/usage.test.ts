@@ -17,7 +17,9 @@ describe("generated types work with @headquery/statamic", () => {
 
   it("types collection handles, filters and results from the registered schema", () => {
     const q = cms.collection("blog").entries().where("featured", true).fields(["title", "hero"]);
-    expectTypeOf(q.get).returns.resolves.toHaveProperty("data").toEqualTypeOf<Array<Pick<BlogEntry, "title" | "hero">>>();
+    expectTypeOf(q.get)
+      .returns.resolves.toHaveProperty("data")
+      .toEqualTypeOf<Array<Pick<BlogEntry, "title" | "hero">>>();
     expectTypeOf<BlogEntry["hero"]>().toEqualTypeOf<HqAsset | null>();
     expectTypeOf<BlogEntry["stage"]>().toEqualTypeOf<HqOption<"draft" | "review" | "live"> | HqEmptyOption>();
     expectTypeOf<BlogEntry["featured"]>().toEqualTypeOf<boolean>();
@@ -37,12 +39,19 @@ describe("generated types work with @headquery/statamic", () => {
     expectTypeOf<SettingsGlobal["handle"]>().toEqualTypeOf<"settings">();
 
     const q = cms.collection("blog").entries().fields(["title", "url"]).sort("-date");
-    expectTypeOf(q.get).returns.resolves.toHaveProperty("data").toEqualTypeOf<Array<Pick<BlogEntry, "title" | "url">>>();
+    expectTypeOf(q.get)
+      .returns.resolves.toHaveProperty("data")
+      .toEqualTypeOf<Array<Pick<BlogEntry, "title" | "url">>>();
   });
 
   it("types globals", () => {
-    expectTypeOf(cms.global("settings").get).returns.resolves.toHaveProperty("data").toHaveProperty("site_name").toEqualTypeOf<string | null>();
-    expectTypeOf<SettingsGlobal["social"][number]["network"]>().toEqualTypeOf<HqOption<"mastodon" | "github"> | HqEmptyOption>();
+    expectTypeOf(cms.global("settings").get)
+      .returns.resolves.toHaveProperty("data")
+      .toHaveProperty("site_name")
+      .toEqualTypeOf<string | null>();
+    expectTypeOf<SettingsGlobal["social"][number]["network"]>().toEqualTypeOf<
+      HqOption<"mastodon" | "github"> | HqEmptyOption
+    >();
     expectTypeOf(cms.globals().get).returns.resolves.toHaveProperty("data").toEqualTypeOf<SettingsGlobal[]>();
   });
 

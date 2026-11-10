@@ -71,6 +71,8 @@ pnpm build                 # turbo: builds all JS packages in dependency order (
 pnpm test:js               # vitest + tsc --noEmit for every JS package
 pnpm test:php              # runs `composer test` in PHP packages (needs `composer install` there first)
 pnpm --filter @headquery/statamic test     # one package
+pnpm lint                  # biome check: formatting, lint, import sorting (CI runs `biome ci .`)
+pnpm lint:fix              # apply safe fixes + formatting
 pnpm changeset             # REQUIRED for user-facing changes to published JS packages
 pnpm docs:dev              # docs site on localhost:3000 (builds packages first)
 pnpm docs:test             # type-checks every ```ts twoslash snippet in apps/docs/content
@@ -183,6 +185,10 @@ it for blueprint fields in fixtures or the seed.
 
 - TypeScript strict (incl. `noUncheckedIndexedAccess`), ESM-first, dual ESM/CJS via tsup,
   `.d.ts` emitted. Node ≥ 20. Use `import type` for types (`verbatimModuleSyntax`).
+- Formatting and linting: Biome (`biome.json`), JS/TS/JSON/CSS only; Markdown, YAML and
+  PHP are not touched. 2 spaces, double quotes, semicolons, 120 columns. Generated files
+  (codegen snapshot, `apps/docs/generated`, playground `cms.ts`) are excluded.
+  `noNonNullAssertion` is off because `noUncheckedIndexedAccess` makes `!` idiomatic here.
 - Public API changes in JS packages need a changeset. Internal wrappers
   (`@headquery-internal/*`) are ignored by changesets.
 - PHP ≥ 8.2, PSR-4 under `Headquery\Statamic\`, PSR-12 style, no new runtime dependencies

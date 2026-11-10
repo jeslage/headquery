@@ -11,6 +11,9 @@
     "test:js": "turbo run test --filter=./packages/js/*",
     "test:php": "turbo run test --filter=./packages/php/*",
     "typecheck": "turbo run typecheck --filter=./packages/**",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "format": "biome format --write .",
     "dev": "turbo run dev --parallel --filter=./packages/**",
     "docs:dev": "turbo run dev --filter=@headquery-internal/docs",
     "docs:build": "turbo run build --filter=@headquery-internal/docs",
@@ -20,6 +23,7 @@
     "release": "turbo run build --filter=./packages/js/* && changeset publish"
   },
   "devDependencies": {
+    "@biomejs/biome": "2.6.6",
     "@changesets/cli": "^2.29.0",
     "@types/node": "^22.0.0",
     "tsup": "^8.5.0",

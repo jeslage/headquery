@@ -69,9 +69,7 @@ export function schemaEndpointUrl(endpoint: SchemaEndpoint, target: Target = "st
   if (schemaPath === undefined) {
     throw new Error(`headquery codegen: no default schemaPath for target "${target}"; set from.schemaPath`);
   }
-  return (
-    endpoint.baseUrl.replace(/\/+$/, "") + segment(endpoint.apiPrefix ?? DEFAULT_API_PREFIX) + segment(schemaPath)
-  );
+  return endpoint.baseUrl.replace(/\/+$/, "") + segment(endpoint.apiPrefix ?? DEFAULT_API_PREFIX) + segment(schemaPath);
 }
 
 /** Return the absolute path of the first config file in `cwd`, if any. */

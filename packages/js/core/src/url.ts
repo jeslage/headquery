@@ -26,8 +26,8 @@ export function serializeQuery(params: QueryParams | undefined): string {
 
 export function joinUrl(baseUrl: string, apiPrefix: string, path: string, query?: QueryParams): string {
   const base = baseUrl.replace(/\/+$/, "");
-  const prefix = apiPrefix ? "/" + apiPrefix.replace(/^\/+|\/+$/g, "") : "";
-  const p = "/" + path.replace(/^\/+/, "");
+  const prefix = apiPrefix ? `/${apiPrefix.replace(/^\/+|\/+$/g, "")}` : "";
+  const p = `/${path.replace(/^\/+/, "")}`;
   const qs = serializeQuery(query);
   return `${base}${prefix}${p}${qs ? `?${qs}` : ""}`;
 }
@@ -37,9 +37,5 @@ function stringify(v: QueryValue): string {
 }
 
 function encode(s: string): string {
-  return encodeURIComponent(s)
-    .replace(/%5B/gi, "[")
-    .replace(/%5D/gi, "]")
-    .replace(/%3A/gi, ":")
-    .replace(/%2C/gi, ",");
+  return encodeURIComponent(s).replace(/%5B/gi, "[").replace(/%5D/gi, "]").replace(/%3A/gi, ":").replace(/%2C/gi, ",");
 }

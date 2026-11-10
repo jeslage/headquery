@@ -1,6 +1,5 @@
 export { createCoreClient } from "./client";
 export { HeadqueryError, HeadqueryHttpError, HeadqueryNetworkError } from "./errors";
-export { joinUrl, serializeQuery } from "./url";
 export type {
   ClientOptions,
   Compilable,
@@ -12,3 +11,4 @@ export type {
   ResultOf,
   RunOptions,
 } from "./types";
+export { joinUrl, serializeQuery } from "./url";

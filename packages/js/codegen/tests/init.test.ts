@@ -3,7 +3,14 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { loadConfig, resolveOptions } from "../src";
-import { initDefaults, initPrompts, parseSourceInput, renderConfig, renderNextSteps, type InitContext } from "../src/init";
+import {
+  type InitContext,
+  initDefaults,
+  initPrompts,
+  parseSourceInput,
+  renderConfig,
+  renderNextSteps,
+} from "../src/init";
 
 const ctx = (overrides: Partial<InitContext> = {}): InitContext => ({
   env: {},
@@ -32,7 +39,9 @@ describe("initDefaults", () => {
 
   it("takes the source from flags, then $HEADQUERY_BASE_URL", () => {
     const env = { HEADQUERY_BASE_URL: "https://env.test/" };
-    expect(initDefaults(ctx({ env }), { baseUrl: "https://flag.test/" }).source).toEqual({ baseUrl: "https://flag.test" });
+    expect(initDefaults(ctx({ env }), { baseUrl: "https://flag.test/" }).source).toEqual({
+      baseUrl: "https://flag.test",
+    });
     expect(initDefaults(ctx({ env }), { from: "schema.json" }).source).toBe("schema.json");
     expect(initDefaults(ctx({ env })).source).toEqual({ baseUrl: "https://env.test" });
     expect(initDefaults(ctx()).source).toBeUndefined();
@@ -93,7 +102,13 @@ describe("renderConfig", () => {
   const load = async (text: string, name: string) => {
     dir = await mkdtemp(join(tmpdir(), "headquery-init-"));
     const file = join(dir, name);
-    await writeFile(file, text.replace(`from "@headquery/codegen"`, `from ${JSON.stringify(new URL("../dist/index.js", import.meta.url).href)}`));
+    await writeFile(
+      file,
+      text.replace(
+        `from "@headquery/codegen"`,
+        `from ${JSON.stringify(new URL("../dist/index.js", import.meta.url).href)}`,
+      ),
+    );
     return { file, config: await loadConfig(file) };
   };
 
@@ -104,7 +119,9 @@ describe("renderConfig", () => {
     vi.stubEnv("HEADQUERY_BASE_URL", "");
     delete process.env.HEADQUERY_BASE_URL;
     const loaded = await load(text, "a.mjs");
-    expect(resolveOptions({}, { config: loaded.config, path: loaded.file }).from).toBe("https://cms.test/api/headquery/schema");
+    expect(resolveOptions({}, { config: loaded.config, path: loaded.file }).from).toBe(
+      "https://cms.test/api/headquery/schema",
+    );
 
     vi.stubEnv("HEADQUERY_BASE_URL", "https://override.test");
     const overridden = await load(text, "b.mjs");

@@ -45,7 +45,9 @@ export function guarded<T extends ArgsDef>(
         }
       }
       if (context.args._.length > 0) {
-        throw new Error(`unexpected argument "${context.args._[0]}". Run \`headquery ${name} --help\` for the options.`);
+        throw new Error(
+          `unexpected argument "${context.args._[0]}". Run \`headquery ${name} --help\` for the options.`,
+        );
       }
       await run(context);
     } catch (error) {

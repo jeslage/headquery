@@ -4,7 +4,9 @@ import { describe, expect, it } from "vitest";
 import { assertIrSchema, IrSchemaError } from "../src";
 
 const fixture = (name: string) =>
-  JSON.parse(readFileSync(fileURLToPath(new URL(`../../../../spec/statamic/fixtures/${name}`, import.meta.url)), "utf8"));
+  JSON.parse(
+    readFileSync(fileURLToPath(new URL(`../../../../spec/statamic/fixtures/${name}`, import.meta.url)), "utf8"),
+  );
 
 describe("assertIrSchema", () => {
   it("accepts the shared Statamic fixture", () => {

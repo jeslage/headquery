@@ -111,7 +111,8 @@ export function initPrompts(defaults: InitDefaults): { intro: string; source: Te
             initialValue: sourceLabel(defaults.source),
           }
         : {
-            message: "CMS base URL or schema file (no default: HEADQUERY_BASE_URL isn't set in env, .env.local or .env)",
+            message:
+              "CMS base URL or schema file (no default: HEADQUERY_BASE_URL isn't set in env, .env.local or .env)",
             placeholder: "https://cms.example.com or ./schema.json",
           },
     out: { message: `Output file for the generated types (${defaults.outOrigin})`, initialValue: defaults.out },

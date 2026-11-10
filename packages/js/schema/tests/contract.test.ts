@@ -36,6 +36,8 @@ describe("spec/ir/schema-v1.json", () => {
     const base = { schemaVersion: 1, cms: { name: "statamic" } };
     expect(validate({ ...base, resources: { blog: { kind: "collection", fields: {} } } })).toBe(false);
     expect(validate({ ...base, resources: { navigation: { main: { fields: {}, depth: 2 } } } })).toBe(false);
-    expect(validate({ ...base, resources: { navigation: { main: { fields: {}, collections: ["blog"], maxDepth: 2 } } } })).toBe(true);
+    expect(
+      validate({ ...base, resources: { navigation: { main: { fields: {}, collections: ["blog"], maxDepth: 2 } } } }),
+    ).toBe(true);
   });
 });

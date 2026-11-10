@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
-import type { ReactNode } from "react";
 import { Head } from "nextra/components";
 import { getPageMap } from "nextra/page-map";
 import { Footer, Layout, Navbar } from "nextra-theme-docs";
+import type { ReactNode } from "react";
 import "nextra-theme-docs/style.css";
 
 export const metadata: Metadata = {

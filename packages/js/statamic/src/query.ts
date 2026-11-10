@@ -28,7 +28,9 @@ interface ListState {
   fields?: string[];
 }
 
-type FieldValue<Item, F extends keyof Item> = Item[F] extends Scalar | null | undefined ? Exclude<Item[F], null | undefined> : Scalar;
+type FieldValue<Item, F extends keyof Item> = Item[F] extends Scalar | null | undefined
+  ? Exclude<Item[F], null | undefined>
+  : Scalar;
 
 /**
  * Immutable list query for collection entries and taxonomy terms.
@@ -47,8 +49,16 @@ export class ListQuery<Item, Filterable extends string, Picked extends keyof Ite
 
   /** `filter[field]=value` (condition `is`). */
   where<F extends Filterable & keyof Item>(field: F, value: FieldValue<Item, F>): this;
-  where<F extends Filterable & keyof Item>(field: F, condition: ScalarCondition, value: FieldValue<Item, F> | Scalar): this;
-  where<F extends Filterable & keyof Item>(field: F, condition: ListCondition, values: Array<FieldValue<Item, F> | Scalar>): this;
+  where<F extends Filterable & keyof Item>(
+    field: F,
+    condition: ScalarCondition,
+    value: FieldValue<Item, F> | Scalar,
+  ): this;
+  where<F extends Filterable & keyof Item>(
+    field: F,
+    condition: ListCondition,
+    values: Array<FieldValue<Item, F> | Scalar>,
+  ): this;
   where<F extends Filterable & keyof Item>(field: F, condition: PresenceCondition): this;
   where(field: string, a?: unknown, b?: unknown): this {
     let condition: string;
@@ -120,7 +130,9 @@ export class ListQuery<Item, Filterable extends string, Picked extends keyof Ite
 }
 
 /** Single resource (one entry, one term, one global set). */
-export class SingleQuery<Item, Picked extends keyof Item = keyof Item> implements Compilable<Single<Pick<Item, Picked>>> {
+export class SingleQuery<Item, Picked extends keyof Item = keyof Item>
+  implements Compilable<Single<Pick<Item, Picked>>>
+{
   declare readonly __result?: Single<Pick<Item, Picked>>;
 
   constructor(

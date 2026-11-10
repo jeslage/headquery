@@ -9,10 +9,7 @@ const tlsCa = tls as typeof tls & {
   getCACertificates?: (type: "default" | "system") => string[];
 };
 if (tlsCa.setDefaultCACertificates && tlsCa.getCACertificates) {
-  const certs = new Set([
-    ...tlsCa.getCACertificates("default"),
-    ...tlsCa.getCACertificates("system"),
-  ]);
+  const certs = new Set([...tlsCa.getCACertificates("default"), ...tlsCa.getCACertificates("system")]);
   tlsCa.setDefaultCACertificates([...certs]);
 }
 
@@ -21,16 +18,12 @@ const envFile = fileURLToPath(new URL("../.env", import.meta.url));
 if (existsSync(envFile)) process.loadEnvFile(envFile);
 
 /** Origin of the playground, e.g. `http://127.0.0.1:8000`. Undefined when not configured. */
-export const baseUrl =
-  process.env.HEADQUERY_BASE_URL?.replace(/\/+$/, "") || undefined;
-export const schemaToken =
-  process.env.HEADQUERY_SCHEMA_TOKEN || "dev-schema-token";
+export const baseUrl = process.env.HEADQUERY_BASE_URL?.replace(/\/+$/, "") || undefined;
+export const schemaToken = process.env.HEADQUERY_SCHEMA_TOKEN || "dev-schema-token";
 
 export function requireBaseUrl(): string {
   if (!baseUrl) {
-    console.error(
-      "Set HEADQUERY_BASE_URL (e.g. in playgrounds/statamic-client/.env, see .env.example).",
-    );
+    console.error("Set HEADQUERY_BASE_URL (e.g. in playgrounds/statamic-client/.env, see .env.example).");
     process.exit(1);
   }
   return baseUrl;

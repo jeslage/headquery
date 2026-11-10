@@ -1,3 +1,5 @@
+export type { ClientOptions, RunOptions } from "@headquery/core";
+export { HeadqueryError, HeadqueryHttpError, HeadqueryNetworkError } from "@headquery/core";
 export { createStatamicClient, type StatamicClient } from "./client";
 export { IndexQuery, LIST_SEPARATOR, ListQuery, SingleQuery, TreeQuery } from "./query";
 export type {
@@ -8,8 +10,8 @@ export type {
   LooseItem,
   LooseNavPage,
   LooseSchema,
-  NavigationShape,
   NavInfo,
+  NavigationShape,
   NavTree,
   NavTreeItem,
   Paginated,
@@ -27,5 +29,3 @@ export type {
   SortField,
   StatamicSchemaShape,
 } from "./types";
-export { HeadqueryError, HeadqueryHttpError, HeadqueryNetworkError } from "@headquery/core";
-export type { ClientOptions, RunOptions } from "@headquery/core";

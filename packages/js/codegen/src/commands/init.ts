@@ -7,12 +7,12 @@ import { defineCommand } from "citty";
 import { findConfig, type SchemaSource } from "../config";
 import {
   configFileName,
+  type InitContext,
   initDefaults,
   initPrompts,
   parseSourceInput,
   renderConfig,
   renderNextSteps,
-  type InitContext,
   type TextPrompt,
 } from "../init";
 import { guarded, ok, style } from "./shared";
@@ -57,7 +57,8 @@ async function ask(prompt: TextPrompt, required: boolean): Promise<string> {
 const args = {
   "base-url": {
     type: "string",
-    description: "CMS origin, e.g. https://cms.example.com (default: $HEADQUERY_BASE_URL, else from .env.local or .env)",
+    description:
+      "CMS origin, e.g. https://cms.example.com (default: $HEADQUERY_BASE_URL, else from .env.local or .env)",
     valueHint: "url",
   },
   from: {
@@ -65,7 +66,11 @@ const args = {
     description: "Full schema endpoint URL or local schema JSON file instead of --base-url",
     valueHint: "url|file",
   },
-  out: { type: "string", description: "Output .ts file (default: src/cms.generated.ts, lib/… or ./…)", valueHint: "file" },
+  out: {
+    type: "string",
+    description: "Output .ts file (default: src/cms.generated.ts, lib/… or ./…)",
+    valueHint: "file",
+  },
   yes: {
     type: "boolean",
     alias: "y",

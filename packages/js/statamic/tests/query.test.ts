@@ -93,7 +93,9 @@ describe("collection entries", () => {
 
 describe("single resources", () => {
   it("builds entry, term and global paths", () => {
-    expect(cms.collection("blog").entry("hello world").toRequest().path).toBe("/collections/blog/entries/hello%20world");
+    expect(cms.collection("blog").entry("hello world").toRequest().path).toBe(
+      "/collections/blog/entries/hello%20world",
+    );
     expect(cms.taxonomy("tags").term("php").site("de").toRequest()).toEqual({
       method: "GET",
       path: "/taxonomies/tags/terms/php",

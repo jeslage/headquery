@@ -1,13 +1,9 @@
 {
   "$schema": "https://turbo.build/schema.json",
-  "extends": [
-    "//"
-  ],
+  "extends": ["//"],
   "tasks": {
     "build": {
-      "dependsOn": [
-        "^build"
-      ],
+      "dependsOn": ["^build"],
       "inputs": [
         "app/**",
         "content/**",
@@ -18,27 +14,14 @@
         "tsconfig.json",
         "$TURBO_ROOT$/spec/statamic/fixtures/**"
       ],
-      "outputs": [
-        "out/**",
-        ".next/**",
-        "!.next/cache/**"
-      ]
+      "outputs": ["out/**", ".next/**", "!.next/cache/**"]
     },
     "test": {
-      "dependsOn": [
-        "^build"
-      ],
-      "inputs": [
-        "content/**",
-        "scripts/**",
-        "package.json",
-        "$TURBO_ROOT$/spec/statamic/fixtures/**"
-      ]
+      "dependsOn": ["^build"],
+      "inputs": ["content/**", "scripts/**", "package.json", "$TURBO_ROOT$/spec/statamic/fixtures/**"]
     },
     "dev": {
-      "dependsOn": [
-        "^build"
-      ],
+      "dependsOn": ["^build"],
       "cache": false,
       "persistent": true
     }

@@ -73,7 +73,20 @@
       "required": ["type"],
       "properties": {
         "type": {
-          "enum": ["string", "number", "boolean", "date", "enum", "array", "object", "relation", "asset", "richtext", "blocks", "unknown"]
+          "enum": [
+            "string",
+            "number",
+            "boolean",
+            "date",
+            "enum",
+            "array",
+            "object",
+            "relation",
+            "asset",
+            "richtext",
+            "blocks",
+            "unknown"
+          ]
         },
         "required": { "type": "boolean" },
         "filterable": { "type": "boolean" },

@@ -2,8 +2,9 @@ import { describe, expect, it, vi } from "vitest";
 import { createCoreClient, HeadqueryHttpError, HeadqueryNetworkError } from "../src";
 
 function mockFetch(status: number, body: unknown) {
-  return vi.fn(async (_url: string | URL | Request, _init?: RequestInit) =>
-    new Response(typeof body === "string" ? body : JSON.stringify(body), { status }),
+  return vi.fn(
+    async (_url: string | URL | Request, _init?: RequestInit) =>
+      new Response(typeof body === "string" ? body : JSON.stringify(body), { status }),
   );
 }
 

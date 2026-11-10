@@ -12,7 +12,11 @@ describe.skipIf(!baseUrl)(`Statamic playground (${baseUrl})`, () => {
   describe("collection entries", () => {
     it("lists published entries only, with pagination meta", async () => {
       const res = await blog.entries().fields(["slug"]).get();
-      expect(res.data.map((e) => e.slug).sort()).toEqual(["cacheable-get-requests", "hello-headquery", "statamic-addon"]);
+      expect(res.data.map((e) => e.slug).sort()).toEqual([
+        "cacheable-get-requests",
+        "hello-headquery",
+        "statamic-addon",
+      ]);
       expect(res.meta).toMatchObject({ current_page: 1, total: 3 });
       expect(res.links).toHaveProperty("next", null);
     });
@@ -40,7 +44,11 @@ describe.skipIf(!baseUrl)(`Statamic playground (${baseUrl})`, () => {
     });
 
     it("filters with `in` (verifies LIST_SEPARATOR)", async () => {
-      const res = await blog.entries().where("slug", "in", ["hello-headquery", "statamic-addon"]).fields(["slug"]).get();
+      const res = await blog
+        .entries()
+        .where("slug", "in", ["hello-headquery", "statamic-addon"])
+        .fields(["slug"])
+        .get();
       expect(res.data.map((e) => e.slug).sort()).toEqual(["hello-headquery", "statamic-addon"]);
     });
 
@@ -57,7 +65,11 @@ describe.skipIf(!baseUrl)(`Statamic playground (${baseUrl})`, () => {
 
     it("rejects filters on fields that are not in allowed_filters", async () => {
       // @ts-expect-error reading_time is not filterable
-      const err = await blog.entries().where("reading_time", 3).get().catch((e: unknown) => e);
+      const err = await blog
+        .entries()
+        .where("reading_time", 3)
+        .get()
+        .catch((e: unknown) => e);
       expect(err).toBeInstanceOf(HeadqueryHttpError);
       expect((err as HeadqueryHttpError).status).toBe(422);
     });
@@ -66,7 +78,12 @@ describe.skipIf(!baseUrl)(`Statamic playground (${baseUrl})`, () => {
   describe("single entry", () => {
     it("fetches by slug and returns the documented field shapes", async () => {
       const { data } = await blog.entry("hello-headquery").get();
-      expect(data).toMatchObject({ title: "Hello headquery", slug: "hello-headquery", featured: true, reading_time: 4 });
+      expect(data).toMatchObject({
+        title: "Hello headquery",
+        slug: "hello-headquery",
+        featured: true,
+        reading_time: 4,
+      });
       expect(data.stage).toEqual({ key: "live", value: "live", label: "Live" });
       expect(data.tags.map((t) => t.slug)).toEqual(["javascript", "statamic"]);
       expect(data.hero).toMatchObject({ url: expect.stringContaining("hero.svg") });
@@ -80,7 +97,10 @@ describe.skipIf(!baseUrl)(`Statamic playground (${baseUrl})`, () => {
     });
 
     it("hides unpublished entries (404)", async () => {
-      const err = await blog.entry("unpublished-draft").get().catch((e: unknown) => e);
+      const err = await blog
+        .entry("unpublished-draft")
+        .get()
+        .catch((e: unknown) => e);
       expect(err).toBeInstanceOf(HeadqueryHttpError);
       expect((err as HeadqueryHttpError).status).toBe(404);
     });

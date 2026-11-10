@@ -132,13 +132,44 @@ export type HqNavEntry<E, F> = Omit<E, keyof HqNavPageBase | keyof F | "entry_id
 /** Keys of the base interfaces above; blueprint fields with the same handle take precedence. */
 const BASE_KEYS = {
   HqEntryBase: [
-    "id", "title", "slug", "date", "uri", "url", "permalink", "api_url", "edit_url", "published",
-    "private", "status", "locale", "origin_id", "order", "mount", "is_entry", "blueprint",
-    "collection", "last_modified", "updated_at", "updated_by",
+    "id",
+    "title",
+    "slug",
+    "date",
+    "uri",
+    "url",
+    "permalink",
+    "api_url",
+    "edit_url",
+    "published",
+    "private",
+    "status",
+    "locale",
+    "origin_id",
+    "order",
+    "mount",
+    "is_entry",
+    "blueprint",
+    "collection",
+    "last_modified",
+    "updated_at",
+    "updated_by",
   ],
   HqTermBase: [
-    "id", "title", "slug", "uri", "url", "permalink", "api_url", "edit_url", "locale", "is_term",
-    "entries_count", "taxonomy", "updated_at", "updated_by",
+    "id",
+    "title",
+    "slug",
+    "uri",
+    "url",
+    "permalink",
+    "api_url",
+    "edit_url",
+    "locale",
+    "is_term",
+    "entries_count",
+    "taxonomy",
+    "updated_at",
+    "updated_by",
   ],
   HqGlobalBase: ["handle", "api_url"],
 } as const;
@@ -203,7 +234,7 @@ export function generateStatamic(schema: IrSchema, options: StatamicGenerateOpti
     "}",
   ].join("\n");
 
-  return [header, HELPERS, ...out, schemaType, augmentation].join("\n\n") + "\n";
+  return `${[header, HELPERS, ...out, schemaType, augmentation].join("\n\n")}\n`;
 }
 
 function block(lines: string[]): string {
@@ -215,7 +246,10 @@ function itemInterface(name: string, resource: IrResource, base: BaseName, baseA
   const overridden = BASE_KEYS[base].filter((k) => k in resource.fields);
   const baseRef = baseArg ? `${base}<${baseArg}>` : base;
   const parent = overridden.length
-    ? `Omit<${baseRef}, ${overridden.map((k) => JSON.stringify(k)).sort().join(" | ")}>`
+    ? `Omit<${baseRef}, ${overridden
+        .map((k) => JSON.stringify(k))
+        .sort()
+        .join(" | ")}>`
     : baseRef;
   for (const handle of Object.keys(resource.fields).sort()) {
     const field = resource.fields[handle]!;
@@ -241,7 +275,10 @@ function navigationTypes(name: string, nav: IrNavigation, schema: IrSchema): str
   const entryTypes = [...new Set(nav.collections ?? [])]
     .sort()
     .map((c) => (schema.resources.collection?.[c] ? `${pascal(c)}Entry` : "HqEntryBase"));
-  const variants = [`HqNavLink<${fieldsName}>`, ...[...new Set(entryTypes)].map((e) => `HqNavEntry<${e}, ${fieldsName}>`)];
+  const variants = [
+    `HqNavLink<${fieldsName}>`,
+    ...[...new Set(entryTypes)].map((e) => `HqNavEntry<${e}, ${fieldsName}>`),
+  ];
   const comment = `/** Page of the \`${nav.title ?? name}\` navigation${nav.maxDepth ? ` (max depth ${nav.maxDepth})` : ""}. */`;
   return [fieldsType, `${comment}\nexport type ${name} =\n  | ${variants.join("\n  | ")};`];
 }
@@ -321,7 +358,7 @@ function baseType(field: IrField, depth: number): string {
         const inner = Object.keys(fields)
           .sort()
           .map((h) => `${key(h)}: ${fieldType(fields[h]!, depth + 1)}`);
-        return `{ id?: string; type: ${JSON.stringify(set)}${inner.length ? "; " + inner.join("; ") : ""} }`;
+        return `{ id?: string; type: ${JSON.stringify(set)}${inner.length ? `; ${inner.join("; ")}` : ""} }`;
       });
       return `Array<${variants.join(" | ")}>`;
     }

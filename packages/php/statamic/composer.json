@@ -29,9 +29,7 @@
       "description": "Schema export for typed headquery clients"
     },
     "laravel": {
-      "providers": [
-        "Headquery\\Statamic\\ServiceProvider"
-      ]
+      "providers": ["Headquery\\Statamic\\ServiceProvider"]
     }
   },
   "scripts": {

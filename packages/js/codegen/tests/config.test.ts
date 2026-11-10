@@ -47,9 +47,9 @@ describe("loadConfig", () => {
       /`token` must be a string/,
     );
     await expect(loadConfig(await write(`export const config = {};`))).rejects.toThrow(/export default/);
-    await expect(loadConfig(await write(`export default { from: { baseUrl: "cms.test" }, out: "b" };`))).rejects.toThrow(
-      /`from.baseUrl` must be an http\(s\) URL/,
-    );
+    await expect(
+      loadConfig(await write(`export default { from: { baseUrl: "cms.test" }, out: "b" };`)),
+    ).rejects.toThrow(/`from.baseUrl` must be an http\(s\) URL/);
     await expect(
       loadConfig(await write(`export default { from: { baseUrl: "https://cms.test", apiPrefix: 1 }, out: "b" };`)),
     ).rejects.toThrow(/`from.apiPrefix` must be a string/);
@@ -94,7 +94,10 @@ describe("resolveOptions", () => {
     expect(resolveOptions({}, config({ from: { baseUrl: "https://cms.test/" }, out: "a.ts" })).from).toBe(
       "https://cms.test/api/headquery/schema",
     );
-    const custom = config({ from: { baseUrl: "https://cms.test", apiPrefix: "rest/", schemaPath: "/types" }, out: "a" });
+    const custom = config({
+      from: { baseUrl: "https://cms.test", apiPrefix: "rest/", schemaPath: "/types" },
+      out: "a",
+    });
     expect(resolveOptions({}, custom).from).toBe("https://cms.test/rest/types");
     // flags override single keys of the endpoint
     expect(resolveOptions({ apiPrefix: "/v2" }, custom).from).toBe("https://cms.test/v2/types");
@@ -103,7 +106,9 @@ describe("resolveOptions", () => {
 
   it("lets --from and --base-url replace any config source", () => {
     const fileConfig = config({ from: "schema.json", out: "a.ts" });
-    expect(resolveOptions({ baseUrl: "https://cms.test" }, fileConfig).from).toBe("https://cms.test/api/headquery/schema");
+    expect(resolveOptions({ baseUrl: "https://cms.test" }, fileConfig).from).toBe(
+      "https://cms.test/api/headquery/schema",
+    );
     const endpointConfig = config({ from: { baseUrl: "https://cms.test" }, out: "a.ts" });
     expect(resolveOptions({ from: "local.json" }, endpointConfig).from).toBe("local.json");
   });
@@ -122,10 +127,12 @@ describe("resolveOptions", () => {
 describe("schemaEndpointUrl", () => {
   it("joins base URL, prefix and path without double slashes", () => {
     expect(schemaEndpointUrl({ baseUrl: "https://cms.test" })).toBe("https://cms.test/api/headquery/schema");
-    expect(schemaEndpointUrl({ baseUrl: "https://cms.test//", apiPrefix: "//api//", schemaPath: "headquery/schema/" })).toBe(
-      "https://cms.test/api/headquery/schema",
+    expect(
+      schemaEndpointUrl({ baseUrl: "https://cms.test//", apiPrefix: "//api//", schemaPath: "headquery/schema/" }),
+    ).toBe("https://cms.test/api/headquery/schema");
+    expect(schemaEndpointUrl({ baseUrl: "https://cms.test/sub", apiPrefix: "" })).toBe(
+      "https://cms.test/sub/headquery/schema",
     );
-    expect(schemaEndpointUrl({ baseUrl: "https://cms.test/sub", apiPrefix: "" })).toBe("https://cms.test/sub/headquery/schema");
   });
 });
 
