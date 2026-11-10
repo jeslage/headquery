@@ -3,6 +3,11 @@
   "description": "Statamic addon for headquery: exports the content model for typed JavaScript clients of the Statamic REST API.",
   "type": "statamic-addon",
   "license": "MIT",
+  "homepage": "https://github.com/jeslage/headquery",
+  "support": {
+    "issues": "https://github.com/jeslage/headquery/issues",
+    "source": "https://github.com/jeslage/headquery/tree/main/packages/php/statamic"
+  },
   "keywords": ["statamic", "headless", "rest", "typescript", "codegen"],
   "require": {
     "php": "^8.2",

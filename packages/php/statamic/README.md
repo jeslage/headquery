@@ -1,11 +1,11 @@
 # headquery/statamic
 
-Statamic addon for [headquery](https://github.com/headquery/headquery). It exports your
+Statamic addon for [headquery](https://github.com/jeslage/headquery). It exports your
 content model so `@headquery/codegen` can generate TypeScript types for
 `@headquery/statamic`, the typed client for Statamic's REST Content API.
 
 > Read-only mirror. Issues and pull requests go to the
-> [headquery monorepo](https://github.com/headquery/headquery).
+> [headquery monorepo](https://github.com/jeslage/headquery).
 
 ## Install
 

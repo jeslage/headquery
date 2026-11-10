@@ -208,9 +208,9 @@ it for blueprint fields in fixtures or the seed.
 
 - **npm:** changesets → `release.yml` opens a "Version packages" PR → merging publishes.
   Needs `NPM_TOKEN` secret and the `@headquery` npm org.
-- **Packagist:** `split.yml` mirrors `packages/php/statamic` to `github.com/headquery/statamic`
-  on every push to main. Release by tagging the monorepo `php-statamic/vX.Y.Z`; the split
-  repo receives `vX.Y.Z`. Needs `SPLIT_TOKEN` secret, the empty split repo and a Packagist entry.
+- **Packagist:** `split.yml` mirrors `packages/php/statamic` to `github.com/jeslage/headquery-statamic`
+  on every push to main. Release by tagging the monorepo `php-statamic/X.Y.Z` (no "v"); the split
+  repo receives `X.Y.Z`. Needs `SPLIT_TOKEN` secret, the empty split repo and a Packagist entry.
 
 ## Roadmap (suggested order)
 

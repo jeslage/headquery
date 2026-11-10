@@ -3,6 +3,15 @@
   "version": "0.0.0",
   "description": "Types and validation for the headquery intermediate schema (IR) exported by CMS plugins.",
   "license": "MIT",
+  "homepage": "https://github.com/jeslage/headquery#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jeslage/headquery.git",
+    "directory": "packages/js/schema"
+  },
+  "bugs": {
+    "url": "https://github.com/jeslage/headquery/issues"
+  },
   "type": "module",
   "sideEffects": false,
   "exports": {

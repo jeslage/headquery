@@ -3,6 +3,15 @@
   "version": "0.0.0",
   "description": "Generate TypeScript types for headquery clients from a CMS schema (file or URL).",
   "license": "MIT",
+  "homepage": "https://github.com/jeslage/headquery#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jeslage/headquery.git",
+    "directory": "packages/js/codegen"
+  },
+  "bugs": {
+    "url": "https://github.com/jeslage/headquery/issues"
+  },
   "type": "module",
   "bin": {
     "headquery": "./dist/cli.js"

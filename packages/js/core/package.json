@@ -3,6 +3,15 @@
   "version": "0.0.0",
   "description": "CMS-agnostic fetch transport for headquery adapters: deterministic URLs, auth, errors.",
   "license": "MIT",
+  "homepage": "https://github.com/jeslage/headquery#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jeslage/headquery.git",
+    "directory": "packages/js/core"
+  },
+  "bugs": {
+    "url": "https://github.com/jeslage/headquery/issues"
+  },
   "type": "module",
   "sideEffects": false,
   "exports": {

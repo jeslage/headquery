@@ -3,6 +3,15 @@
   "version": "0.0.0",
   "description": "Typed, cacheable client for the Statamic REST Content API.",
   "license": "MIT",
+  "homepage": "https://github.com/jeslage/headquery#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jeslage/headquery.git",
+    "directory": "packages/js/statamic"
+  },
+  "bugs": {
+    "url": "https://github.com/jeslage/headquery/issues"
+  },
   "type": "module",
   "sideEffects": false,
   "keywords": [

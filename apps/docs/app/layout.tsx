@@ -10,7 +10,7 @@ export const metadata: Metadata = {
   description: "Typed, cacheable JavaScript clients for the REST APIs of headless PHP CMSs.",
 };
 
-const REPO = "https://github.com/headquery/headquery";
+const REPO = "https://github.com/jeslage/headquery";
 
 export default async function RootLayout({ children }: { children: ReactNode }) {
   return (

@@ -1,10 +1,10 @@
 # Mirrors each Composer package into its own read-only repo, which Packagist reads.
 #
 # - Every push to main updates the split repo's main branch.
-# - Releases: tag the monorepo with "<prefix>/vX.Y.Z" (e.g. php-statamic/v0.1.0);
-#   the split repo receives the plain tag "vX.Y.Z".
+# - Releases: tag the monorepo with "<prefix>/X.Y.Z" (e.g. php-statamic/0.1.0);
+#   the split repo receives the plain tag "X.Y.Z".
 #
-# Setup: create github.com/headquery/statamic (empty), register it on Packagist,
+# Setup: create github.com/jeslage/headquery-statamic (empty), register it on Packagist,
 # add a SPLIT_TOKEN secret (fine-grained PAT with contents:write on the split repos).
 
 name: Split PHP packages
@@ -13,7 +13,7 @@ on:
   push:
     branches: [main]
     paths: ["packages/php/**"]
-    tags: ["php-*/v*"]
+    tags: ["php-*/[0-9]*"]
 
 jobs:
   split:
@@ -23,7 +23,7 @@ jobs:
       matrix:
         package:
           - dir: statamic
-            repo: statamic
+            repo: headquery-statamic
             tag_prefix: php-statamic/
     steps:
       - uses: actions/checkout@v4
@@ -52,7 +52,7 @@ jobs:
         uses: danharrin/monorepo-split-github-action@v2
         with:
           package_directory: packages/php/${{ matrix.package.dir }}
-          repository_organization: headquery
+          repository_organization: jeslage
           repository_name: ${{ matrix.package.repo }}
           branch: main
           tag: ${{ steps.tag.outputs.tag }}
