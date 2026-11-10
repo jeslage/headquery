@@ -14,6 +14,7 @@
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
     "format": "biome format --write .",
+    "size": "size-limit",
     "dev": "turbo run dev --parallel --filter=./packages/**",
     "docs:dev": "turbo run dev --filter=@headquery-internal/docs",
     "docs:build": "turbo run build --filter=@headquery-internal/docs",
@@ -25,7 +26,9 @@
   "devDependencies": {
     "@biomejs/biome": "2.6.6",
     "@changesets/cli": "^2.29.0",
+    "@size-limit/preset-small-lib": "^14.3.0",
     "@types/node": "^22.0.0",
+    "size-limit": "^14.3.0",
     "tsup": "^8.5.0",
     "turbo": "^2.5.0",
     "typescript": "^5.9.0",

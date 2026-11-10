@@ -1,0 +1,16 @@
+[
+  {
+    "name": "@headquery/statamic (createStatamicClient)",
+    "path": "packages/js/statamic/dist/index.js",
+    "import": "{ createStatamicClient }",
+    "gzip": true,
+    "limit": "2.5 kB"
+  },
+  {
+    "name": "@headquery/core (createCoreClient)",
+    "path": "packages/js/core/dist/index.js",
+    "import": "{ createCoreClient }",
+    "gzip": true,
+    "limit": "1.2 kB"
+  }
+]

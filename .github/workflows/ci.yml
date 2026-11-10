@@ -39,6 +39,9 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
       - run: pnpm test:js
+      # bundle budget for the browser client (see .size-limit.json)
+      - if: matrix.node == 22
+        run: pnpm size
 
   docs:
     name: Docs

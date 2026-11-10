@@ -37,7 +37,11 @@ Two halves:
 7. **Zero runtime dependencies** in published JS packages unless clearly justified.
    CLI-only libraries (`citty`, `@clack/prompts` in `@headquery/codegen`) are devDependencies
    that tsup bundles into `dist/cli.js`; never import them from a library entry (`src/index.ts`).
-8. **The PHP side stays tiny.** It exports the schema and (only where needed) adds small
+8. **Bundle size is a feature.** A fetch wrapper is only worth installing if it costs about as
+   much as a hand-written `fetch`. Budgets in `.size-limit.json` (minified + gzip, checked in CI
+   via `pnpm size`): `createStatamicClient` ≤ 2.5 kB including core, `createCoreClient` ≤ 1.2 kB.
+   New resources must not bloat the base client; don't raise a limit without a reason in the commit.
+9. **The PHP side stays tiny.** It exports the schema and (only where needed) adds small
    glue. No business logic, no query engine.
 
 ## Repository layout
@@ -73,6 +77,7 @@ pnpm test:php              # runs `composer test` in PHP packages (needs `compos
 pnpm --filter @headquery/statamic test     # one package
 pnpm lint                  # biome check: formatting, lint, import sorting (CI runs `biome ci .`)
 pnpm lint:fix              # apply safe fixes + formatting
+pnpm size                  # bundle size budget (size-limit; run pnpm build first)
 pnpm changeset             # REQUIRED for user-facing changes to published JS packages
 pnpm docs:dev              # docs site on localhost:3000 (builds packages first)
 pnpm docs:test             # type-checks every ```ts twoslash snippet in apps/docs/content
