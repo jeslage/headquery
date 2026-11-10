@@ -1,7 +1,7 @@
+import { HeadqueryHttpError } from "@headquery/statamic";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { HeadqueryHttpError } from "@headquery/statamic";
 import { absolute, cms } from "@/lib/statamic";
 
 type Props = { params: Promise<{ slug: string }> };
@@ -37,7 +37,9 @@ export default async function PostPage({ params }: Props) {
       <p>
         <Link href="/">← All posts</Link>
       </p>
+
       <h1>{post.title}</h1>
+
       <p className="meta">
         {post.date?.slice(0, 10)}
         {post.author?.name && <> · {post.author.name}</>}
@@ -45,17 +47,9 @@ export default async function PostPage({ params }: Props) {
         {post.stage.label && <> · {post.stage.label}</>}
       </p>
 
-      {post.hero && (
-        <img
-          className="hero"
-          src={absolute(post.hero.url)}
-          alt={post.hero.alt ?? ""}
-        />
-      )}
+      {post.hero && <img className="hero" src={absolute(post.hero.url)} alt={post.hero.alt ?? ""} />}
 
-      {typeof post.content === "string" && (
-        <div dangerouslySetInnerHTML={{ __html: post.content }} />
-      )}
+      {typeof post.content === "string" && <div dangerouslySetInnerHTML={{ __html: post.content }} />}
 
       {post.sections.map((section, i) =>
         section.type === "quote" ? (
@@ -72,9 +66,7 @@ export default async function PostPage({ params }: Props) {
         ),
       )}
 
-      {post.tags.length > 0 && (
-        <p className="meta">Tags: {post.tags.map((t) => t.title).join(", ")}</p>
-      )}
+      {post.tags.length > 0 && <p className="meta">Tags: {post.tags.map((t) => t.title).join(", ")}</p>}
 
       {post.related.length > 0 && (
         <>
