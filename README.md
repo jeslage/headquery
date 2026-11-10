@@ -3,7 +3,8 @@
 Typed, cacheable JavaScript clients for the REST APIs of headless PHP CMSs — keep the
 CMS's own query vocabulary, get TypeScript types generated from your content model.
 
-> Early development. Statamic first; Kirby and Craft planned.
+> **Early development.** headquery is still under development and should not be used in production yet. APIs, generated types and the schema format may change in any 0.x release.
+> Statamic is supported first; Kirby and Craft are planned.
 
 ```ts
 import { createStatamicClient } from "@headquery/statamic";

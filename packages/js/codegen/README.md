@@ -1,5 +1,7 @@
 # @headquery/codegen
 
+> **Early development.** headquery is still under development and should not be used in production yet. APIs, generated types and the schema format may change in any 0.x release.
+
 The `headquery` CLI generates TypeScript types for headquery clients from your CMS's content model.
 The schema comes from a CMS plugin (for Statamic: the Composer package
 [`headquery/statamic`](https://packagist.org/packages/headquery/statamic)), either as an exported file or from an

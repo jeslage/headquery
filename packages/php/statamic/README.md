@@ -1,5 +1,7 @@
 # headquery/statamic
 
+> **Early development.** headquery is still under development and should not be used in production yet. APIs, generated types and the schema format may change in any 0.x release.
+
 Statamic addon for [headquery](https://github.com/jeslage/headquery). It exports your
 content model so `@headquery/codegen` can generate TypeScript types for
 `@headquery/statamic`, the typed client for Statamic's REST Content API.

@@ -1,5 +1,7 @@
 # @headquery/statamic
 
+> **Early development.** headquery is still under development and should not be used in production yet. APIs, generated types and the schema format may change in any 0.x release.
+
 Typed, cacheable client for the [Statamic REST Content API](https://statamic.dev/rest-api).
 You keep Statamic's own query vocabulary (filters, sort, fields), written in TypeScript.
 
