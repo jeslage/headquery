@@ -12,8 +12,10 @@ name: Split PHP packages
 on:
   push:
     branches: [main]
-    paths: ["packages/php/**"]
+    paths: ["packages/php/**", ".github/workflows/split.yml"]
     tags: ["php-*/[0-9]*"]
+  # manual run: mirrors main without a tag
+  workflow_dispatch:
 
 jobs:
   split:
@@ -49,7 +51,7 @@ jobs:
           fi
 
       - if: steps.tag.outputs.run == 'true'
-        uses: danharrin/monorepo-split-github-action@v2
+        uses: danharrin/monorepo-split-github-action@14e42e2437f674b8987c1f50ca3689116aea1893 # v2.4.5
         with:
           package_directory: packages/php/${{ matrix.package.dir }}
           repository_organization: jeslage
