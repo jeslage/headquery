@@ -8,8 +8,28 @@ The CLI is the `headquery` bin of `@headquery/codegen` and has two commands:
 
 | Command | Description |
 | --- | --- |
-| `headquery init` | Run once: asks for the CMS base URL (or a schema file; suggests `HEADQUERY_BASE_URL` from the environment, `.env.local` or `.env`) and the output path, writes `headquery.config.ts` (`.mts`/`.mjs` where needed), and prints the `package.json` scripts and `.env` lines to add. It doesn't change any other file. Flags: `--base-url`, `--from`, `--out`, `--yes` (no prompts), `--force` (overwrite). |
+| `headquery init` | Run once: asks for the CMS base URL (or a schema file; suggests `HEADQUERY_BASE_URL` from the environment, `.env.local` or `.env`) and the output path, and writes `headquery.config.ts` (`.mts`/`.mjs` where needed). Then it offers to write a typed client file, add `cms:types` scripts to `package.json` and add `HEADQUERY_*` lines to the env file. See below. |
 | `headquery generate` | Fetches the schema and writes the types. Reads the config file; flags below override it. |
+
+What `init` writes, besides the config:
+
+| Step | Details |
+| --- | --- |
+| Client file | Only when an adapter (`@headquery/statamic`) is installed. Written next to the generated types (`src/cms.ts`), passes `Schema` explicitly and reads the base URL from env depending on the framework: `NEXT_PUBLIC_HEADQUERY_BASE_URL` (Next.js), `VITE_HEADQUERY_BASE_URL` (Vite), `HEADQUERY_BASE_URL` (Node), a literal URL for Nuxt (use `runtimeConfig`). The framework is detected from `package.json` and can be changed in the prompt. An existing file is only overwritten after confirmation or with `--force`. |
+| `package.json` scripts | `cms:types` (`headquery generate`) and `cms:types:check` (`headquery generate --check`). Existing scripts are never changed. |
+| Env lines | `HEADQUERY_BASE_URL`, `HEADQUERY_SCHEMA_TOKEN` (empty) and the client's variable, appended to `.env.local` or `.env` (if neither exists, `init` asks for a name). Keys that are already set stay unchanged. The config then loads that file with `process.loadEnvFile`. `init` warns if the file isn't in `.gitignore`. |
+
+Flags of `headquery init`:
+
+| Flag | Description |
+| --- | --- |
+| `--base-url` / `--from` | Schema source (CMS origin, or a schema URL/file) |
+| `--out` | Output `.ts` file for the types |
+| `--framework` | `next`, `nuxt`, `vite` or `node` (default: detected) |
+| `--no-client`, `--no-scripts`, `--no-env` | Skip a step |
+| `--env-file` | Env file to add the lines to |
+| `--yes` | No prompts: use flags and defaults, all steps on |
+| `--force` | Overwrite an existing config and client file |
 
 Before `@headquery/codegen` is installed, run `npx @headquery/codegen init`: `npx headquery`
 would look for an npm package called `headquery`.
@@ -78,20 +98,28 @@ declare module "@headquery/statamic" {
 }
 ```
 
-Import the file once (for example where you create the client). From then on
-`createStatamicClient()` is fully typed without generics: collection handles autocomplete,
-`.where()` only accepts filterable fields, and `.fields()` narrows results.
+Pass the generated `Schema` to the client, as the client file from `headquery init` does:
+
+```ts
+import { createStatamicClient } from "@headquery/statamic";
+import type { Schema } from "./cms.generated";
+
+export const cms = createStatamicClient<Schema>({ baseUrl: "https://cms.example.com" });
+```
+
+Collection handles autocomplete, `.where()` only accepts filterable fields, and `.fields()`
+narrows results.
+
+Importing the file once (`import "./cms.generated"`) also registers the schema globally, so
+`createStatamicClient()` is typed without the generic. That relies on TypeScript seeing the
+generated file and resolving the same `@headquery/statamic` copy, so the explicit generic is the
+more robust default.
 
 Without a registered schema, the client falls back to loose types: any handle, any field,
 items typed as `{ id: string } & Record<string, unknown>`.
 
-You can also pass a schema explicitly, e.g. when you talk to two different CMS instances:
-
-```ts
-import type { Schema } from "./cms.generated";
-
-const cms = createStatamicClient<Schema>({ baseUrl: "https://cms.example.com" });
-```
+The explicit generic also lets you talk to two CMS instances: generate one file per instance and
+pass each `Schema` to its own client.
 
 ## Field mapping
 

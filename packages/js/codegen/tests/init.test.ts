@@ -1,13 +1,23 @@
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { loadConfig, resolveOptions } from "../src";
 import {
+  clientPath,
+  defaultEnvFile,
+  detectAdapter,
+  detectFramework,
+  detectPackageManager,
+  envLines,
   type InitContext,
   initDefaults,
   initPrompts,
+  isGitignored,
+  mergeEnv,
+  mergeScripts,
   parseSourceInput,
+  renderClient,
   renderConfig,
   renderNextSteps,
 } from "../src/init";
@@ -59,9 +69,20 @@ describe("initDefaults", () => {
     );
   });
 
+  it("detects the framework unless --framework is given", () => {
+    const next = ctx({ packageJson: { dependencies: { next: "15", vite: "6" } } });
+    expect(initDefaults(next)).toMatchObject({ framework: "next", frameworkOrigin: "detected from package.json" });
+    expect(initDefaults(next, { framework: "vite" })).toMatchObject({
+      framework: "vite",
+      frameworkOrigin: "--framework",
+    });
+    expect(initDefaults(ctx()).framework).toBe("node");
+  });
+
   it("rejects conflicting or invalid flags", () => {
     expect(() => initDefaults(ctx(), { baseUrl: "https://a.test", from: "b.json" })).toThrow(/either --from/);
     expect(() => initDefaults(ctx(), { baseUrl: "cms.test" })).toThrow(/http\(s\) URL/);
+    expect(() => initDefaults(ctx(), { framework: "nope" })).toThrow(/next, nuxt, vite, node/);
   });
 });
 
@@ -128,6 +149,20 @@ describe("renderConfig", () => {
     expect(overridden.config.from).toEqual({ baseUrl: "https://override.test" });
   });
 
+  it("loads the env file next to the config, if one was written", async () => {
+    const text = renderConfig({ source: { baseUrl: "https://cms.test" }, out: "cms.ts", envFile: ".env.test" });
+    expect(text).not.toContain("// process.loadEnvFile");
+    vi.stubEnv("HEADQUERY_BASE_URL", "");
+    delete process.env.HEADQUERY_BASE_URL;
+    // a missing env file is fine
+    expect((await load(text, "d.mjs")).config.from).toEqual({ baseUrl: "https://cms.test" });
+    await writeFile(join(dir!, ".env.test"), "HEADQUERY_BASE_URL=https://dotenv.test\n");
+    const file = join(dir!, "e.mjs");
+    await writeFile(file, await readFile(join(dir!, "d.mjs"), "utf8"));
+    expect((await loadConfig(file)).from).toEqual({ baseUrl: "https://dotenv.test" });
+    delete process.env.HEADQUERY_BASE_URL;
+  });
+
   it("renders a file source without env hints", async () => {
     const text = renderConfig({ source: "./schema.json", out: "cms.ts" });
     expect(text).not.toContain("HEADQUERY_SCHEMA_TOKEN");
@@ -135,20 +170,171 @@ describe("renderConfig", () => {
   });
 });
 
+describe("client file", () => {
+  it("finds the adapter and picks a path next to the generated types", () => {
+    expect(detectAdapter({ devDependencies: { "@headquery/statamic": "^0.1" } })).toBe("@headquery/statamic");
+    expect(detectAdapter({ dependencies: { react: "19" } })).toBeUndefined();
+    expect(detectFramework({ dependencies: { nuxt: "4", vite: "7" } })).toBe("nuxt");
+    expect(detectFramework({ devDependencies: { vite: "7" } })).toBe("vite");
+    expect(clientPath("src/cms.generated.ts")).toBe("src/cms.ts");
+    expect(clientPath("cms.generated.ts")).toBe("cms.ts");
+    expect(clientPath("lib/cms.ts")).toBe("lib/client.ts");
+  });
+
+  const client = (framework: "next" | "nuxt" | "vite" | "node", source: string | { baseUrl: string }) =>
+    renderClient({
+      adapter: "@headquery/statamic",
+      framework,
+      source,
+      clientPath: "src/cms.ts",
+      out: "src/cms.generated.ts",
+    });
+
+  it("passes the generated Schema and reads the base URL the framework's way", () => {
+    const next = client("next", { baseUrl: "https://cms.test" });
+    expect(next).toContain(`import type { Schema } from "./cms.generated";`);
+    expect(next).toContain(`export const cms = createStatamicClient<Schema>({`);
+    expect(next).toContain(`baseUrl: process.env.NEXT_PUBLIC_HEADQUERY_BASE_URL ?? "https://cms.test",`);
+    expect(client("vite", { baseUrl: "https://cms.test" })).toContain(
+      `import.meta.env.VITE_HEADQUERY_BASE_URL ?? "https://cms.test"`,
+    );
+    expect(client("node", { baseUrl: "https://cms.test" })).toContain(
+      `process.env.HEADQUERY_BASE_URL ?? "https://cms.test"`,
+    );
+    const nuxt = client("nuxt", { baseUrl: "https://cms.test" });
+    expect(nuxt).toContain(`baseUrl: "https://cms.test",`);
+    expect(nuxt).toContain("runtimeConfig");
+  });
+
+  it("falls back to a placeholder for file sources and imports across folders", () => {
+    expect(client("node", "schema.json")).toContain("// TODO");
+    const text = renderClient({
+      adapter: "@headquery/statamic",
+      framework: "node",
+      source: "schema.json",
+      clientPath: "app/cms.ts",
+      out: "types/cms.generated.ts",
+    });
+    expect(text).toContain(`from "../types/cms.generated"`);
+  });
+});
+
+describe("mergeScripts", () => {
+  it("adds missing scripts and keeps indentation and the trailing newline", () => {
+    const merged = mergeScripts(`{\n    "name": "app",\n    "scripts": { "dev": "next dev" }\n}\n`);
+    expect(merged.added).toEqual(["cms:types", "cms:types:check"]);
+    expect(merged.text).toContain(
+      `\n    "scripts": {\n        "dev": "next dev",\n        "cms:types": "headquery generate",`,
+    );
+    expect(merged.text.endsWith("}\n")).toBe(true);
+  });
+
+  it("never overwrites existing scripts", () => {
+    const text = JSON.stringify({ scripts: { "cms:types": "headquery generate", "cms:types:check": "custom" } });
+    expect(mergeScripts(text)).toEqual({ text, added: [], skipped: ["cms:types:check"] });
+  });
+});
+
+describe("env lines", () => {
+  const source = { baseUrl: "https://cms.test" };
+
+  it("adds the client's variable only when it differs and a client was written", () => {
+    expect(envLines({ source, framework: "next", client: true })).toEqual([
+      "HEADQUERY_BASE_URL=https://cms.test",
+      "HEADQUERY_SCHEMA_TOKEN=",
+      "NEXT_PUBLIC_HEADQUERY_BASE_URL=https://cms.test",
+    ]);
+    expect(envLines({ source, framework: "next", client: false })).toHaveLength(2);
+    expect(envLines({ source, framework: "node", client: true })).toHaveLength(2);
+    expect(envLines({ source: "schema.json", framework: "node", client: true })).toEqual([]);
+  });
+
+  it("appends only keys that aren't set yet", () => {
+    const lines = envLines({ source, framework: "node", client: true });
+    expect(mergeEnv(undefined, lines).text).toBe(
+      "# headquery\nHEADQUERY_BASE_URL=https://cms.test\nHEADQUERY_SCHEMA_TOKEN=\n",
+    );
+    const merged = mergeEnv("APP_KEY=1\nexport HEADQUERY_BASE_URL=https://other.test", lines);
+    expect(merged).toEqual({
+      text: "APP_KEY=1\nexport HEADQUERY_BASE_URL=https://other.test\n\n# headquery\nHEADQUERY_SCHEMA_TOKEN=\n",
+      added: ["HEADQUERY_SCHEMA_TOKEN"],
+      skipped: ["HEADQUERY_BASE_URL"],
+    });
+    expect(mergeEnv(merged.text, lines).added).toEqual([]);
+  });
+
+  it("picks a default file name and checks .gitignore", () => {
+    expect(defaultEnvFile("next")).toBe(".env.local");
+    expect(defaultEnvFile("nuxt")).toBe(".env");
+    expect(isGitignored("node_modules\n.env*\n", ".env.local")).toBe(true);
+    expect(isGitignored("/.env\n", ".env")).toBe(true);
+    expect(isGitignored("*.local\n", ".env.local")).toBe(true);
+    expect(isGitignored(".env.*\n# .env\n", ".env")).toBe(false);
+  });
+});
+
 describe("renderNextSteps", () => {
   const base = { out: "src/cms.generated.ts", hasCodegenDependency: true };
 
-  it("prints scripts and env lines for a CMS source", () => {
+  it("prints scripts and env lines when init didn't write them", () => {
     const text = renderNextSteps({ ...base, source: { baseUrl: "https://cms.test" } });
     expect(text).toContain(`"cms:types": "headquery generate"`);
     expect(text).toContain("HEADQUERY_BASE_URL=https://cms.test");
     expect(text).toContain("HEADQUERY_SCHEMA_TOKEN=");
+    expect(text).toContain("npx headquery generate");
     expect(text).not.toContain("npm install");
   });
 
-  it("skips env lines for files and suggests installing the CLI", () => {
+  it("skips what init did and uses the package manager", () => {
+    const text = renderNextSteps({
+      ...base,
+      source: { baseUrl: "https://cms.test" },
+      hasCodegenDependency: false,
+      packageManager: "pnpm",
+      client: "src/cms.ts",
+      scripts: true,
+      envFile: ".env.local",
+    });
+    expect(text).toContain("pnpm add -D @headquery/codegen");
+    expect(text).toContain("Set HEADQUERY_SCHEMA_TOKEN in .env.local");
+    expect(text).toContain("pnpm cms:types");
+    expect(text).toContain("Import `cms` from src/cms.ts");
+    expect(text).not.toContain(`"cms:types"`);
+    expect(text).not.toContain("HEADQUERY_BASE_URL=");
+  });
+
+  it("lists the CMS setup of the adapter", () => {
+    const url = renderNextSteps({ ...base, source: { baseUrl: "https://cms.test" }, adapter: "@headquery/statamic" });
+    expect(url).toContain(
+      [
+        "2. On the CMS: the REST API is a Statamic Pro feature and off by default. Add to its .env:",
+        "",
+        "   STATAMIC_PRO_ENABLED=true",
+        "   STATAMIC_API_ENABLED=true",
+        "   HEADQUERY_SCHEMA_ROUTE=true",
+        "   HEADQUERY_SCHEMA_TOKEN=<a long random token>",
+        "",
+      ].join("\n"),
+    );
+    expect(url).toContain("   php artisan config:clear");
+    const file = renderNextSteps({ ...base, source: "schema.json", adapter: "@headquery/statamic" });
+    expect(file).not.toContain("HEADQUERY_SCHEMA_ROUTE");
+    expect(file).toContain("   php please headquery:schema --out=schema.json");
+    expect(renderNextSteps({ ...base, source: "schema.json" })).not.toContain("STATAMIC_API_ENABLED");
+  });
+
+  it("skips env lines for files", () => {
     const text = renderNextSteps({ ...base, source: "schema.json", hasCodegenDependency: false });
     expect(text).not.toContain("HEADQUERY_BASE_URL");
     expect(text).toContain("npm install -D @headquery/codegen");
+  });
+});
+
+describe("detectPackageManager", () => {
+  it("prefers the packageManager field, then lockfiles", () => {
+    expect(detectPackageManager({ packageManager: "pnpm@9.0.0" }, ["yarn.lock"])).toBe("pnpm");
+    expect(detectPackageManager({}, ["yarn.lock"])).toBe("yarn");
+    expect(detectPackageManager(undefined, ["bun.lock"])).toBe("bun");
+    expect(detectPackageManager(undefined)).toBe("npm");
   });
 });

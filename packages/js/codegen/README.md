@@ -10,7 +10,7 @@ authenticated endpoint.
 ```bash
 npm install -D @headquery/codegen
 
-# once: writes headquery.config.ts and prints the package.json scripts and env lines
+# once: writes headquery.config.ts and offers a typed client file, package.json scripts and env lines
 npx headquery init
 
 # whenever the content model changes (add --check in CI)
@@ -21,7 +21,7 @@ npx headquery generate --base-url https://cms.example.com --out src/cms.generate
 npx headquery generate --from schema.json --out src/cms.generated.ts
 ```
 
-The generated module augments `@headquery/statamic`, so you don't pass generics yourself. Importing the
-file once is enough. A programmatic API (`generate`, `loadSchema`) is exported as well.
+The generated module exports a `Schema` type to pass to the client (`createStatamicClient<Schema>()`) and also
+augments `@headquery/statamic`, so importing the file once registers it globally. A programmatic API (`generate`, `loadSchema`) is exported as well.
 
 See the [repository](https://github.com/jeslage/headquery) for documentation. MIT licensed.
