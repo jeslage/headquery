@@ -30,3 +30,19 @@ npx headquery generate \
 
 The schema describes your content model (handles, field names and types), not your
 content. Treat the token like any other deploy secret anyway.
+
+## Troubleshooting
+
+When the schema can't be loaded, `headquery generate` prints the underlying error (not just
+`fetch failed`), the most likely cause and a checklist:
+
+| Error | Cause and fix |
+| --- | --- |
+| `404 Not Found` | The route or the REST API is off. On the CMS, set **both** `HEADQUERY_SCHEMA_ROUTE=true` and `HEADQUERY_SCHEMA_TOKEN`, enable the REST API (`STATAMIC_API_ENABLED=true`) and Pro (`STATAMIC_PRO_ENABLED=true`, the REST API is a Pro feature), then `php artisan config:clear`. If you changed `statamic.api.route` or `headquery.schema.path`, set `from.apiPrefix` / `from.schemaPath` in `headquery.config.ts`. |
+| `401 Unauthorized` | The frontend sent no token or a different one. Set `HEADQUERY_SCHEMA_TOKEN` to the CMS's value (env file, `token` in the config, or `--token`). |
+| `ECONNREFUSED` | The CMS isn't running, or the host/port in `HEADQUERY_BASE_URL` is wrong. |
+| `ENOTFOUND` | The host doesn't resolve. `*.test` domains from Herd/Valet only exist on the machine that serves them. |
+| `self-signed certificate`, `SELF_SIGNED_CERT_IN_CHAIN`, … | Node doesn't trust the local Herd/Valet certificate. Run with `NODE_OPTIONS=--use-system-ca` (Node ≥ 22.15), point `NODE_EXTRA_CA_CERTS` at the CA file (Herd: `~/Library/Application Support/Herd/config/valet/CA/LaravelValetCASelfSigned.pem`), or use `http://`. |
+| `ERR_SSL_…` / `EPROTO` | `https://` against a server that only speaks HTTP (e.g. `php artisan serve`). Use `http://`. |
+| `didn't return JSON (text/html)` | The URL points to a page, not the endpoint. Check the base URL and API prefix. |
+| `500` | The export failed on the CMS. See `storage/logs/laravel.log`. |

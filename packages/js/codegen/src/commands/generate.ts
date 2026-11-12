@@ -2,7 +2,8 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, relative, resolve } from "node:path";
 import { defineCommand } from "citty";
 import { findConfig, loadConfig, resolveOptions } from "../config";
-import { generate, loadSchema } from "../index";
+import { generate, loadSchema, SchemaLoadError } from "../index";
+import { formatLoadError } from "../troubleshoot";
 import { fail, guarded, ok, style } from "./shared";
 
 const args = {
@@ -73,7 +74,20 @@ export const generateCommand = defineCommand({
       );
     }
 
-    const schema = await loadSchema(options.from, options.token ? { token: options.token } : {});
+    let schema: unknown;
+    try {
+      schema = await loadSchema(options.from, options.token ? { token: options.token } : {});
+    } catch (error) {
+      if (!(error instanceof SchemaLoadError)) throw error;
+      // statamic is the only target so far, and the default when the schema decides.
+      console.error(
+        formatLoadError(error, options.target ?? "statamic", {
+          width: process.stderr.columns,
+          style: (format, text) => style(format, text, process.stderr),
+        }),
+      );
+      process.exit(1);
+    }
     const code = generate(schema, {
       ...(options.target ? { target: options.target } : {}),
       ...(options.module ? { moduleName: options.module } : {}),
