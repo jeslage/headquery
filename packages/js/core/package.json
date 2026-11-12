@@ -1,6 +1,6 @@
 {
   "name": "@headquery/core",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "CMS-agnostic fetch transport for headquery adapters: deterministic URLs, auth, errors.",
   "license": "MIT",
   "homepage": "https://github.com/jeslage/headquery#readme",
