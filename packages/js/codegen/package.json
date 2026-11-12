@@ -14,7 +14,7 @@
   },
   "type": "module",
   "bin": {
-    "headquery": "./dist/cli.js"
+    "headquery": "./bin/headquery.js"
   },
   "exports": {
     ".": {
@@ -27,6 +27,7 @@
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "files": [
+    "bin",
     "dist"
   ],
   "scripts": {
