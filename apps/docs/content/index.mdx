@@ -27,6 +27,8 @@ const posts = await cms
 // GET /api/collections/blog/entries?fields=title,date,hero&filter[title:contains]=monorepo&limit=10&sort=-date
 ```
 
+Why another package for a fetch call? See [Motivation](/motivation).
+
 ## Principles
 
 - **Wraps the existing REST API.** headquery is a thin layer over `fetch`. It doesn't add a
@@ -37,6 +39,8 @@ const posts = await cms
   loose types. Run the codegen and handles, filterable fields and result shapes are checked
   by TypeScript, without passing generics by hand.
 - **Zero runtime dependencies** in the JS packages.
+- **Small by design.** The Statamic client stays under 2.5 kB gzipped, including core; a
+  size budget in CI keeps it there.
 
 ## Packages
 

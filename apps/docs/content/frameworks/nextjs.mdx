@@ -1,0 +1,207 @@
+# Next.js
+
+With the App Router, fetch CMS data directly in Server Components: `await query.get()`. No
+data fetching library or extra package is needed. Next's own fetch features work through
+`fetchOptions`, and because every query has a deterministic URL, Next's request memoization
+and data cache key on it automatically.
+
+## Client setup
+
+Create the client in a server-only module:
+
+```ts twoslash
+import "./generated/cms.generated";
+// ---cut---
+// lib/cms.ts
+import "server-only";
+import { createStatamicClient } from "@headquery/statamic";
+
+export const cms = createStatamicClient({
+  baseUrl: process.env.HEADQUERY_BASE_URL!,
+  // Next's data cache: revalidate CMS responses every 60 seconds
+  fetchOptions: { next: { revalidate: 60 } },
+});
+```
+
+`server-only` makes the build fail if this module is ever imported from a Client Component.
+On the server the import does nothing. That matters for three reasons:
+
+- **Secrets stay on the server.** A `token` or an internal CMS URL would otherwise end up in the
+  browser bundle after a single `"use client"` import.
+- **A build error instead of a confusing runtime error.** Next replaces env variables without the
+  `NEXT_PUBLIC_` prefix with `undefined` in client bundles, so `HEADQUERY_BASE_URL` would be
+  missing in the browser.
+- **Server-only settings don't leak.** `next: { revalidate }` only has an effect on the server.
+
+If your API is public and read-only (no `token`, public CMS URL), you don't need it, and one
+client can serve both sides. Otherwise, use a separate public client in the browser, as shown
+in [Client Components](#client-components).
+
+## Server Components
+
+```tsx twoslash
+// @jsx: react-jsx
+import "./generated/cms.generated";
+import { createStatamicClient } from "@headquery/statamic";
+const cms = createStatamicClient({ baseUrl: "https://cms.example.com" });
+// ---cut---
+// app/page.tsx
+import Link from "next/link";
+
+export default async function HomePage() {
+  const { data: posts } = await cms.collection("blog").entries().sort("-date").fields(["title", "slug"]).get();
+
+  return (
+    <ul>
+      {posts.map((post) => (
+        <li key={post.slug}>
+          <Link href={`/blog/${post.slug}`}>{post.title}</Link>
+        </li>
+      ))}
+    </ul>
+  );
+}
+```
+
+Calling the same query in several components (for example in `generateMetadata` and the page)
+sends one request per render: Next memoizes `fetch` calls with the same URL and options.
+
+## Dynamic routes and not found pages
+
+Pre-render every entry with `generateStaticParams`, and turn a `404` from the CMS into Next's
+not found page:
+
+```tsx twoslash
+// @jsx: react-jsx
+import "./generated/cms.generated";
+import { createStatamicClient } from "@headquery/statamic";
+const cms = createStatamicClient({ baseUrl: "https://cms.example.com" });
+// ---cut---
+// app/blog/[slug]/page.tsx
+import type { Metadata } from "next";
+import { notFound } from "next/navigation";
+import { HeadqueryHttpError } from "@headquery/statamic";
+
+type Props = { params: Promise<{ slug: string }> };
+
+const blog = cms.collection("blog");
+
+export async function generateStaticParams() {
+  const { data } = await blog.entries().fields(["slug"]).get();
+  return data.map((post) => ({ slug: post.slug }));
+}
+
+async function getPost(slug: string) {
+  try {
+    return (await blog.entry(slug).get()).data;
+  } catch (error) {
+    if (error instanceof HeadqueryHttpError && error.status === 404) notFound();
+    throw error;
+  }
+}
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const post = await getPost((await params).slug);
+  return { title: post.title };
+}
+
+export default async function PostPage({ params }: Props) {
+  const post = await getPost((await params).slug);
+  return <h1>{post.title}</h1>;
+}
+```
+
+## Caching per query
+
+Options passed to `.get()` are merged over the client's `fetchOptions`:
+
+```ts twoslash
+import "./generated/cms.generated";
+import { createStatamicClient } from "@headquery/statamic";
+const cms = createStatamicClient({ baseUrl: "https://cms.example.com" });
+// ---cut---
+// always fresh
+await cms.global("settings").get({ fetchOptions: { cache: "no-store" } });
+
+// cache for an hour, and tag it for on-demand revalidation
+await cms
+  .collection("blog")
+  .entries()
+  .get({ fetchOptions: { next: { revalidate: 3600, tags: ["blog"] } } });
+```
+
+## On-demand revalidation
+
+Expire tagged responses when content changes, for example from a webhook that your CMS calls
+after saving an entry:
+
+```ts twoslash
+// app/api/revalidate/route.ts
+import { revalidateTag } from "next/cache";
+
+export async function POST(request: Request) {
+  if (request.headers.get("authorization") !== `Bearer ${process.env.REVALIDATE_SECRET}`) {
+    return new Response("Unauthorized", { status: 401 });
+  }
+  revalidateTag("blog", "max");
+  return Response.json({ revalidated: true });
+}
+```
+
+## Client Components
+
+Data that is fetched in the browser (search, filters, infinite lists) needs a second client
+that only uses public settings: a `NEXT_PUBLIC_` URL, no `token` and no `next` fetch options.
+
+```ts twoslash
+import "./generated/cms.generated";
+// ---cut---
+// lib/cms-public.ts
+import { createStatamicClient } from "@headquery/statamic";
+
+export const publicCms = createStatamicClient({
+  baseUrl: process.env.NEXT_PUBLIC_HEADQUERY_BASE_URL!,
+});
+```
+
+The Statamic REST API must be reachable from the browser for this. If it runs on another
+domain, allow your site's origin in Laravel's CORS config (`config/cors.php`, with `api/*`
+in `paths`).
+
+Use it with a data fetching library such as [TanStack Query](/data-fetching/tanstack-query)
+or [SWR](/data-fetching/swr):
+
+```tsx twoslash
+// @jsx: react-jsx
+import "./generated/cms.generated";
+import { createStatamicClient } from "@headquery/statamic";
+const publicCms = createStatamicClient({ baseUrl: "https://cms.example.com" });
+// ---cut---
+// app/blog/search.tsx
+"use client";
+
+import { useState } from "react";
+import useSWR from "swr";
+
+export function PostSearch() {
+  const [term, setTerm] = useState("");
+  const query = term ? publicCms.collection("blog").entries().where("title", "contains", term).limit(10) : null;
+  const { data } = useSWR(query?.url() ?? null, () => query!.get());
+
+  return (
+    <>
+      <input value={term} onChange={(event) => setTerm(event.target.value)} placeholder="Search posts" />
+      <ul>
+        {data?.data.map((post) => (
+          <li key={post.id}>{post.title}</li>
+        ))}
+      </ul>
+    </>
+  );
+}
+```
+
+If both clients use the same `baseUrl`, they produce the same URL for the same query, so data
+fetched on the server can be handed to the client cache without remapping keys (see
+[SWR server-side data](/data-fetching/swr#server-side-data)). If the server reaches the CMS
+through an internal URL, the keys differ.

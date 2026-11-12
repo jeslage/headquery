@@ -7,7 +7,7 @@ import { glob, readFile } from "node:fs/promises";
 import { relative } from "node:path";
 import { createTwoslasher } from "twoslash";
 
-const BLOCK = /^```(?:ts|tsx)\s+twoslash[^\n]*\n([\s\S]*?)^```/gm;
+const BLOCK = /^```(ts|tsx)\s+twoslash[^\n]*\n([\s\S]*?)^```/gm;
 
 const twoslasher = createTwoslasher();
 let blocks = 0;
@@ -19,7 +19,7 @@ for await (const file of glob("content/**/*.mdx")) {
     blocks++;
     const line = source.slice(0, match.index).split("\n").length;
     try {
-      twoslasher(match[1], "ts");
+      twoslasher(match[2], match[1]);
     } catch (error) {
       failures.push(`${relative(process.cwd(), file)}:${line}\n${error instanceof Error ? error.message : error}`);
     }

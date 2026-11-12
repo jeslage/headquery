@@ -1,0 +1,99 @@
+# TanStack Query
+
+The key is `query.url()`, the query function calls `.get()`. TanStack Query passes an
+`AbortSignal`, which headquery forwards to `fetch`, so cancelled queries abort the request.
+
+```ts twoslash
+import "./generated/cms.generated";
+import { createStatamicClient } from "@headquery/statamic";
+const cms = createStatamicClient({ baseUrl: "https://cms.example.com" });
+// ---cut---
+import { useQuery } from "@tanstack/react-query";
+
+const latest = cms.collection("blog").entries().sort("-date").limit(10).fields(["title", "slug", "date"]);
+
+export function useLatestPosts() {
+  return useQuery({
+    queryKey: ["headquery", latest.url()],
+    queryFn: ({ signal }) => latest.get({ signal }),
+  });
+}
+
+const { data } = useLatestPosts();
+//      ^?
+```
+
+## A reusable helper
+
+Wrap this in `queryOptions` once, then use it with `useQuery`, `useSuspenseQuery` or for
+prefetching on the server:
+
+```ts twoslash
+import "./generated/cms.generated";
+import { createStatamicClient } from "@headquery/statamic";
+const cms = createStatamicClient({ baseUrl: "https://cms.example.com" });
+import { QueryClient, useQuery } from "@tanstack/react-query";
+const queryClient = new QueryClient();
+// ---cut---
+import { queryOptions } from "@tanstack/react-query";
+import type { RunOptions } from "@headquery/statamic";
+
+interface Query<T> {
+  url(): string;
+  get(options?: RunOptions): Promise<T>;
+}
+
+export function hq<T>(query: Query<T>) {
+  return queryOptions({
+    queryKey: ["headquery", query.url()],
+    queryFn: ({ signal }) => query.get({ signal }),
+  });
+}
+
+const settings = cms.global("settings");
+
+useQuery(hq(settings));
+await queryClient.prefetchQuery(hq(settings));
+```
+
+## Pagination
+
+Keep the base query without a page, so its URL stays a stable key, and add the page in the
+query function:
+
+```ts twoslash
+import "./generated/cms.generated";
+import { createStatamicClient } from "@headquery/statamic";
+const cms = createStatamicClient({ baseUrl: "https://cms.example.com" });
+// ---cut---
+import { useInfiniteQuery } from "@tanstack/react-query";
+
+const posts = cms.collection("blog").entries().sort("-date").limit(10);
+
+useInfiniteQuery({
+  queryKey: ["headquery", posts.url()],
+  initialPageParam: 1,
+  queryFn: ({ pageParam, signal }) => posts.page(pageParam).get({ signal }),
+  getNextPageParam: (last) =>
+    last.meta.current_page < (last.meta.last_page ?? 0) ? last.meta.current_page + 1 : undefined,
+});
+```
+
+## Retries
+
+Errors are [`HeadqueryHttpError`](/errors) with a `status`, so client errors can skip retries:
+
+```ts twoslash
+import { QueryClient } from "@tanstack/react-query";
+// ---cut---
+import { HeadqueryHttpError } from "@headquery/statamic";
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: (failureCount, error) =>
+        !(error instanceof HeadqueryHttpError && error.status < 500) && failureCount < 3,
+    },
+  },
+});
+```

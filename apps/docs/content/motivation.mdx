@@ -1,0 +1,34 @@
+# Motivation
+
+Headless PHP CMSs like Statamic already ship a good REST API. Calling it with plain `fetch`
+works, but everything about the content stays stringly typed:
+
+- **Field handles and filters are guesses.** A typo in a field name returns `undefined`, and a
+  filter on a field outside `allowed_filters` fails with a `422` at runtime.
+- **Response shapes are surprising.** An empty select field is `{ key: null, value: null, label: null }`,
+  not `null`. An empty grid is `[]`, an empty list is `null`. Navigation pages carry the nav item's
+  id, not the entry's. Most of this isn't documented; you find out at runtime.
+- **The content model lives in the CMS.** When an editor adds or renames a field in a blueprint,
+  nothing in the frontend notices.
+
+The usual answer is GraphQL with generated types. That works, but it means a second API,
+queries in another language, and requests that are usually sent as `POST`, which browsers and
+CDNs don't cache by default.
+
+headquery takes the other route: it keeps the CMS's own REST API and query vocabulary, and adds
+what's missing. TypeScript types are generated from your actual blueprints, and the response
+shapes are checked against real responses. Every read stays a cacheable `GET` with a
+deterministic URL. The client is small (about 1.6 kB gzipped, including core), and the
+generated types add nothing to your bundle.
+
+## Built for coding agents, too
+
+Coding agents are good at writing `fetch` calls. What they don't know is your content model.
+Without it, they guess field handles, use filters the API rejects, and assume response shapes
+that look plausible but are wrong. Those mistakes only show up at runtime.
+
+With headquery, the generated types are the content model, in a form that both agents and
+your IDE understand. A wrong handle, a non-filterable field or a field that wasn't requested
+with `.fields()` becomes a type error right away, and agents fix type errors reliably. The CMS
+quirks above are encoded in the types once and tested against real responses, instead of
+being rediscovered (or missed) in every project.

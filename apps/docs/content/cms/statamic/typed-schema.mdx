@@ -106,7 +106,7 @@ const cms = createStatamicClient<Schema>({ baseUrl: "https://cms.example.com" })
 | `entries`, `terms`, `users` | `HqRelatedEntry`, `HqRelatedTerm`, `HqUser` |
 | `grid`, `replicator` | arrays of typed rows/sets (`[]` when empty) |
 | `bard` | `HqRichText` (HTML string without sets, blocks with sets) |
-| unknown fieldtypes | `unknown` — see [custom fieldtypes](/statamic/custom-fieldtypes) |
+| unknown fieldtypes | `unknown` — see [custom fieldtypes](/cms/statamic/custom-fieldtypes) |
 
 System fields Statamic adds to every entry, term and global set (`id`, `url`, `status`,
 `permalink`, …) come from `HqEntryBase`, `HqTermBase` and `HqGlobalBase`. Blueprint

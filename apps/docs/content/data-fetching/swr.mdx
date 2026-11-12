@@ -1,0 +1,93 @@
+# SWR
+
+The key is `query.url()`, the fetcher calls `.get()`:
+
+```ts twoslash
+import "./generated/cms.generated";
+import { createStatamicClient } from "@headquery/statamic";
+const cms = createStatamicClient({ baseUrl: "https://cms.example.com" });
+// ---cut---
+import useSWR from "swr";
+
+const latest = cms.collection("blog").entries().sort("-date").limit(10).fields(["title", "slug", "date"]);
+
+export function useLatestPosts() {
+  return useSWR(latest.url(), () => latest.get());
+}
+
+const { data } = useLatestPosts();
+//      ^?
+```
+
+SWR does not pass an `AbortSignal` to the fetcher, so outdated requests are not cancelled.
+
+## Conditional fetching
+
+Pass `null` as the key to skip the request:
+
+```ts twoslash
+import "./generated/cms.generated";
+import { createStatamicClient } from "@headquery/statamic";
+const cms = createStatamicClient({ baseUrl: "https://cms.example.com" });
+declare const slug: string | undefined;
+// ---cut---
+import useSWR from "swr";
+
+const post = slug ? cms.collection("blog").entry(slug) : null;
+
+const { data } = useSWR(post?.url() ?? null, () => post!.get());
+```
+
+## Pagination
+
+With `useSWRInfinite`, the key is `[base URL, page]` and the fetcher reads the page from it:
+
+```ts twoslash
+import "./generated/cms.generated";
+import { createStatamicClient } from "@headquery/statamic";
+const cms = createStatamicClient({ baseUrl: "https://cms.example.com" });
+// ---cut---
+import useSWRInfinite from "swr/infinite";
+
+const posts = cms.collection("blog").entries().sort("-date").limit(10);
+type Page = Awaited<ReturnType<typeof posts.get>>;
+
+const { data, size, setSize } = useSWRInfinite(
+  (index, previous: Page | null) =>
+    previous && previous.meta.current_page >= (previous.meta.last_page ?? 0) ? null : [posts.url(), index + 1],
+  ([, page]: [string, number]) => posts.page(page).get(),
+);
+```
+
+## Retries
+
+```ts twoslash
+import type { SWRConfiguration } from "swr";
+// ---cut---
+import { HeadqueryHttpError } from "@headquery/statamic";
+
+export const swrConfig: SWRConfiguration = {
+  onErrorRetry: (error, _key, _config, revalidate, { retryCount }) => {
+    if (error instanceof HeadqueryHttpError && error.status < 500) return;
+    if (retryCount < 3) setTimeout(() => revalidate({ retryCount }), 2000);
+  },
+};
+```
+
+## Server-side data
+
+Fetch on the server and hand the result to SWR as `fallback`. Because the key is the URL, the
+server and the client agree on it without extra mapping:
+
+```ts twoslash
+import "./generated/cms.generated";
+import { createStatamicClient } from "@headquery/statamic";
+const cms = createStatamicClient({ baseUrl: "https://cms.example.com" });
+// ---cut---
+const latest = cms.collection("blog").entries().sort("-date").limit(10);
+
+// on the server
+const fallback = { [latest.url()]: await latest.get() };
+
+// then render: <SWRConfig value={{ fallback }}>…</SWRConfig>
+```

@@ -1,0 +1,108 @@
+# Nuxt
+
+In Nuxt, use `useAsyncData` with `query.url()` as the key and `.get()` as the handler. The
+request runs on the server during SSR, the result is sent to the client in the payload, and
+components that build the same query share one entry because the key is the URL.
+
+```ts twoslash
+import "./generated/cms.generated";
+import { createStatamicClient } from "@headquery/statamic";
+const cms = createStatamicClient({ baseUrl: "https://cms.example.com" });
+// ---cut---
+import { useAsyncData } from "nuxt/app"; // auto-imported in a Nuxt app
+
+const latest = cms.collection("blog").entries().sort("-date").limit(10).fields(["title", "slug", "date"]);
+
+const { data, status, error } = await useAsyncData(latest.url(), (_nuxtApp, { signal }) => latest.get({ signal }));
+//      ^?
+```
+
+Nuxt passes an `AbortSignal` to the handler; forwarding it to `.get()` cancels outdated requests.
+
+## Why not `useFetch`?
+
+`useFetch(query.url())` also works, because the URL is a complete, deterministic request:
+
+```ts twoslash
+import "./generated/cms.generated";
+import { createStatamicClient } from "@headquery/statamic";
+const cms = createStatamicClient({ baseUrl: "https://cms.example.com" });
+// ---cut---
+import { useFetch } from "nuxt/app";
+
+const latest = cms.collection("blog").entries().sort("-date").limit(10);
+
+const { data } = await useFetch<Awaited<ReturnType<typeof latest.get>>>(latest.url());
+```
+
+But it bypasses the headquery client: the `token`, `headers` and `fetchOptions` from
+`createStatamicClient` are not applied, errors are not [`HeadqueryHttpError`](/errors), and the
+result type has to be passed by hand. Prefer `useAsyncData` unless you specifically want
+Nuxt's `$fetch`.
+
+## Reactive queries
+
+Build the query in a `computed` and pass getters for both the key and the handler. When the
+query changes, its URL changes, and Nuxt fetches again:
+
+```ts twoslash
+import "./generated/cms.generated";
+import { createStatamicClient } from "@headquery/statamic";
+const cms = createStatamicClient({ baseUrl: "https://cms.example.com" });
+// ---cut---
+import { useAsyncData } from "nuxt/app";
+import { computed, ref } from "vue";
+
+const page = ref(1);
+const posts = computed(() => cms.collection("blog").entries().sort("-date").limit(10).page(page.value));
+
+const { data } = await useAsyncData(
+  () => posts.value.url(),
+  (_nuxtApp, { signal }) => posts.value.get({ signal }),
+);
+
+page.value++; // new URL → new request
+```
+
+## Not found pages
+
+Turn a `404` from the CMS into a Nuxt error page:
+
+```ts twoslash
+import "./generated/cms.generated";
+import { createStatamicClient } from "@headquery/statamic";
+const cms = createStatamicClient({ baseUrl: "https://cms.example.com" });
+declare const slug: string;
+// ---cut---
+import { HeadqueryHttpError } from "@headquery/statamic";
+import { createError, useAsyncData } from "nuxt/app";
+
+const post = cms.collection("blog").entry(slug);
+
+const { data } = await useAsyncData(post.url(), async (_nuxtApp, { signal }) => {
+  try {
+    return await post.get({ signal });
+  } catch (error) {
+    if (error instanceof HeadqueryHttpError && error.status === 404) {
+      throw createError({ statusCode: 404, statusMessage: "Post not found", fatal: true });
+    }
+    throw error;
+  }
+});
+```
+
+## Client setup
+
+Create the client once, for example in `utils/cms.ts`, so Nuxt auto-imports it:
+
+```ts twoslash
+import "./generated/cms.generated";
+// ---cut---
+import { createStatamicClient } from "@headquery/statamic";
+
+export const cms = createStatamicClient({ baseUrl: "https://cms.example.com" });
+```
+
+If your API needs a `token`, don't put it in this shared client: code in `utils/` also ends up
+in the browser bundle. Read it from private `runtimeConfig` and use that client only in server
+code, or keep the API public and read-only.

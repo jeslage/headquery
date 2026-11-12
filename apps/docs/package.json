@@ -25,10 +25,15 @@
     "react-dom": "^19.3.1"
   },
   "devDependencies": {
+    "@tanstack/react-query": "^5.107.1",
     "@types/node": "^22.0.0",
     "@types/react": "^19.3.0",
+    "nuxt": "^4.6.4",
     "pagefind": "^1.6.0",
+    "server-only": "^0.0.1",
+    "swr": "^2.5.1",
+    "twoslash": "^0.3.9",
     "typescript": "^5.9.0",
-    "twoslash": "^0.3.9"
+    "vue": "^3.5.45"
   }
 }
