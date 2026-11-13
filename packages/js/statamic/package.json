@@ -1,6 +1,6 @@
 {
   "name": "@headquery/statamic",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Typed, cacheable client for the Statamic REST Content API.",
   "license": "MIT",
   "homepage": "https://github.com/jeslage/headquery#readme",
