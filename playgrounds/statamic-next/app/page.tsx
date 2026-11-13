@@ -2,7 +2,7 @@ import Link from "next/link";
 import { cms } from "@/lib/statamic";
 
 export default async function HomePage() {
-  const query = cms.collection("blog").entries().sort("-date").fields(["title", "slug", "date", "featured", "tags"]);
+  const query = cms.collections("blog").sort("-date").fields(["title", "slug", "date", "featured", "tags"]);
 
   const { data: posts } = await query.get();
 

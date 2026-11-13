@@ -71,7 +71,7 @@ const cms = createStatamicClient({ baseUrl: "https://cms.example.com" });
 import Link from "next/link";
 
 export default async function HomePage() {
-  const { data: posts } = await cms.collection("blog").entries().sort("-date").fields(["title", "slug"]).get();
+  const { data: posts } = await cms.collections("blog").sort("-date").fields(["title", "slug"]).get();
 
   return (
     <ul>
@@ -102,24 +102,18 @@ const cms = createStatamicClient({ baseUrl: "https://cms.example.com" });
 // app/blog/[slug]/page.tsx
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { HeadqueryHttpError } from "@headquery/statamic";
 
 type Props = { params: Promise<{ slug: string }> };
 
-const blog = cms.collection("blog");
-
 export async function generateStaticParams() {
-  const { data } = await blog.entries().fields(["slug"]).get();
+  const { data } = await cms.collections("blog").fields(["slug"]).get();
   return data.map((post) => ({ slug: post.slug }));
 }
 
 async function getPost(slug: string) {
-  try {
-    return (await blog.entry(slug).get()).data;
-  } catch (error) {
-    if (error instanceof HeadqueryHttpError && error.status === 404) notFound();
-    throw error;
-  }
+  const post = await cms.collections("blog").find(slug).get();
+  if (!post) notFound();
+  return post.data;
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -147,8 +141,7 @@ await cms.global("settings").get({ fetchOptions: { cache: "no-store" } });
 
 // cache for an hour, and tag it for on-demand revalidation
 await cms
-  .collection("blog")
-  .entries()
+  .collections("blog")
   .get({ fetchOptions: { next: { revalidate: 3600, tags: ["blog"] } } });
 ```
 
@@ -216,7 +209,7 @@ export function BlogFilter() {
   const [sort, setSort] = useState<Sort>("-date");
 
   // Builders are immutable: add a filter only when it's set.
-  let query = publicCms.collection("blog").entries().sort(sort).limit(10);
+  let query = publicCms.collections("blog").sort(sort).limit(10);
   if (term) query = query.where("title", "contains", term);
   if (featured) query = query.where("featured", true);
 

@@ -45,7 +45,13 @@
       "additionalProperties": false,
       "properties": {
         "title": { "type": "string" },
-        "fields": { "$ref": "#/$defs/fieldMap" }
+        "fields": { "$ref": "#/$defs/fieldMap" },
+        "systemFilters": {
+          "description": "Handles allowed in API filters that are not blueprint fields (e.g. system fields like `date` or an asset's `basename`). Blueprint fields carry `filterable` instead.",
+          "type": "array",
+          "items": { "type": "string" },
+          "uniqueItems": true
+        }
       }
     },
     "navigation": {

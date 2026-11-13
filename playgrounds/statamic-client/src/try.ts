@@ -15,14 +15,14 @@ async function show(label: string, query: { url(): string; get(): Promise<unknow
   }
 }
 
-const blog = cms.collection("blog");
+const blog = cms.collections("blog");
 
 await show(
   "featured posts, newest first",
-  blog.entries().where("featured", true).sort("-date").fields(["title", "slug", "date"]),
+  blog.where("featured", true).sort("-date").fields(["title", "slug", "date"]),
 );
-await show("title contains 'GET'", blog.entries().where("title", "contains", "GET").fields(["title"]));
-await show("slug in [...]", blog.entries().where("slug", "in", ["hello-headquery", "statamic-addon"]).fields(["slug"]));
-await show("single entry by slug", blog.entry("hello-headquery").fields(["title", "stage", "tags", "hero"]));
-await show("tags", cms.taxonomy("tags").terms().fields(["title", "slug"]));
+await show("title contains 'GET'", blog.where("title", "contains", "GET").fields(["title"]));
+await show("slug in [...]", blog.where("slug", "in", ["hello-headquery", "statamic-addon"]).fields(["slug"]));
+await show("single entry by slug", blog.find("hello-headquery").fields(["title", "stage", "tags", "hero"]));
+await show("tags", cms.taxonomies("tags").fields(["title", "slug"]));
 await show("settings global", cms.global("settings"));

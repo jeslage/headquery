@@ -12,8 +12,7 @@ import "./cms.generated"; // registers your schema's types
 const cms = createStatamicClient({ baseUrl: "https://cms.example.com" });
 
 const posts = await cms
-  .collection("blog") // collection handles autocomplete
-  .entries()
+  .collections("blog") // collection handles autocomplete
   .where("title", "contains", "monorepo") // only allowed_filters fields are accepted
   .sort("-date")
   .limit(10)

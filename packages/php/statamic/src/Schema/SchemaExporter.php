@@ -3,6 +3,7 @@
 namespace Headquery\Statamic\Schema;
 
 use Illuminate\Support\Collection as LaravelCollection;
+use Statamic\Facades\AssetContainer;
 use Statamic\Facades\Collection;
 use Statamic\Facades\GlobalSet;
 use Statamic\Facades\Nav;
@@ -17,7 +18,9 @@ use Statamic\Statamic;
  *
  * Only resources that are enabled in config/statamic/api.php are exported, and
  * only fields listed in `allowed_filters` are marked filterable — the schema
- * mirrors what the REST API actually serves.
+ * mirrors what the REST API actually serves. Allowed filters that are not
+ * blueprint fields (system fields like `date` or an asset's `basename`) are
+ * listed in `systemFilters`.
  *
  * Uses Statamic's public API (Collection::all(), entryBlueprints(),
  * Blueprint::fields()->all(), Field::type()/config()); checked manually against
@@ -33,7 +36,7 @@ class SchemaExporter
 
     public function export(): array
     {
-        $resources = ['collection' => [], 'taxonomy' => [], 'global' => [], 'navigation' => []];
+        $resources = ['collection' => [], 'taxonomy' => [], 'global' => [], 'navigation' => [], 'assetContainer' => []];
 
         if (! config('statamic.api.enabled', false)) {
             return $this->envelope($resources);
@@ -44,10 +47,11 @@ class SchemaExporter
             if ($config === null) {
                 continue;
             }
-            $resources['collection'][$collection->handle()] = [
-                'title' => (string) $collection->title(),
-                'fields' => $this->mergeBlueprints($collection->entryBlueprints(), $config),
-            ];
+            $resources['collection'][$collection->handle()] = $this->resource(
+                (string) $collection->title(),
+                $collection->entryBlueprints(),
+                $config,
+            );
         }
 
         foreach (Taxonomy::all() as $taxonomy) {
@@ -55,10 +59,11 @@ class SchemaExporter
             if ($config === null) {
                 continue;
             }
-            $resources['taxonomy'][$taxonomy->handle()] = [
-                'title' => (string) $taxonomy->title(),
-                'fields' => $this->mergeBlueprints($taxonomy->termBlueprints(), $config),
-            ];
+            $resources['taxonomy'][$taxonomy->handle()] = $this->resource(
+                (string) $taxonomy->title(),
+                $taxonomy->termBlueprints(),
+                $config,
+            );
         }
 
         foreach (GlobalSet::all() as $set) {
@@ -90,6 +95,19 @@ class SchemaExporter
             $resources['navigation'][$nav->handle()] = $navigation;
         }
 
+        foreach (AssetContainer::all() as $container) {
+            $config = $this->resourceConfig('assets', $container->handle());
+            if ($config === null) {
+                continue;
+            }
+            $blueprint = $container->blueprint();
+            $resources['assetContainer'][$container->handle()] = $this->resource(
+                (string) $container->title(),
+                $blueprint ? collect([$blueprint]) : collect(),
+                $config,
+            );
+        }
+
         return $this->envelope($resources);
     }
 
@@ -113,6 +131,27 @@ class SchemaExporter
                 return (object) $byHandle;
             }, $resources),
         ];
+    }
+
+    /**
+     * A filterable resource: merged blueprint fields, plus the allowed filters
+     * that are not blueprint fields as `systemFilters`.
+     */
+    protected function resource(string $title, LaravelCollection $blueprints, array $config): array
+    {
+        $fields = $this->mergeBlueprints($blueprints, $config);
+        $resource = ['title' => $title, 'fields' => $fields];
+
+        $allowedFilters = $this->allowedFilters($config);
+        if (is_array($allowedFilters)) {
+            $system = array_values(array_unique(array_diff($allowedFilters, array_keys((array) $fields))));
+            sort($system);
+            if ($system !== []) {
+                $resource['systemFilters'] = $system;
+            }
+        }
+
+        return $resource;
     }
 
     /**

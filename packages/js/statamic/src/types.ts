@@ -8,6 +8,8 @@ export interface StatamicSchemaShape {
   // `object` rather than Record<string, unknown> so plain interfaces (no index signature) fit.
   globals: Record<string, object>;
   navigations: Record<string, NavigationShape>;
+  /** Optional so schemas generated before asset support still match. */
+  assetContainers?: Record<string, ResourceShape>;
 }
 
 export interface NavigationShape {
@@ -16,7 +18,7 @@ export interface NavigationShape {
 }
 
 export interface ResourceShape {
-  /** One item as returned by the API (entry or term). */
+  /** One item as returned by the API (entry, term or asset). */
   item: object;
   /** Field handles allowed in `filter[...]` (Statamic `allowed_filters`). */
   filterable: string;
@@ -40,9 +42,20 @@ export interface LooseSchema {
   taxonomies: Record<string, { item: LooseItem; filterable: string }>;
   globals: Record<string, LooseItem>;
   navigations: Record<string, { page: LooseNavPage }>;
+  assetContainers: Record<string, { item: LooseAsset; filterable: string }>;
 }
 
 export type LooseItem = { id: string } & Record<string, unknown>;
+
+/** Asset without generated types. `path` is relative to the container root. */
+export type LooseAsset = { id: string; path: string } & Record<string, unknown>;
+
+/** Asset containers of a schema; loosely typed when the schema has none (generated before asset support). */
+export type AssetContainersOf<S extends StatamicSchemaShape> = S extends {
+  assetContainers: infer A extends Record<string, ResourceShape>;
+}
+  ? A
+  : LooseSchema["assetContainers"];
 
 /** Nav page without generated types: `entry_id` is null for plain links, the entry id otherwise. */
 export type LooseNavPage = { id: string; entry_id: string | null } & Record<string, unknown>;

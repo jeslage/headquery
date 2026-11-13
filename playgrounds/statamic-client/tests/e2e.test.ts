@@ -3,15 +3,15 @@
 import { HeadqueryHttpError } from "@headquery/statamic";
 import { describe, expect, expectTypeOf, it } from "vitest";
 import { cms } from "../src/client";
-import type { BlogEntry, HqAsset } from "../src/cms";
+import type { AssetsAsset, BlogEntry, HqAsset, HqAssetBase } from "../src/cms";
 import { baseUrl } from "../src/env";
 
-const blog = cms.collection("blog");
+const blog = cms.collections("blog");
 
 describe.skipIf(!baseUrl)(`Statamic playground (${baseUrl})`, () => {
   describe("collection entries", () => {
     it("lists published entries only, with pagination meta", async () => {
-      const res = await blog.entries().fields(["slug"]).get();
+      const res = await blog.fields(["slug"]).get();
       expect(res.data.map((e) => e.slug).sort()).toEqual([
         "cacheable-get-requests",
         "hello-headquery",
@@ -22,51 +22,46 @@ describe.skipIf(!baseUrl)(`Statamic playground (${baseUrl})`, () => {
     });
 
     it("narrows the response to the requested fields", async () => {
-      const res = await blog.entries().fields(["title", "slug"]).limit(1).get();
+      const res = await blog.fields(["title", "slug"]).limit(1).get();
       expect(Object.keys(res.data[0] ?? {}).sort()).toEqual(["slug", "title"]);
       expectTypeOf(res.data).toEqualTypeOf<Array<Pick<BlogEntry, "title" | "slug">>>();
     });
 
     it("sorts descending", async () => {
-      const res = await blog.entries().sort("-date").fields(["slug"]).get();
+      const res = await blog.sort("-date").fields(["slug"]).get();
       expect(res.data.map((e) => e.slug)).toEqual(["statamic-addon", "cacheable-get-requests", "hello-headquery"]);
     });
 
     it("filters with `is` on a boolean", async () => {
-      const res = await blog.entries().where("featured", true).fields(["slug", "featured"]).get();
+      const res = await blog.where("featured", true).fields(["slug", "featured"]).get();
       expect(res.data.map((e) => e.slug).sort()).toEqual(["hello-headquery", "statamic-addon"]);
       expect(res.data.every((e) => e.featured === true)).toBe(true);
     });
 
     it("filters with `contains`", async () => {
-      const res = await blog.entries().where("title", "contains", "GET").fields(["title"]).get();
+      const res = await blog.where("title", "contains", "GET").fields(["title"]).get();
       expect(res.data.map((e) => e.title)).toEqual(["Cacheable GET requests"]);
     });
 
     it("filters with `in` (verifies LIST_SEPARATOR)", async () => {
-      const res = await blog
-        .entries()
-        .where("slug", "in", ["hello-headquery", "statamic-addon"])
-        .fields(["slug"])
-        .get();
+      const res = await blog.where("slug", "in", ["hello-headquery", "statamic-addon"]).fields(["slug"]).get();
       expect(res.data.map((e) => e.slug).sort()).toEqual(["hello-headquery", "statamic-addon"]);
     });
 
     it("paginates", async () => {
-      const page2 = await blog.entries().sort("date").limit(2).page(2).fields(["slug"]).get();
+      const page2 = await blog.sort("date").limit(2).page(2).fields(["slug"]).get();
       expect(page2.data.map((e) => e.slug)).toEqual(["statamic-addon"]);
       expect(page2.meta).toMatchObject({ current_page: 2, per_page: 2, total: 3 });
     });
 
     it("first() returns one item or null", async () => {
-      expect(await blog.entries().sort("date").fields(["slug"]).first()).toEqual({ slug: "hello-headquery" });
-      expect(await blog.entries().where("slug", "nope").first()).toBeNull();
+      expect(await blog.sort("date").fields(["slug"]).first()).toEqual({ slug: "hello-headquery" });
+      expect(await blog.where("slug", "nope").first()).toBeNull();
     });
 
     it("rejects filters on fields that are not in allowed_filters", async () => {
-      // @ts-expect-error reading_time is not filterable
       const err = await blog
-        .entries()
+        // @ts-expect-error reading_time is not filterable
         .where("reading_time", 3)
         .get()
         .catch((e: unknown) => e);
@@ -77,7 +72,7 @@ describe.skipIf(!baseUrl)(`Statamic playground (${baseUrl})`, () => {
 
   describe("single entry", () => {
     it("fetches by slug and returns the documented field shapes", async () => {
-      const { data } = await blog.entry("hello-headquery").get();
+      const { data } = (await blog.find("hello-headquery").get())!;
       expect(data).toMatchObject({
         title: "Hello headquery",
         slug: "hello-headquery",
@@ -91,26 +86,21 @@ describe.skipIf(!baseUrl)(`Statamic playground (${baseUrl})`, () => {
     });
 
     it("returns empty relations as null (single) and [] (multiple)", async () => {
-      const { data } = await blog.entry("statamic-addon").fields(["hero", "related"]).get();
+      const { data } = (await blog.find("statamic-addon").fields(["hero", "related"]).get())!;
       expect(data.hero).toBeNull();
       expect(data.related).toEqual([]);
     });
 
-    it("hides unpublished entries (404)", async () => {
-      const err = await blog
-        .entry("unpublished-draft")
-        .get()
-        .catch((e: unknown) => e);
-      expect(err).toBeInstanceOf(HeadqueryHttpError);
-      expect((err as HeadqueryHttpError).status).toBe(404);
+    it("hides unpublished entries: find() resolves to null on 404", async () => {
+      expect(await blog.find("unpublished-draft").get()).toBeNull();
     });
   });
 
   describe("taxonomies and globals", () => {
     it("lists and fetches terms", async () => {
-      const terms = await cms.taxonomy("tags").terms().fields(["slug"]).get();
+      const terms = await cms.taxonomies("tags").fields(["slug"]).get();
       expect(terms.data.map((t) => t.slug).sort()).toEqual(["javascript", "php", "statamic"]);
-      const { data } = await cms.taxonomy("tags").term("php").get();
+      const { data } = (await cms.taxonomies("tags").find("php").get())!;
       expect(data).toMatchObject({ slug: "php", title: "PHP" });
     });
 
@@ -132,7 +122,7 @@ describe.skipIf(!baseUrl)(`Statamic playground (${baseUrl})`, () => {
   });
 
   describe("navigation", () => {
-    const main = cms.nav("main").tree();
+    const main = cms.navTree("main");
 
     it("returns entry pages with the entry's fields and link pages with entry_id null", async () => {
       const { data } = await main.get();
@@ -165,4 +155,135 @@ describe.skipIf(!baseUrl)(`Statamic playground (${baseUrl})`, () => {
       expect(data).toEqual([expect.objectContaining({ handle: "main", title: "Main", max_depth: 2 })]);
     });
   });
+
+  describe("assets", () => {
+    const assets = cms.assets("assets");
+
+    it("lists assets with pagination meta and narrows to the requested fields", async () => {
+      const res = await assets.sort("path").fields(["path", "folder"]).get();
+      expect(res.data).toEqual([
+        { path: "files/notes.txt", folder: "files" },
+        { path: "gallery-1.svg", folder: "/" },
+        { path: "gallery-2.svg", folder: "/" },
+        { path: "hero.svg", folder: "/" },
+        { path: "icons/logo mark.svg", folder: "icons" },
+      ]);
+      expect(res.meta).toMatchObject({ current_page: 1, total: 5 });
+    });
+
+    it("filters on system fields like Asset::query()->where('basename', …)->first()", async () => {
+      // find() ignores filters, so it is not offered after where()
+      // @ts-expect-error find() only exists before list options
+      assets.where("folder", "icons").find;
+      const hero = await assets.where("basename", "hero.svg").fields(["path", "alt"]).first();
+      expect(hero).toEqual({ path: "hero.svg", alt: null });
+      expect(await assets.where("folder", "icons").fields(["basename"]).first()).toEqual({ basename: "logo mark.svg" });
+    });
+
+    it("rejects filters that are not in allowed_filters", async () => {
+      const err = await assets
+        // @ts-expect-error extension is not filterable
+        .where("extension", "svg")
+        .get()
+        .catch((e: unknown) => e);
+      expect(err).toBeInstanceOf(HeadqueryHttpError);
+      expect((err as HeadqueryHttpError).status).toBe(422);
+    });
+
+    it("fetches one asset by path with every documented system field", async () => {
+      const { data } = (await cms.assets("assets").find("hero.svg").get())!;
+      expectTypeOf(data).toEqualTypeOf<AssetsAsset>();
+      expect(data).toMatchObject({
+        id: "assets::hero.svg",
+        path: "hero.svg",
+        basename: "hero.svg",
+        folder: "/",
+        url: "/assets/hero.svg",
+        is_asset: true,
+        is_image: false,
+        is_svg: true,
+        width: 1200,
+        height: 630,
+        orientation: "landscape",
+        mime_type: "image/svg+xml",
+        duration: null,
+        alt: null,
+        container: expect.objectContaining({ handle: "assets" }),
+      });
+      expect(Object.keys(data).sort()).toEqual([...ASSET_KEYS, "alt"].sort());
+    });
+
+    it("fetches nested paths and keeps their slashes in the URL", async () => {
+      const q = cms.assets("assets").find("icons/logo mark.svg").fields(["id", "api_url"]);
+      expect(q.url()).toBe(`${baseUrl}/api/assets/assets/icons/logo%20mark.svg?fields=id,api_url`);
+      const { data } = (await q.get())!;
+      expect(data).toEqual({
+        id: "assets::icons/logo mark.svg",
+        api_url: expect.stringMatching(/icons\/logo%20mark\.svg$/),
+      });
+    });
+
+    it("returns null dimensions for non-images", async () => {
+      const { data } = (await cms
+        .assets("assets")
+        .find("files/notes.txt")
+        .fields(["width", "height", "ratio", "orientation"])
+        .get())!;
+      expect(data).toEqual({ width: null, height: null, ratio: null, orientation: "square" });
+    });
+
+    it("find() resolves to null for a missing asset", async () => {
+      expect(await cms.assets("assets").find("nope.svg").get()).toBeNull();
+    });
+  });
 });
+
+/** Keys of HqAssetBase, checked against a real response. */
+const ASSET_KEYS = [
+  "id",
+  "title",
+  "path",
+  "filename",
+  "basename",
+  "extension",
+  "folder",
+  "url",
+  "permalink",
+  "api_url",
+  "edit_url",
+  "is_asset",
+  "is_audio",
+  "is_previewable",
+  "is_image",
+  "is_svg",
+  "is_video",
+  "is_pdf",
+  "blueprint",
+  "container",
+  "size",
+  "size_bytes",
+  "size_kilobytes",
+  "size_megabytes",
+  "size_gigabytes",
+  "size_b",
+  "size_kb",
+  "size_mb",
+  "size_gb",
+  "last_modified",
+  "last_modified_timestamp",
+  "last_modified_instance",
+  "focus",
+  "has_focus",
+  "focus_css",
+  "height",
+  "width",
+  "orientation",
+  "ratio",
+  "mime_type",
+  "duration",
+  "duration_seconds",
+  "duration_minutes",
+  "duration_sec",
+  "duration_min",
+  "playtime",
+] satisfies Array<keyof HqAssetBase>;

@@ -35,7 +35,7 @@ function NavItems({ items }: { items: Array<NavTreeItem<NavPage>> }) {
 export default async function RootLayout({ children }: { children: ReactNode }) {
   // Two independent GET requests, fetched in parallel.
   const [{ data: navigation }, { data: settings }] = await Promise.all([
-    cms.nav("main").tree().fields(["title", "url", "entry_id"]).get(),
+    cms.navTree("main").fields(["title", "url", "entry_id"]).get(),
     cms.global("settings").get(),
   ]);
   return (

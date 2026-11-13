@@ -9,7 +9,7 @@ const cms = createStatamicClient({ baseUrl: "https://cms.example.com" });
 // ---cut---
 import useSWR from "swr";
 
-const latest = cms.collection("blog").entries().sort("-date").limit(10).fields(["title", "slug", "date"]);
+const latest = cms.collections("blog").sort("-date").limit(10).fields(["title", "slug", "date"]);
 
 export function useLatestPosts() {
   return useSWR(latest.url(), () => latest.get());
@@ -33,7 +33,7 @@ declare const slug: string | undefined;
 // ---cut---
 import useSWR from "swr";
 
-const post = slug ? cms.collection("blog").entry(slug) : null;
+const post = slug ? cms.collections("blog").find(slug) : null;
 
 const { data } = useSWR(post?.url() ?? null, () => post!.get());
 ```
@@ -49,7 +49,7 @@ const cms = createStatamicClient({ baseUrl: "https://cms.example.com" });
 // ---cut---
 import useSWRInfinite from "swr/infinite";
 
-const posts = cms.collection("blog").entries().sort("-date").limit(10);
+const posts = cms.collections("blog").sort("-date").limit(10);
 type Page = Awaited<ReturnType<typeof posts.get>>;
 
 const { data, size, setSize } = useSWRInfinite(
@@ -84,7 +84,7 @@ import "./generated/cms.generated";
 import { createStatamicClient } from "@headquery/statamic";
 const cms = createStatamicClient({ baseUrl: "https://cms.example.com" });
 // ---cut---
-const latest = cms.collection("blog").entries().sort("-date").limit(10);
+const latest = cms.collections("blog").sort("-date").limit(10);
 
 // on the server
 const fallback = { [latest.url()]: await latest.get() };

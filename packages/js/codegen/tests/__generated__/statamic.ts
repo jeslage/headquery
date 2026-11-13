@@ -102,6 +102,72 @@ export interface HqTermBase {
   updated_by: HqUser | null;
 }
 
+/** Fields Statamic adds to every asset from `cms.assets()`, regardless of the blueprint. */
+export interface HqAssetBase {
+  /** `container::path` */
+  id: string;
+  title: string;
+  /** Relative to the container root, e.g. `2026/hero.jpg`. */
+  path: string;
+  filename: string;
+  basename: string;
+  extension: string;
+  /** `/` for the container root. */
+  folder: string;
+  url: string | null;
+  permalink: string | null;
+  api_url: string;
+  edit_url: string;
+  is_asset: true;
+  is_audio: boolean;
+  is_previewable: boolean;
+  is_image: boolean;
+  is_svg: boolean;
+  is_video: boolean;
+  is_pdf: boolean;
+  blueprint: { title: string; handle: string };
+  container: {
+    id: string;
+    title: string;
+    handle: string;
+    disk: string;
+    blueprint: { title: string; handle: string };
+    search_index: string | null;
+    api_url: string | null;
+  };
+  /** Human-readable, e.g. `255 B`. */
+  size: string;
+  size_bytes: number;
+  size_kilobytes: number;
+  size_megabytes: number;
+  size_gigabytes: number;
+  size_b: number;
+  size_kb: number;
+  size_mb: number;
+  size_gb: number;
+  last_modified: string;
+  last_modified_timestamp: number;
+  last_modified_instance: string;
+  /** `x-y-zoom` in percent, `50-50-1` when no focal point is set. */
+  focus: string;
+  has_focus: boolean;
+  focus_css: string;
+  /** Images and videos only. */
+  width: number | null;
+  height: number | null;
+  /** `square` for non-images (width and height are both null). */
+  orientation: "landscape" | "portrait" | "square";
+  ratio: number | null;
+  mime_type: string | null;
+  /** Audio and video only, in seconds. */
+  duration: number | null;
+  duration_seconds: number | null;
+  duration_minutes: string | null;
+  duration_sec: number | null;
+  duration_min: string | null;
+  playtime: string;
+}
+
 /** Fields Statamic adds to every global set. `handle` tells sets apart in `cms.globals()`. */
 export interface HqGlobalBase<H extends string = string> {
   handle: H;
@@ -176,6 +242,11 @@ export type MainNavPage =
   | HqNavLink<MainNavFields>
   | HqNavEntry<BlogEntry, MainNavFields>;
 
+export interface AssetsAsset extends HqAssetBase {
+  /** Description of the image — CMS field type: `text` */
+  alt: string | null;
+}
+
 export interface Schema {
   collections: {
     blog: { item: BlogEntry; filterable: "featured" | "slug" | "title" };
@@ -188,6 +259,9 @@ export interface Schema {
   };
   navigations: {
     main: { page: MainNavPage };
+  };
+  assetContainers: {
+    assets: { item: AssetsAsset; filterable: "alt" | "basename" | "folder" };
   };
 }
 

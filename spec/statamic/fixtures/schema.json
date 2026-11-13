@@ -62,6 +62,15 @@
         }
       }
     },
+    "assetContainer": {
+      "assets": {
+        "title": "Assets",
+        "systemFilters": ["basename", "folder"],
+        "fields": {
+          "alt": { "type": "string", "filterable": true, "cmsType": "text", "description": "Description of the image" }
+        }
+      }
+    },
     "navigation": {
       "main": {
         "title": "Main",

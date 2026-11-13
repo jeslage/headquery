@@ -52,7 +52,7 @@ mirrors a Statamic site root and contains a content model that follows
 | Taxonomy        | `tags`               | `javascript`, `php`, `statamic`                                                                                |
 | Globals         | `settings`           | `site_name`, `social` (grid)                                                                                   |
 | Navigation      | `main`               | entry links, a nested child, an external URL                                                                   |
-| Asset container | `assets`             | three SVGs in `public/assets`                                                                                  |
+| Asset container | `assets`             | SVGs in `public/assets` (one in `icons/`, with a space), `files/notes.txt`; blueprint field `alt`              |
 | User            | `author@example.com` | relation target for `author`, has no password                                                                  |
 
 `seed/config/statamic/api.php` replaces the skeleton's API config: it exposes all of the

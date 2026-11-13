@@ -32,4 +32,14 @@ describe("assertIrSchema", () => {
       assertIrSchema({ schemaVersion: 1, cms: { name: "x" }, resources: { blog: { kind: "collection", fields: {} } } }),
     ).toThrow(/Unknown resource kind "blog"/);
   });
+
+  it("rejects systemFilters that are not a list of handles", () => {
+    expect(() =>
+      assertIrSchema({
+        schemaVersion: 1,
+        cms: { name: "x" },
+        resources: { assetContainer: { assets: { fields: {}, systemFilters: "basename" } } },
+      }),
+    ).toThrow(/"assetContainer\.assets" systemFilters/);
+  });
 });

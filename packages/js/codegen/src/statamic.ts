@@ -105,6 +105,72 @@ export interface HqTermBase {
   updated_by: HqUser | null;
 }
 
+/** Fields Statamic adds to every asset from \`cms.assets()\`, regardless of the blueprint. */
+export interface HqAssetBase {
+  /** \`container::path\` */
+  id: string;
+  title: string;
+  /** Relative to the container root, e.g. \`2026/hero.jpg\`. */
+  path: string;
+  filename: string;
+  basename: string;
+  extension: string;
+  /** \`/\` for the container root. */
+  folder: string;
+  url: string | null;
+  permalink: string | null;
+  api_url: string;
+  edit_url: string;
+  is_asset: true;
+  is_audio: boolean;
+  is_previewable: boolean;
+  is_image: boolean;
+  is_svg: boolean;
+  is_video: boolean;
+  is_pdf: boolean;
+  blueprint: { title: string; handle: string };
+  container: {
+    id: string;
+    title: string;
+    handle: string;
+    disk: string;
+    blueprint: { title: string; handle: string };
+    search_index: string | null;
+    api_url: string | null;
+  };
+  /** Human-readable, e.g. \`255 B\`. */
+  size: string;
+  size_bytes: number;
+  size_kilobytes: number;
+  size_megabytes: number;
+  size_gigabytes: number;
+  size_b: number;
+  size_kb: number;
+  size_mb: number;
+  size_gb: number;
+  last_modified: string;
+  last_modified_timestamp: number;
+  last_modified_instance: string;
+  /** \`x-y-zoom\` in percent, \`50-50-1\` when no focal point is set. */
+  focus: string;
+  has_focus: boolean;
+  focus_css: string;
+  /** Images and videos only. */
+  width: number | null;
+  height: number | null;
+  /** \`square\` for non-images (width and height are both null). */
+  orientation: "landscape" | "portrait" | "square";
+  ratio: number | null;
+  mime_type: string | null;
+  /** Audio and video only, in seconds. */
+  duration: number | null;
+  duration_seconds: number | null;
+  duration_minutes: string | null;
+  duration_sec: number | null;
+  duration_min: string | null;
+  playtime: string;
+}
+
 /** Fields Statamic adds to every global set. \`handle\` tells sets apart in \`cms.globals()\`. */
 export interface HqGlobalBase<H extends string = string> {
   handle: H;
@@ -172,6 +238,54 @@ const BASE_KEYS = {
     "updated_by",
   ],
   HqGlobalBase: ["handle", "api_url"],
+  HqAssetBase: [
+    "id",
+    "title",
+    "path",
+    "filename",
+    "basename",
+    "extension",
+    "folder",
+    "url",
+    "permalink",
+    "api_url",
+    "edit_url",
+    "is_asset",
+    "is_audio",
+    "is_previewable",
+    "is_image",
+    "is_svg",
+    "is_video",
+    "is_pdf",
+    "blueprint",
+    "container",
+    "size",
+    "size_bytes",
+    "size_kilobytes",
+    "size_megabytes",
+    "size_gigabytes",
+    "size_b",
+    "size_kb",
+    "size_mb",
+    "size_gb",
+    "last_modified",
+    "last_modified_timestamp",
+    "last_modified_instance",
+    "focus",
+    "has_focus",
+    "focus_css",
+    "height",
+    "width",
+    "orientation",
+    "ratio",
+    "mime_type",
+    "duration",
+    "duration_seconds",
+    "duration_minutes",
+    "duration_sec",
+    "duration_min",
+    "playtime",
+  ],
 } as const;
 
 type BaseName = keyof typeof BASE_KEYS;
@@ -184,6 +298,7 @@ export function generateStatamic(schema: IrSchema, options: StatamicGenerateOpti
   const taxonomies: string[] = [];
   const globals: string[] = [];
   const navigations: string[] = [];
+  const assetContainers: string[] = [];
   const sorted = <T>(map: Record<string, T> | undefined): Array<[string, T]> =>
     Object.entries(map ?? {}).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
 
@@ -207,7 +322,11 @@ export function generateStatamic(schema: IrSchema, options: StatamicGenerateOpti
     out.push(...navigationTypes(name, nav, schema));
     navigations.push(`    ${key(handle)}: { page: ${name} };`);
   }
-  // assetContainer: not supported by the Statamic adapter yet
+  for (const [handle, resource] of sorted(schema.resources.assetContainer)) {
+    const name = `${pascal(handle)}Asset`;
+    out.push(itemInterface(name, resource, "HqAssetBase"));
+    assetContainers.push(`    ${key(handle)}: { item: ${name}; filterable: ${filterable(resource)} };`);
+  }
 
   const header = [
     "/* eslint-disable */",
@@ -223,6 +342,7 @@ export function generateStatamic(schema: IrSchema, options: StatamicGenerateOpti
     `  taxonomies: {${block(taxonomies)}};`,
     `  globals: {${block(globals)}};`,
     `  navigations: {${block(navigations)}};`,
+    `  assetContainers: {${block(assetContainers)}};`,
     "}",
   ].join("\n");
 
@@ -283,12 +403,12 @@ function navigationTypes(name: string, nav: IrNavigation, schema: IrSchema): str
   return [fieldsType, `${comment}\nexport type ${name} =\n  | ${variants.join("\n  | ")};`];
 }
 
+/** Blueprint fields marked filterable plus allowed system filters (e.g. `date`, `basename`). */
 function filterable(resource: IrResource): string {
-  const handles = Object.entries(resource.fields)
-    .filter(([, f]) => f.filterable)
-    .map(([h]) => JSON.stringify(h))
-    .sort();
-  return handles.length ? handles.join(" | ") : "never";
+  const handles = new Set(resource.systemFilters ?? []);
+  for (const [h, f] of Object.entries(resource.fields)) if (f.filterable) handles.add(h);
+  const sorted = [...handles].sort().map((h) => JSON.stringify(h));
+  return sorted.length ? sorted.join(" | ") : "never";
 }
 
 /**

@@ -1,4 +1,11 @@
-import type { Compilable, CoreClient, QueryParams, RequestSpec, RunOptions } from "@headquery/core";
+import {
+  type Compilable,
+  type CoreClient,
+  HeadqueryHttpError,
+  type QueryParams,
+  type RequestSpec,
+  type RunOptions,
+} from "@headquery/core";
 import type {
   DataList,
   KeysOfUnion,
@@ -33,7 +40,7 @@ type FieldValue<Item, F extends keyof Item> = Item[F] extends Scalar | null | un
   : Scalar;
 
 /**
- * Immutable list query for collection entries and taxonomy terms.
+ * Immutable list query for collection entries, taxonomy terms and assets.
  * Every builder call returns a new instance, so partial queries can be reused safely.
  */
 export class ListQuery<Item, Filterable extends string, Picked extends keyof Item = keyof Item>
@@ -48,19 +55,19 @@ export class ListQuery<Item, Filterable extends string, Picked extends keyof Ite
   ) {}
 
   /** `filter[field]=value` (condition `is`). */
-  where<F extends Filterable & keyof Item>(field: F, value: FieldValue<Item, F>): this;
+  where<F extends Filterable & keyof Item>(field: F, value: FieldValue<Item, F>): ListQuery<Item, Filterable, Picked>;
   where<F extends Filterable & keyof Item>(
     field: F,
     condition: ScalarCondition,
     value: FieldValue<Item, F> | Scalar,
-  ): this;
+  ): ListQuery<Item, Filterable, Picked>;
   where<F extends Filterable & keyof Item>(
     field: F,
     condition: ListCondition,
     values: Array<FieldValue<Item, F> | Scalar>,
-  ): this;
-  where<F extends Filterable & keyof Item>(field: F, condition: PresenceCondition): this;
-  where(field: string, a?: unknown, b?: unknown): this {
+  ): ListQuery<Item, Filterable, Picked>;
+  where<F extends Filterable & keyof Item>(field: F, condition: PresenceCondition): ListQuery<Item, Filterable, Picked>;
+  where(field: string, a?: unknown, b?: unknown): ListQuery<Item, Filterable, Picked> {
     let condition: string;
     let value: unknown;
     // Two arguments mean `is`, unless the second is a presence condition.
@@ -76,20 +83,20 @@ export class ListQuery<Item, Filterable extends string, Picked extends keyof Ite
   }
 
   /** `sort=a,-b`. Later calls replace earlier ones. */
-  sort(...fields: Array<SortField<Extract<keyof Item, string>>>): this {
+  sort(...fields: Array<SortField<Extract<keyof Item, string>>>): ListQuery<Item, Filterable, Picked> {
     return this.with({ sort: fields });
   }
 
-  limit(limit: number): this {
+  limit(limit: number): ListQuery<Item, Filterable, Picked> {
     return this.with({ limit });
   }
 
-  page(page: number): this {
+  page(page: number): ListQuery<Item, Filterable, Picked> {
     return this.with({ page });
   }
 
   /** Multi-site: `site=<handle>`. */
-  site(handle: string): this {
+  site(handle: string): ListQuery<Item, Filterable, Picked> {
     return this.with({ site: handle });
   }
 
@@ -123,14 +130,47 @@ export class ListQuery<Item, Filterable extends string, Picked extends keyof Ite
     return res.data[0] ?? null;
   }
 
-  private with(patch: Partial<ListState>): this {
-    const Ctor = this.constructor as new (c: CoreClient, p: string, s: ListState) => this;
-    return new Ctor(this.client, this.path, { ...this.state, ...patch });
+  // Always a plain ListQuery: `find()` is only offered before any list option is set.
+  private with(patch: Partial<ListState>): ListQuery<Item, Filterable, Picked> {
+    return new ListQuery(this.client, this.path, { ...this.state, ...patch });
   }
 }
 
-/** Single resource (one entry, one term, one global set). */
-export class SingleQuery<Item, Picked extends keyof Item = keyof Item>
+/**
+ * Start of a query on one collection, taxonomy or asset container: build a list query,
+ * or `find()` a single item. `find()` disappears once a list option is set, because the
+ * single-item endpoint ignores filters, sort and pagination.
+ */
+export class ResourceQuery<Item, Filterable extends string> extends ListQuery<Item, Filterable> {
+  constructor(
+    private readonly core: CoreClient,
+    private readonly base: string,
+    private readonly encodeKey: (key: string) => string = encodeURIComponent,
+  ) {
+    super(core, base);
+  }
+
+  /**
+   * One item by its key: entry id or slug, term slug, or asset path
+   * (`GET {list path}/{key}`). Resolves to `null` instead of throwing when it doesn't exist.
+   */
+  find(key: string): SingleQuery<Item, keyof Item, true> {
+    return new SingleQuery(this.core, `${this.base}/${this.encodeKey(key)}`, { orNull: true });
+  }
+}
+
+interface SingleState {
+  site?: string;
+  fields?: string[];
+  /** Resolve 404 to `null` (`find()`). */
+  orNull?: boolean;
+}
+
+/**
+ * Single resource (one entry, term, asset or global set). With `OrNull` (from `find()`),
+ * `get()` resolves to `null` when the API answers 404.
+ */
+export class SingleQuery<Item, Picked extends keyof Item = keyof Item, OrNull extends boolean = false>
   implements Compilable<Single<Pick<Item, Picked>>>
 {
   declare readonly __result?: Single<Pick<Item, Picked>>;
@@ -138,15 +178,17 @@ export class SingleQuery<Item, Picked extends keyof Item = keyof Item>
   constructor(
     private readonly client: CoreClient,
     private readonly path: string,
-    private readonly state: { site?: string; fields?: string[] } = {},
+    private readonly state: SingleState = {},
   ) {}
 
-  site(handle: string): SingleQuery<Item, Picked> {
+  /** Multi-site: `site=<handle>`. */
+  site(handle: string): SingleQuery<Item, Picked, OrNull> {
     return new SingleQuery(this.client, this.path, { ...this.state, site: handle });
   }
 
-  fields<P extends keyof Item & string>(fields: P[]): SingleQuery<Item, P> {
-    return new SingleQuery<Item, P>(this.client, this.path, { ...this.state, fields });
+  /** Only return these fields; narrows the result type. */
+  fields<P extends keyof Item & string>(fields: P[]): SingleQuery<Item, P, OrNull> {
+    return new SingleQuery<Item, P, OrNull>(this.client, this.path, { ...this.state, fields });
   }
 
   toRequest(): RequestSpec {
@@ -160,8 +202,15 @@ export class SingleQuery<Item, Picked extends keyof Item = keyof Item>
     return this.client.url(this.toRequest());
   }
 
-  get(options?: RunOptions): Promise<Single<Pick<Item, Picked>>> {
-    return this.client.run(this, options);
+  async get(options?: RunOptions): Promise<Single<Pick<Item, Picked>> | (OrNull extends true ? null : never)> {
+    try {
+      return await this.client.run(this, options);
+    } catch (e) {
+      if (this.state.orNull && e instanceof HeadqueryHttpError && e.status === 404) {
+        return null as OrNull extends true ? null : never;
+      }
+      throw e;
+    }
   }
 }
 

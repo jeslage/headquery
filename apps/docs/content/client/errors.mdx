@@ -16,7 +16,7 @@ const cms = createStatamicClient({ baseUrl: "https://cms.example.com" });
 import { HeadqueryHttpError } from "@headquery/statamic";
 
 try {
-  await cms.collection("blog").entry("missing").get();
+  await cms.collections("blog").find("missing").get();
 } catch (error) {
   if (error instanceof HeadqueryHttpError && error.status === 404) {
     // not found

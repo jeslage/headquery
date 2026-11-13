@@ -21,7 +21,8 @@ return [
             'tags' => ['allowed_filters' => ['title']],
         ],
         'assets' => [
-            'assets' => true,
+            // basename and folder are system fields: exported as `systemFilters`.
+            'assets' => ['allowed_filters' => ['alt', 'basename', 'folder']],
         ],
         'globals' => [
             'settings' => true,
