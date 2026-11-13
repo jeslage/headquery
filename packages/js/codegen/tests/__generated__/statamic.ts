@@ -186,6 +186,9 @@ export interface HqNavPageBase {
 /** A navigation page that is a plain link or text (not linked to an entry). */
 export type HqNavLink<F> = HqNavPageBase & F & { entry_id: null };
 
+/** A page of a structured collection's tree: the entry's fields plus `entry_id` (equal to `id`). */
+export type HqTreeEntry<E> = E & { entry_id: string };
+
 /** A navigation page linked to an entry: the entry's fields, the nav fields and `entry_id`. */
 export type HqNavEntry<E, F> = Omit<E, keyof HqNavPageBase | keyof F | "entry_id"> &
   HqNavPageBase &
@@ -217,6 +220,18 @@ export interface BlogEntry extends Omit<HqEntryBase, "date" | "slug" | "title"> 
   /** CMS field type: `text` */
   title: string;
 }
+
+export interface PagesEntry extends Omit<HqEntryBase, "slug" | "title"> {
+  /** CMS field type: `slug` */
+  slug: string;
+  /** CMS field type: `textarea` */
+  summary: string | null;
+  /** CMS field type: `text` */
+  title: string;
+}
+
+/** Page of the `Pages` tree (max depth 3). */
+export type PagesTreePage = HqTreeEntry<PagesEntry>;
 
 export interface TagsTerm extends Omit<HqTermBase, "slug" | "title"> {
   /** CMS field type: `slug` */
@@ -250,6 +265,7 @@ export interface AssetsAsset extends HqAssetBase {
 export interface Schema {
   collections: {
     blog: { item: BlogEntry; filterable: "featured" | "slug" | "title" };
+    pages: { item: PagesEntry; filterable: "title"; tree: PagesTreePage };
   };
   taxonomies: {
     tags: { item: TagsTerm; filterable: "title" };

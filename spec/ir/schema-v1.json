@@ -51,6 +51,15 @@
           "type": "array",
           "items": { "type": "string" },
           "uniqueItems": true
+        },
+        "structure": {
+          "description": "Set for collections whose entries form a page tree (Statamic: structured collections).",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "maxDepth": { "type": "integer", "minimum": 1 },
+            "expectsRoot": { "type": "boolean" }
+          }
         }
       }
     },

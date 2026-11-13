@@ -18,7 +18,10 @@ type LinkPage = NavPageBase & { icon: string | null; entry_id: null };
 type EntryPage = Omit<BlogEntry, keyof NavPageBase> & NavPageBase & { icon: string | null; entry_id: string };
 
 interface TestSchema {
-  collections: { blog: { item: BlogEntry; filterable: "title" | "featured" } };
+  collections: {
+    blog: { item: BlogEntry; filterable: "title" | "featured" };
+    pages: { item: PageEntry; filterable: "title"; tree: PageEntry & { entry_id: string } };
+  };
   taxonomies: { tags: { item: { id: string; title: string }; filterable: "title" } };
   globals: {
     settings: { handle: "settings"; site_name: string | null };
@@ -26,6 +29,12 @@ interface TestSchema {
   };
   navigations: { main: { page: LinkPage | EntryPage } };
   assetContainers: { images: { item: ImageAsset; filterable: "alt" | "basename" } };
+}
+
+interface PageEntry {
+  id: string;
+  title: string;
+  summary: string | null;
 }
 
 interface ImageAsset {
@@ -157,8 +166,8 @@ describe("find()", () => {
 
 describe("navigation trees", () => {
   it("compiles max_depth, site and fields into a deterministic URL", () => {
-    const a = cms.navTree("main").maxDepth(2).fields(["title", "url", "entry_id"]).site("de");
-    const b = cms.navTree("main").site("de").fields(["title", "url", "entry_id"]).maxDepth(2);
+    const a = cms.navs("main").tree().maxDepth(2).fields(["title", "url", "entry_id"]).site("de");
+    const b = cms.navs("main").tree().site("de").fields(["title", "url", "entry_id"]).maxDepth(2);
     expect(a.toRequest()).toEqual({
       method: "GET",
       path: "/navs/main/tree",
@@ -169,17 +178,18 @@ describe("navigation trees", () => {
   });
 
   it("is immutable", () => {
-    const base = cms.navTree("main");
+    const base = cms.navs("main").tree();
     base.maxDepth(1);
     expect(base.toRequest().query).toEqual({});
   });
 
   it("types pages as links or entries, also after fields()", () => {
-    type Item = Awaited<ReturnType<ReturnType<typeof cms.navTree<"main">>["get"]>>["data"][number];
+    const main = cms.navs("main").tree();
+    type Item = Awaited<ReturnType<typeof main.get>>["data"][number];
     expectTypeOf<Item["page"]>().toEqualTypeOf<LinkPage | EntryPage>();
     expectTypeOf<Item["children"]>().toEqualTypeOf<Item[]>();
 
-    const picked = cms.navTree("main").fields(["title", "entry_id", "reading_time"]);
+    const picked = cms.navs("main").tree().fields(["title", "entry_id", "reading_time"]);
     type Page = Awaited<ReturnType<typeof picked.get>>["data"][number]["page"];
     // reading_time only exists on entry pages, so link pages don't get it
     expectTypeOf<Page>().toEqualTypeOf<
@@ -189,9 +199,52 @@ describe("navigation trees", () => {
     if (page.entry_id !== null) expectTypeOf(page.reading_time).toEqualTypeOf<number | null>();
 
     // @ts-expect-error unknown field
-    cms.navTree("main").fields(["nope"]);
+    cms.navs("main").tree().fields(["nope"]);
     // @ts-expect-error unknown navigation
-    cms.navTree("footer");
+    cms.navs("footer").tree();
+  });
+});
+
+describe("collection trees", () => {
+  it("compiles filters, max_depth, site and fields like nav trees", () => {
+    const q = cms.collections("pages").tree().where("title", "contains", "About").maxDepth(2).fields(["title"]);
+    expect(q.toRequest()).toEqual({
+      method: "GET",
+      path: "/collections/pages/tree",
+      query: { "filter[title:contains]": "About", max_depth: 2, fields: ["title"] },
+    });
+    expect(q.url()).toBe(
+      "https://cms.test/api/collections/pages/tree?fields=title&filter[title:contains]=About&max_depth=2",
+    );
+  });
+
+  it("types pages as entries with entry_id", () => {
+    const tree = cms.collections("pages").tree();
+    expectTypeOf<Awaited<ReturnType<typeof tree.get>>["data"][number]["page"]>().toEqualTypeOf<
+      PageEntry & { entry_id: string }
+    >();
+    const picked = cms.collections("pages").tree().fields(["title", "entry_id"]);
+    expectTypeOf<Awaited<ReturnType<typeof picked.get>>["data"][number]["page"]>().toEqualTypeOf<
+      Pick<PageEntry & { entry_id: string }, "title" | "entry_id">
+    >();
+  });
+
+  it("only exists for structured collections, before list options", () => {
+    // @ts-expect-error blog is not structured
+    cms.collections("blog").tree;
+    // @ts-expect-error taxonomies have no tree endpoint
+    cms.taxonomies("tags").tree;
+    // @ts-expect-error tree() ignores list options
+    cms.collections("pages").limit(2).tree;
+    // @ts-expect-error summary is not in allowed_filters
+    cms.collections("pages").tree().where("summary", "x");
+    // @ts-expect-error nav trees don't accept filters
+    cms.navs("main").tree().where("title", "x");
+  });
+
+  it("is offered on every collection without a schema", () => {
+    const loose = createStatamicClient({ baseUrl: "https://cms.test", fetch });
+    expect(loose.collections("anything").tree().where("x", "y").toRequest().path).toBe("/collections/anything/tree");
   });
 });
 
@@ -255,7 +308,7 @@ describe("without a registered schema", () => {
     const loose = createStatamicClient({ baseUrl: "https://cms.test", fetch });
     const q = loose.collections("anything").where("whatever", "x");
     expect(q.toRequest().query).toEqual({ "filter[whatever:is]": "x" });
-    const tree = loose.navTree("any").fields(["title", "custom"]);
+    const tree = loose.navs("any").tree().fields(["title", "custom"]);
     expect(tree.toRequest().path).toBe("/navs/any/tree");
     expectTypeOf<Awaited<ReturnType<typeof tree.get>>["data"][number]["page"]>().toHaveProperty("custom");
   });

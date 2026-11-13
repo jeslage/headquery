@@ -1,8 +1,16 @@
 import { type ClientOptions, type CoreClient, createCoreClient } from "@headquery/core";
 import { IndexQuery, ResourceQuery, SingleQuery, TreeQuery } from "./query";
-import type { AssetContainersOf, NavInfo, RegisteredSchema, StatamicSchemaShape } from "./types";
+import type { AssetContainersOf, NavInfo, RegisteredSchema, ResourceShape, StatamicSchemaShape } from "./types";
 
 type Handle<T> = Extract<keyof T, string>;
+
+/** `ResourceQuery` without `tree()`: taxonomies, asset containers and unstructured collections. */
+export type FlatResourceQuery<Item, Filterable extends string> = Omit<ResourceQuery<Item, Filterable>, "tree">;
+
+/** Query on one collection; `tree()` only exists for structured collections. */
+export type CollectionQuery<R extends ResourceShape> = R extends { tree: infer Page }
+  ? ResourceQuery<R["item"], R["filterable"], Page>
+  : FlatResourceQuery<R["item"], R["filterable"]>;
 
 export interface StatamicClient<S extends StatamicSchemaShape> {
   /** The underlying CMS-agnostic client (use for framework adapters or raw requests). */
@@ -13,11 +21,10 @@ export interface StatamicClient<S extends StatamicSchemaShape> {
   /**
    * Entries of a collection: `GET /collections/{collection}/entries`, like
    * `Entry::query()->where('collection', …)`. `.find(idOrSlug)` fetches one entry
-   * (`GET /collections/{collection}/entries/{idOrSlug}`).
+   * (`GET /collections/{collection}/entries/{idOrSlug}`), `.tree()` the page tree of a
+   * structured collection (`GET /collections/{collection}/tree`).
    */
-  collections<K extends Handle<S["collections"]>>(
-    collection: K,
-  ): ResourceQuery<S["collections"][K]["item"], S["collections"][K]["filterable"]>;
+  collections<K extends Handle<S["collections"]>>(collection: K): CollectionQuery<S["collections"][K]>;
 
   /**
    * Terms of a taxonomy: `GET /taxonomies/{taxonomy}/terms`. `.find(slug)` fetches one term
@@ -25,7 +32,7 @@ export interface StatamicClient<S extends StatamicSchemaShape> {
    */
   taxonomies<K extends Handle<S["taxonomies"]>>(
     taxonomy: K,
-  ): ResourceQuery<S["taxonomies"][K]["item"], S["taxonomies"][K]["filterable"]>;
+  ): FlatResourceQuery<S["taxonomies"][K]["item"], S["taxonomies"][K]["filterable"]>;
 
   /**
    * `GET /assets/{container}`, like `Asset::query()->where('container', …)`. `.find(path)` fetches
@@ -33,7 +40,7 @@ export interface StatamicClient<S extends StatamicSchemaShape> {
    */
   assets<K extends Handle<AssetContainersOf<S>>>(
     container: K,
-  ): ResourceQuery<AssetContainersOf<S>[K]["item"], AssetContainersOf<S>[K]["filterable"]>;
+  ): FlatResourceQuery<AssetContainersOf<S>[K]["item"], AssetContainersOf<S>[K]["filterable"]>;
 
   /** `GET /globals/{handle}` */
   global<K extends Handle<S["globals"]>>(handle: K): SingleQuery<S["globals"][K]>;
@@ -41,9 +48,8 @@ export interface StatamicClient<S extends StatamicSchemaShape> {
   /** `GET /globals`: all global sets; tell them apart by `handle`. */
   globals(): IndexQuery<S["globals"][keyof S["globals"]]>;
 
-  /** `GET /navs/{handle}/tree` */
-  navTree<K extends Handle<S["navigations"]>>(handle: K): TreeQuery<S["navigations"][K]["page"]>;
-
+  /** One navigation; `.tree()` fetches its page tree (`GET /navs/{handle}/tree`). */
+  navs<K extends Handle<S["navigations"]>>(handle: K): { tree(): TreeQuery<S["navigations"][K]["page"]> };
   /** `GET /navs`: all navigations (handle, title, max depth). */
   navs(): IndexQuery<NavInfo>;
 }
@@ -66,12 +72,17 @@ export function createStatamicClient<S extends StatamicSchemaShape = RegisteredS
     core,
     run: core.run,
     send: core.send,
-    collections: (collection) => new ResourceQuery(core, `/collections/${seg(collection)}/entries`),
+    collections: ((collection: string) => {
+      const base = `/collections/${seg(collection)}`;
+      return new ResourceQuery(core, `${base}/entries`, seg, `${base}/tree`);
+    }) as never,
     taxonomies: (taxonomy) => new ResourceQuery(core, `/taxonomies/${seg(taxonomy)}/terms`),
     assets: (container) => new ResourceQuery(core, `/assets/${seg(container)}`, assetPath),
     global: (handle) => new SingleQuery(core, `/globals/${seg(handle)}`),
     globals: () => new IndexQuery(core, "/globals"),
-    navTree: (handle) => new TreeQuery(core, `/navs/${seg(handle)}/tree`),
-    navs: () => new IndexQuery(core, "/navs"),
+    navs: ((handle?: string) =>
+      handle === undefined
+        ? new IndexQuery(core, "/navs")
+        : { tree: () => new TreeQuery(core, `/navs/${seg(handle)}/tree`) }) as never,
   };
 }

@@ -22,6 +22,8 @@ export interface ResourceShape {
   item: object;
   /** Field handles allowed in `filter[...]` (Statamic `allowed_filters`). */
   filterable: string;
+  /** Structured collections only: one page of `collections(handle).tree()`. */
+  tree?: object;
 }
 
 /**
@@ -38,7 +40,7 @@ export interface Register {}
 
 /** Used when no schema is registered: everything works, loosely typed. */
 export interface LooseSchema {
-  collections: Record<string, { item: LooseItem; filterable: string }>;
+  collections: Record<string, { item: LooseItem; filterable: string; tree: LooseTreePage }>;
   taxonomies: Record<string, { item: LooseItem; filterable: string }>;
   globals: Record<string, LooseItem>;
   navigations: Record<string, { page: LooseNavPage }>;
@@ -46,6 +48,9 @@ export interface LooseSchema {
 }
 
 export type LooseItem = { id: string } & Record<string, unknown>;
+
+/** Page of a collection tree without generated types: the entry plus `entry_id`. */
+export type LooseTreePage = LooseItem & { entry_id: string };
 
 /** Asset without generated types. `path` is relative to the container root. */
 export type LooseAsset = { id: string; path: string } & Record<string, unknown>;

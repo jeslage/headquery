@@ -49,6 +49,7 @@ mirrors a Statamic site root and contains a content model that follows
 | Resource        | Handle               | Notes                                                                                                          |
 | --------------- | -------------------- | -------------------------------------------------------------------------------------------------------------- |
 | Collection      | `blog`               | 4 entries (one unpublished); text, slug, date, toggle, integer, select, terms, users, assets, bard, replicator |
+| Collection      | `pages`              | structured (max depth 3): Home, About › Team, Contact › unpublished draft                                    |
 | Taxonomy        | `tags`               | `javascript`, `php`, `statamic`                                                                                |
 | Globals         | `settings`           | `site_name`, `social` (grid)                                                                                   |
 | Navigation      | `main`               | entry links, a nested child, an external URL                                                                   |

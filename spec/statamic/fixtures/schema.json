@@ -32,6 +32,15 @@
           },
           "seo": { "type": "unknown", "cmsType": "seo_pro" }
         }
+      },
+      "pages": {
+        "title": "Pages",
+        "structure": { "maxDepth": 3, "expectsRoot": true },
+        "fields": {
+          "title": { "type": "string", "required": true, "filterable": true, "cmsType": "text" },
+          "summary": { "type": "string", "cmsType": "textarea" },
+          "slug": { "type": "string", "required": true, "cmsType": "slug" }
+        }
       }
     },
     "taxonomy": {

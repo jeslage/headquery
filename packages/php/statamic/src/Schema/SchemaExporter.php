@@ -47,11 +47,16 @@ class SchemaExporter
             if ($config === null) {
                 continue;
             }
-            $resources['collection'][$collection->handle()] = $this->resource(
-                (string) $collection->title(),
-                $collection->entryBlueprints(),
-                $config,
-            );
+            $resource = $this->resource((string) $collection->title(), $collection->entryBlueprints(), $config);
+            if ($collection->hasStructure()) {
+                // Structured collections can be fetched as a page tree (GET /collections/{c}/tree).
+                $structure = $collection->structure();
+                $resource['structure'] = array_filter([
+                    'maxDepth' => $structure->maxDepth() ? (int) $structure->maxDepth() : null,
+                    'expectsRoot' => (bool) $structure->expectsRoot(),
+                ], fn ($v) => $v !== null);
+            }
+            $resources['collection'][$collection->handle()] = $resource;
         }
 
         foreach (Taxonomy::all() as $taxonomy) {

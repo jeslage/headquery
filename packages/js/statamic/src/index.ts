@@ -1,6 +1,6 @@
 export type { ClientOptions, RunOptions } from "@headquery/core";
 export { HeadqueryError, HeadqueryHttpError, HeadqueryNetworkError } from "@headquery/core";
-export { createStatamicClient, type StatamicClient } from "./client";
+export { type CollectionQuery, createStatamicClient, type FlatResourceQuery, type StatamicClient } from "./client";
 export { IndexQuery, LIST_SEPARATOR, ListQuery, ResourceQuery, SingleQuery, TreeQuery } from "./query";
 export type {
   AssetContainersOf,
@@ -12,6 +12,7 @@ export type {
   LooseItem,
   LooseNavPage,
   LooseSchema,
+  LooseTreePage,
   NavInfo,
   NavigationShape,
   NavTree,

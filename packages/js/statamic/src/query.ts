@@ -68,18 +68,7 @@ export class ListQuery<Item, Filterable extends string, Picked extends keyof Ite
   ): ListQuery<Item, Filterable, Picked>;
   where<F extends Filterable & keyof Item>(field: F, condition: PresenceCondition): ListQuery<Item, Filterable, Picked>;
   where(field: string, a?: unknown, b?: unknown): ListQuery<Item, Filterable, Picked> {
-    let condition: string;
-    let value: unknown;
-    // Two arguments mean `is`, unless the second is a presence condition.
-    if (b === undefined && !isPresence(a)) {
-      condition = "is";
-      value = a;
-    } else {
-      condition = a as string;
-      value = b ?? (condition === "exists" || condition === "doesnt_exist" ? true : undefined);
-    }
-    const serialized = Array.isArray(value) ? value.map(String).join(LIST_SEPARATOR) : String(value);
-    return this.with({ filters: { ...this.state.filters, [`filter[${field}:${condition}]`]: serialized } });
+    return this.with({ filters: addFilter(this.state.filters, field, a, b) });
   }
 
   /** `sort=a,-b`. Later calls replace earlier ones. */
@@ -141,13 +130,22 @@ export class ListQuery<Item, Filterable extends string, Picked extends keyof Ite
  * or `find()` a single item. `find()` disappears once a list option is set, because the
  * single-item endpoint ignores filters, sort and pagination.
  */
-export class ResourceQuery<Item, Filterable extends string> extends ListQuery<Item, Filterable> {
+export class ResourceQuery<Item, Filterable extends string, TreePage = never> extends ListQuery<Item, Filterable> {
   constructor(
     private readonly core: CoreClient,
     private readonly base: string,
     private readonly encodeKey: (key: string) => string = encodeURIComponent,
+    private readonly treePath?: string,
   ) {
     super(core, base);
+  }
+
+  /**
+   * Page tree of a structured collection (`GET /collections/{handle}/tree`), filterable
+   * with the collection's `allowed_filters`.
+   */
+  tree(): TreeQuery<TreePage, KeysOfUnion<TreePage>, Filterable> {
+    return new TreeQuery(this.core, this.treePath!);
   }
 
   /**
@@ -214,11 +212,20 @@ export class SingleQuery<Item, Picked extends keyof Item = keyof Item, OrNull ex
   }
 }
 
+interface TreeState {
+  filters: Record<string, string>;
+  maxDepth?: number;
+  site?: string;
+  fields?: string[];
+}
+
 /**
- * Navigation tree (`GET /navs/{handle}/tree`). Pages are a union of plain links (`entry_id: null`)
- * and linked entries (`entry_id: string`, with the entry's fields).
+ * Page tree: a navigation (`GET /navs/{handle}/tree`) or a structured collection
+ * (`GET /collections/{handle}/tree`). Nav pages are a union of plain links (`entry_id: null`)
+ * and linked entries (`entry_id: string`, with the entry's fields). Only collection trees
+ * accept filters (`Filterable` is `never` for navigations).
  */
-export class TreeQuery<Page, Picked extends KeysOfUnion<Page> = KeysOfUnion<Page>>
+export class TreeQuery<Page, Picked extends KeysOfUnion<Page> = KeysOfUnion<Page>, Filterable extends string = never>
   implements Compilable<NavTree<PickedUnion<Page, Picked>>>
 {
   declare readonly __result?: NavTree<PickedUnion<Page, Picked>>;
@@ -226,29 +233,49 @@ export class TreeQuery<Page, Picked extends KeysOfUnion<Page> = KeysOfUnion<Page
   constructor(
     private readonly client: CoreClient,
     private readonly path: string,
-    private readonly state: { maxDepth?: number; site?: string; fields?: string[] } = {},
+    private readonly state: TreeState = { filters: {} },
   ) {}
 
+  /**
+   * `filter[field:condition]=value`, applied per level: a page that doesn't match is
+   * dropped together with its children.
+   */
+  where<F extends Filterable & keyof Page>(field: F, value: FieldValue<Page, F>): TreeQuery<Page, Picked, Filterable>;
+  where<F extends Filterable & keyof Page>(
+    field: F,
+    condition: ScalarCondition,
+    value: FieldValue<Page, F> | Scalar,
+  ): TreeQuery<Page, Picked, Filterable>;
+  where<F extends Filterable & keyof Page>(
+    field: F,
+    condition: ListCondition,
+    values: Array<FieldValue<Page, F> | Scalar>,
+  ): TreeQuery<Page, Picked, Filterable>;
+  where<F extends Filterable & keyof Page>(field: F, condition: PresenceCondition): TreeQuery<Page, Picked, Filterable>;
+  where(field: string, a?: unknown, b?: unknown): TreeQuery<Page, Picked, Filterable> {
+    return this.with({ filters: addFilter(this.state.filters, field, a, b) });
+  }
+
   /** `max_depth=n`: only return pages up to this depth (1 = top level). */
-  maxDepth(depth: number): TreeQuery<Page, Picked> {
-    return new TreeQuery(this.client, this.path, { ...this.state, maxDepth: depth });
+  maxDepth(depth: number): TreeQuery<Page, Picked, Filterable> {
+    return this.with({ maxDepth: depth });
   }
 
   /** Multi-site: `site=<handle>`. */
-  site(handle: string): TreeQuery<Page, Picked> {
-    return new TreeQuery(this.client, this.path, { ...this.state, site: handle });
+  site(handle: string): TreeQuery<Page, Picked, Filterable> {
+    return this.with({ site: handle });
   }
 
   /**
-   * Only return these page fields; narrows the page type. Keep `entry_id` to tell
-   * links and entries apart.
+   * Only return these page fields; narrows the page type. In navigations, keep `entry_id`
+   * to tell links and entries apart.
    */
-  fields<P extends KeysOfUnion<Page> & string>(fields: P[]): TreeQuery<Page, P> {
-    return new TreeQuery<Page, P>(this.client, this.path, { ...this.state, fields });
+  fields<P extends KeysOfUnion<Page> & string>(fields: P[]): TreeQuery<Page, P, Filterable> {
+    return new TreeQuery<Page, P, Filterable>(this.client, this.path, { ...this.state, fields });
   }
 
   toRequest(): RequestSpec {
-    const query: QueryParams = {};
+    const query: QueryParams = { ...this.state.filters };
     if (this.state.maxDepth !== undefined) query.max_depth = this.state.maxDepth;
     if (this.state.site) query.site = this.state.site;
     if (this.state.fields?.length) query.fields = this.state.fields;
@@ -261,6 +288,10 @@ export class TreeQuery<Page, Picked extends KeysOfUnion<Page> = KeysOfUnion<Page
 
   get(options?: RunOptions): Promise<NavTree<PickedUnion<Page, Picked>>> {
     return this.client.run(this, options);
+  }
+
+  private with(patch: Partial<TreeState>): TreeQuery<Page, Picked, Filterable> {
+    return new TreeQuery(this.client, this.path, { ...this.state, ...patch });
   }
 }
 
@@ -294,6 +325,11 @@ export class IndexQuery<Item> implements Compilable<DataList<Item>> {
   }
 }
 
-function isPresence(v: unknown): v is PresenceCondition {
-  return v === "exists" || v === "doesnt_exist";
+/** Adds `filter[field:condition]=value`. Two arguments mean `is`, unless the second is a presence condition. */
+function addFilter(filters: Record<string, string>, field: string, a: unknown, b: unknown): Record<string, string> {
+  const presence = a === "exists" || a === "doesnt_exist";
+  const condition = b === undefined && !presence ? "is" : (a as string);
+  const value = b === undefined ? (presence ? true : a) : b;
+  const serialized = Array.isArray(value) ? value.map(String).join(LIST_SEPARATOR) : String(value);
+  return { ...filters, [`filter[${field}:${condition}]`]: serialized };
 }

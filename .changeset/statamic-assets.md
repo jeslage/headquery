@@ -12,7 +12,7 @@
 | `cms.collection("blog").entry(slug)` | `cms.collections("blog").find(slug)` |
 | `cms.taxonomy("tags").terms()` | `cms.taxonomies("tags")` |
 | `cms.taxonomy("tags").term(slug)` | `cms.taxonomies("tags").find(slug)` |
-| `cms.nav("main").tree()` | `cms.navTree("main")` |
+| `cms.nav("main").tree()` | `cms.navs("main").tree()` |
 
 `.find(key)` resolves to `null` when the API answers 404 (other errors still throw), so `const post = await cms.collections("blog").find(slug).get(); if (!post) notFound();` replaces the try/catch. It is only available directly after `collections()`/`taxonomies()`/`assets()`, because the single-item endpoint ignores filters, sort and pagination. `global(handle)` still throws on 404.
 

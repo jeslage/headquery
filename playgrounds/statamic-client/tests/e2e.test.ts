@@ -122,7 +122,7 @@ describe.skipIf(!baseUrl)(`Statamic playground (${baseUrl})`, () => {
   });
 
   describe("navigation", () => {
-    const main = cms.navTree("main");
+    const main = cms.navs("main").tree();
 
     it("returns entry pages with the entry's fields and link pages with entry_id null", async () => {
       const { data } = await main.get();
@@ -153,6 +153,58 @@ describe.skipIf(!baseUrl)(`Statamic playground (${baseUrl})`, () => {
     it("lists navigations", async () => {
       const { data } = await cms.navs().get();
       expect(data).toEqual([expect.objectContaining({ handle: "main", title: "Main", max_depth: 2 })]);
+    });
+  });
+
+  describe("collection trees", () => {
+    const pages = cms.collections("pages");
+    type Node = { page: { title: string }; children: Node[] };
+    const titles = (nodes: Node[]): unknown[] =>
+      nodes.map((n) => (n.children.length ? [n.page.title, titles(n.children)] : n.page.title));
+
+    it("returns published entries as pages, with id equal to entry_id", async () => {
+      const { data } = await pages.tree().get();
+      expect(titles(data)).toEqual(["Home", ["About", ["Team"]], "Contact"]);
+      const about = data[1]!;
+      expect(about.depth).toBe(1);
+      expect(about.children[0]?.depth).toBe(2);
+      expect(about.page).toMatchObject({ slug: "about", url: "/about", summary: "About headquery" });
+      expect(about.page.id).toBe(about.page.entry_id);
+      expectTypeOf(about.page.entry_id).toEqualTypeOf<string>();
+    });
+
+    it("limits the depth and narrows the fields", async () => {
+      const { data } = await pages.tree().maxDepth(1).fields(["title", "url"]).get();
+      expect(data.map((n) => n.page)).toEqual([
+        { title: "Home", url: "/" },
+        { title: "About", url: "/about" },
+        { title: "Contact", url: "/contact" },
+      ]);
+      expect(data.every((n) => n.children.length === 0)).toBe(true);
+    });
+
+    it("filters per level: a non-matching parent drops its subtree", async () => {
+      expect(titles((await pages.tree().where("title", "contains", "About").get()).data)).toEqual(["About"]);
+      expect((await pages.tree().where("title", "Team").get()).data).toEqual([]);
+    });
+
+    it("rejects filters outside allowed_filters and unstructured collections", async () => {
+      const forbidden = await pages
+        .tree()
+        // @ts-expect-error summary is not filterable
+        .where("summary", "x")
+        .get()
+        .catch((e: unknown) => e);
+      expect((forbidden as HeadqueryHttpError).status).toBe(422);
+
+      // @ts-expect-error blog is not structured, so the generated types have no tree()
+      cms.collections("blog").tree;
+      const blog = cms.collections("blog") as unknown as ReturnType<typeof cms.collections<"pages">>;
+      const unstructured = await blog
+        .tree()
+        .get()
+        .catch((e: unknown) => e);
+      expect((unstructured as HeadqueryHttpError).status).toBe(404);
     });
   });
 

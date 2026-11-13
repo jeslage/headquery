@@ -1,0 +1,6 @@
+title: Pages
+route: '{parent_uri}/{slug}'
+revisions: false
+structure:
+  root: true
+  max_depth: 3

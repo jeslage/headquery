@@ -17,7 +17,9 @@ takes a handle and starts a query, like `Entry::query()->where('collection', 'bl
 | `taxonomies(handle)` | terms: `GET /taxonomies/{handle}/terms` | slug |
 | `assets(container)` | assets: `GET /assets/{container}` | path |
 | `globals()` / `global(handle)` | `GET /globals` | `GET /globals/{handle}` |
-| `navs()` / `navTree(handle)` | `GET /navs` | `GET /navs/{handle}/tree` |
+| `navs()` | navigations: `GET /navs` | – |
+
+Trees: `collections(handle).tree()` (structured collections) and `navs(handle).tree()`.
 
 ## Collections
 
@@ -159,9 +161,34 @@ for (const set of all.data) {
 }
 ```
 
+## Collection trees
+
+`collections(handle).tree()` fetches the page tree of a structured collection
+(`GET /collections/{handle}/tree`), e.g. a pages collection. Every page is an entry of the
+collection plus `entry_id` (equal to `id`); unpublished entries are left out.
+
+```ts twoslash
+import "./generated/cms.generated";
+import { createStatamicClient } from "@headquery/statamic";
+const cms = createStatamicClient({ baseUrl: "https://cms.example.com" });
+// ---cut---
+const { data } = await cms.collections("pages").tree().maxDepth(2).fields(["title", "url"]).get();
+
+for (const { page, depth, children } of data) {
+  page.title;
+  //   ^?
+}
+```
+
+- `.maxDepth(n)`, `.site(handle)` and `.fields([...])` work like for navigation trees.
+- `.where(...)` filters with the collection's `allowed_filters`, per level: a page that
+  doesn't match is dropped together with its children.
+- `tree()` only exists for structured collections (the schema marks them), and only directly
+  after `collections(…)`. On other collections Statamic answers 404.
+
 ## Navigation
 
-`navTree(handle)` fetches a navigation tree (`GET /navs/{handle}/tree`). Enable it in
+`navs(handle).tree()` fetches a navigation tree (`GET /navs/{handle}/tree`). Enable it in
 `config/statamic/api.php` under `resources.navs`.
 
 Each page is either a plain link (`entry_id: null`) or a linked entry: Statamic then returns
@@ -173,7 +200,7 @@ import "./generated/cms.generated";
 import { createStatamicClient } from "@headquery/statamic";
 const cms = createStatamicClient({ baseUrl: "https://cms.example.com" });
 // ---cut---
-const { data } = await cms.navTree("main").maxDepth(2).get();
+const { data } = await cms.navs("main").tree().maxDepth(2).get();
 
 for (const { page, depth, children } of data) {
   if (page.entry_id !== null) {
@@ -198,7 +225,7 @@ import { createStatamicClient } from "@headquery/statamic";
 const cms = createStatamicClient({ baseUrl: "https://cms.example.com" });
 // ---cut---
 const [navigation, settings] = await Promise.all([
-  cms.navTree("main").fields(["title", "url", "entry_id"]).get(),
+  cms.navs("main").tree().fields(["title", "url", "entry_id"]).get(),
   cms.global("settings").get(),
 ]);
 ```

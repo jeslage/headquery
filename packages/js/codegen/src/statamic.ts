@@ -189,6 +189,9 @@ export interface HqNavPageBase {
 /** A navigation page that is a plain link or text (not linked to an entry). */
 export type HqNavLink<F> = HqNavPageBase & F & { entry_id: null };
 
+/** A page of a structured collection's tree: the entry's fields plus \`entry_id\` (equal to \`id\`). */
+export type HqTreeEntry<E> = E & { entry_id: string };
+
 /** A navigation page linked to an entry: the entry's fields, the nav fields and \`entry_id\`. */
 export type HqNavEntry<E, F> = Omit<E, keyof HqNavPageBase | keyof F | "entry_id"> &
   HqNavPageBase &
@@ -305,7 +308,17 @@ export function generateStatamic(schema: IrSchema, options: StatamicGenerateOpti
   for (const [handle, resource] of sorted(schema.resources.collection)) {
     const name = `${pascal(handle)}Entry`;
     out.push(itemInterface(name, resource, "HqEntryBase"));
-    collections.push(`    ${key(handle)}: { item: ${name}; filterable: ${filterable(resource)} };`);
+    let tree = "";
+    if (resource.structure) {
+      // Structured collection: `cms.collections(handle).tree()` returns its page tree.
+      const page = `${pascal(handle)}TreePage`;
+      const depth = resource.structure.maxDepth ? ` (max depth ${resource.structure.maxDepth})` : "";
+      out.push(
+        `/** Page of the \`${resource.title ?? handle}\` tree${depth}. */\nexport type ${page} = HqTreeEntry<${name}>;`,
+      );
+      tree = `; tree: ${page}`;
+    }
+    collections.push(`    ${key(handle)}: { item: ${name}; filterable: ${filterable(resource)}${tree} };`);
   }
   for (const [handle, resource] of sorted(schema.resources.taxonomy)) {
     const name = `${pascal(handle)}Term`;

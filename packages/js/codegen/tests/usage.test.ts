@@ -9,6 +9,7 @@ import type {
   HqOption,
   MainNavFields,
   MainNavPage,
+  PagesTreePage,
   SettingsGlobal,
   TagsTerm,
 } from "./__generated__/statamic";
@@ -28,7 +29,7 @@ describe("generated types work with @headquery/statamic", () => {
     // @ts-expect-error reading_time is not filterable in the fixture
     cms.collections("blog").where("reading_time", 3);
     // @ts-expect-error unknown collection
-    cms.collections("pages");
+    cms.collections("products");
   });
 
   it("includes Statamic's system fields, with blueprint fields taking precedence", () => {
@@ -57,7 +58,8 @@ describe("generated types work with @headquery/statamic", () => {
   });
 
   it("types navigation trees as links or linked entries", () => {
-    type Item = Awaited<ReturnType<ReturnType<typeof cms.navTree<"main">>["get"]>>["data"][number];
+    const main = cms.navs("main").tree();
+    type Item = Awaited<ReturnType<typeof main.get>>["data"][number];
     // expectTypeOf expands unions of intersections; compare type identity instead.
     type Equal<A, B> = (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B ? 1 : 2 ? true : false;
     expectTypeOf<Equal<Item["page"], MainNavPage>>().toEqualTypeOf<true>();
@@ -75,7 +77,7 @@ describe("generated types work with @headquery/statamic", () => {
     }
 
     // @ts-expect-error unknown navigation
-    cms.navTree("footer");
+    cms.navs("footer").tree();
   });
 
   it("types assets, filterable by blueprint and system fields", () => {
@@ -93,5 +95,16 @@ describe("generated types work with @headquery/statamic", () => {
     cms.assets("assets").where("extension", "svg");
     // @ts-expect-error unknown asset container
     cms.assets("videos");
+  });
+
+  it("types collection trees for structured collections only", () => {
+    const tree = cms.collections("pages").tree().where("title", "contains", "About").maxDepth(2);
+    type Item = Awaited<ReturnType<typeof tree.get>>["data"][number];
+    expectTypeOf<Item["page"]>().toEqualTypeOf<PagesTreePage>();
+    expectTypeOf<PagesTreePage["entry_id"]>().toEqualTypeOf<string>();
+    expectTypeOf<PagesTreePage["summary"]>().toEqualTypeOf<string | null>();
+
+    // @ts-expect-error blog is not a structured collection
+    cms.collections("blog").tree;
   });
 });

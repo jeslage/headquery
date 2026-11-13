@@ -13,6 +13,7 @@ return [
     'resources' => [
         'collections' => [
             'blog' => ['allowed_filters' => ['title', 'slug', 'featured']],
+            'pages' => ['allowed_filters' => ['title']],
         ],
         'navs' => [
             'main' => true,

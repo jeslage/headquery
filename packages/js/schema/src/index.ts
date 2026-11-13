@@ -46,10 +46,21 @@ export interface IrResource {
    * like `date` or an asset's `basename`. Blueprint fields carry `filterable` instead.
    */
   systemFilters?: string[];
+  /**
+   * Set for collections whose entries form a page tree (Statamic: structured collections),
+   * which can be fetched as a whole via the collection's tree endpoint.
+   */
+  structure?: IrStructure;
+}
+
+export interface IrStructure {
+  maxDepth?: number;
+  /** The first page is the root (home) page. */
+  expectsRoot?: boolean;
 }
 
 /** A navigation tree. `fields` are the navigation blueprint's fields, present on every page. */
-export interface IrNavigation extends Omit<IrResource, "systemFilters"> {
+export interface IrNavigation extends Omit<IrResource, "systemFilters" | "structure"> {
   /** Handles of collections whose entries can be linked as pages. */
   collections?: string[];
   maxDepth?: number;
@@ -113,6 +124,9 @@ export function assertIrSchema(input: unknown): asserts input is IrSchema {
       const { systemFilters } = resource;
       if (systemFilters !== undefined && !(Array.isArray(systemFilters) && systemFilters.every(isString))) {
         throw new IrSchemaError(`Resource "${kind}.${handle}" systemFilters must be an array of strings`);
+      }
+      if (resource.structure !== undefined && !isObject(resource.structure)) {
+        throw new IrSchemaError(`Resource "${kind}.${handle}" structure must be an object`);
       }
       for (const [field, def] of Object.entries(resource.fields)) {
         if (!isObject(def) || typeof def.type !== "string") {
