@@ -265,8 +265,8 @@ it for blueprint fields in fixtures or the seed.
 2. Contract/e2e tests: JS client against the running playground in CI.
 3. Statamic: multi-site helpers. Every REST endpoint is covered (metadata endpoints and `/ping` via `cms.send()`).
    (Navigation and collection trees, the globals list and assets are done.)
-4. Codegen: `--check` in docs/CI recipes, ETag-aware fetch. (Config file `headquery.config.ts`
-   is done: `packages/js/codegen/src/config.ts`.)
+4. Codegen: ETag-aware fetch. (Config file `headquery.config.ts` is done:
+   `packages/js/codegen/src/config.ts`; CI recipes for `--check` are in `apps/docs/content/codegen/ci.mdx`.)
 5. Framework adapters: `@headquery/vue` (composables), `@headquery/react` (hooks),
    then Nuxt/Next integrations (SSR, `revalidate`, caching keys via `query.url()`).
 6. Next CMS: Kirby. KQL is `POST /api/query` (not HTTP-cacheable) → the Kirby Composer

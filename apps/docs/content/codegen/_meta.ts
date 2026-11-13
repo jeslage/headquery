@@ -5,4 +5,5 @@ export default {
   init: "headquery init",
   generate: "headquery generate",
   config: "Config file",
+  ci: "CI",
 } satisfies MetaRecord;
