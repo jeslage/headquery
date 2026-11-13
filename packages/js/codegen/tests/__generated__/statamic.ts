@@ -264,7 +264,7 @@ export interface AssetsAsset extends HqAssetBase {
 
 export interface Schema {
   collections: {
-    blog: { item: BlogEntry; filterable: "featured" | "slug" | "title" };
+    blog: { item: BlogEntry; filterable: "date" | "featured" | "slug" | "tags" | "taxonomy:tags" | "title" };
     pages: { item: PagesEntry; filterable: "title"; tree: PagesTreePage };
   };
   taxonomies: {

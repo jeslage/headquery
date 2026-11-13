@@ -200,6 +200,10 @@ Nav tree items are `{ page, depth, children }` (depth 1 = top level). Pages link
 contain all of the entry's fields plus `entry_id`; their `id` is the nav item id, not the entry id.
 Plain link pages only have `id title url uri permalink` and `entry_id: null`. Nav blueprint
 fields are on every page (`null` when empty). Modelled as `HqNavLink`/`HqNavEntry`.
+Filters: all collection-tag conditions work in the API (`queryCondition()`), incl. `matches`,
+`is_after`/`is_before` (string = date, `true`/numeric = now), `overlaps` (`|` values) and the boolean
+`is_*` checks (`true`/`false`). Taxonomy filters `filter[taxonomy:{t}:{any|not|all}]=a,b` use commas,
+need `taxonomy:{t}` in `allowed_filters` (exported as `systemFilters`) and only apply to entry lists.
 Collection trees (`/collections/{c}/tree`) have the same `{ page, depth, children }` items; pages are
 the entries plus `entry_id`, and `id === entry_id` (no separate branch id). Unpublished entries are
 left out. Filters (from `allowed_filters`, 422 otherwise) apply per level, so a non-matching parent

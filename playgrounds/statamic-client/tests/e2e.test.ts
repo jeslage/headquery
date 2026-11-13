@@ -70,6 +70,61 @@ describe.skipIf(!baseUrl)(`Statamic playground (${baseUrl})`, () => {
     });
   });
 
+  describe("taxonomy filters and extra conditions", () => {
+    // Seed: hello-headquery (2026-10-01, javascript+statamic), cacheable-get-requests
+    // (2026-10-15, javascript), statamic-addon (2026-11-01, php+statamic).
+    const slugs = async (q: { get(): Promise<{ data: Array<{ slug: string | null }> }> }) =>
+      (await q.get()).data.map((e) => e.slug);
+    const byDate = blog.sort("date").fields(["slug"]);
+
+    it("filters by taxonomy terms: any, all and not", async () => {
+      expect(await slugs(byDate.whereTaxonomyIn("tags", ["php", "javascript"]))).toEqual([
+        "hello-headquery",
+        "cacheable-get-requests",
+        "statamic-addon",
+      ]);
+      expect(await slugs(byDate.whereTaxonomy("tags", "javascript").whereTaxonomy("tags", "statamic"))).toEqual([
+        "hello-headquery",
+      ]);
+      expect(await slugs(byDate.whereTaxonomyNotIn("tags", ["php"]))).toEqual([
+        "hello-headquery",
+        "cacheable-get-requests",
+      ]);
+    });
+
+    it("rejects taxonomies outside allowed_filters", async () => {
+      const err = await blog
+        // @ts-expect-error categories is not in allowed_filters
+        .whereTaxonomyIn("categories", ["news"])
+        .get()
+        .catch((e: unknown) => e);
+      expect((err as HeadqueryHttpError).status).toBe(422);
+    });
+
+    it("filters dates relative to a date or now", async () => {
+      expect(await slugs(byDate.where("date", "is_after", "2026-10-10"))).toEqual([
+        "cacheable-get-requests",
+        "statamic-addon",
+      ]);
+      expect(await slugs(byDate.where("date", "is_before", new Date("2026-10-10T00:00:00Z")))).toEqual([
+        "hello-headquery",
+      ]);
+      // Future-dated entries are private in this collection, so every listed entry is in the past.
+      expect(await slugs(byDate.where("date", "is_past"))).toHaveLength(3);
+      expect(await slugs(byDate.where("date", "is_future"))).toEqual([]);
+    });
+
+    it("filters with regex, array overlap and boolean checks", async () => {
+      expect(await slugs(byDate.where("title", "matches", "^Hello"))).toEqual(["hello-headquery"]);
+      expect(await slugs(byDate.where("title", "doesnt_match", "^Hello"))).toHaveLength(2);
+      expect(await slugs(byDate.where("tags", "overlaps", ["php"]))).toEqual(["statamic-addon"]);
+      expect(await slugs(byDate.where("tags", "doesnt_overlap", ["php"]))).toHaveLength(2);
+      // Slugs contain dashes, so none is purely alphabetic.
+      expect(await slugs(byDate.where("slug", "is_alpha"))).toEqual([]);
+      expect(await slugs(byDate.where("slug", "is_alpha", false))).toHaveLength(3);
+    });
+  });
+
   describe("single entry", () => {
     it("fetches by slug and returns the documented field shapes", async () => {
       const { data } = (await blog.find("hello-headquery").get())!;

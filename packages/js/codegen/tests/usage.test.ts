@@ -107,4 +107,20 @@ describe("generated types work with @headquery/statamic", () => {
     // @ts-expect-error blog is not a structured collection
     cms.collections("blog").tree;
   });
+
+  it("types taxonomy filters and the extra conditions", () => {
+    const q = cms
+      .collections("blog")
+      .whereTaxonomyIn("tags", ["php", "statamic"])
+      .whereTaxonomyNotIn("tags", ["drafts"])
+      .where("date", "is_past")
+      .where("tags", "overlaps", ["php"])
+      .where("title", "matches", "^Hello");
+    expectTypeOf(q.get).returns.resolves.toHaveProperty("data").toEqualTypeOf<BlogEntry[]>();
+
+    // @ts-expect-error only taxonomies listed in allowed_filters (taxonomy:tags)
+    cms.collections("blog").whereTaxonomy("categories", "news");
+    // @ts-expect-error the pages collection doesn't allow taxonomy filters
+    cms.collections("pages").whereTaxonomyIn("tags", ["php"]);
+  });
 });

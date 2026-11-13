@@ -4,6 +4,7 @@ export { type CollectionQuery, createStatamicClient, type FlatResourceQuery, typ
 export { IndexQuery, LIST_SEPARATOR, ListQuery, ResourceQuery, SingleQuery, TreeQuery } from "./query";
 export type {
   AssetContainersOf,
+  BooleanCondition,
   Condition,
   DataList,
   KeysOfUnion,
@@ -31,4 +32,5 @@ export type {
   Single,
   SortField,
   StatamicSchemaShape,
+  TaxonomyFilter,
 } from "./types";

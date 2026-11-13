@@ -6,14 +6,22 @@
     "collection": {
       "blog": {
         "title": "Blog",
+        "systemFilters": ["taxonomy:tags"],
         "fields": {
           "title": { "type": "string", "required": true, "filterable": true, "cmsType": "text" },
           "slug": { "type": "string", "required": true, "filterable": true, "cmsType": "slug" },
-          "date": { "type": "date", "withTime": false, "cmsType": "date" },
+          "date": { "type": "date", "withTime": false, "filterable": true, "cmsType": "date" },
           "featured": { "type": "boolean", "filterable": true, "cmsType": "toggle" },
           "reading_time": { "type": "number", "integer": true, "cmsType": "integer" },
           "stage": { "type": "enum", "values": ["draft", "review", "live"], "cmsType": "select" },
-          "tags": { "type": "relation", "to": "term", "resources": ["tags"], "multiple": true, "cmsType": "terms" },
+          "tags": {
+            "type": "relation",
+            "to": "term",
+            "resources": ["tags"],
+            "multiple": true,
+            "filterable": true,
+            "cmsType": "terms"
+          },
           "author": { "type": "relation", "to": "user", "multiple": false, "cmsType": "users" },
           "hero": { "type": "asset", "multiple": false, "cmsType": "assets" },
           "content": { "type": "richtext", "cmsType": "bard" },

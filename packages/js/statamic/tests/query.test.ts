@@ -7,6 +7,8 @@ interface BlogEntry {
   date: string | null;
   featured: boolean | null;
   reading_time: number | null;
+  tags: Array<{ slug: string }>;
+  website: string | null;
 }
 
 interface NavPageBase {
@@ -19,7 +21,7 @@ type EntryPage = Omit<BlogEntry, keyof NavPageBase> & NavPageBase & { icon: stri
 
 interface TestSchema {
   collections: {
-    blog: { item: BlogEntry; filterable: "title" | "featured" };
+    blog: { item: BlogEntry; filterable: "title" | "featured" | "date" | "tags" | "website" | "taxonomy:tags" };
     pages: { item: PageEntry; filterable: "title"; tree: PageEntry & { entry_id: string } };
   };
   taxonomies: { tags: { item: { id: string; title: string }; filterable: "title" } };
@@ -122,6 +124,89 @@ describe("single resources", () => {
       query: { site: "de" },
     });
     expect(cms.globals("settings").toRequest().path).toBe("/globals/settings");
+  });
+});
+
+describe("conditions", () => {
+  const blog = cms.collections("blog");
+  const query = (q: { toRequest(): { query?: unknown } }) => q.toRequest().query;
+
+  it("sends boolean conditions without a value as true, and accepts false", () => {
+    expect(query(blog.where("date", "is_future"))).toEqual({ "filter[date:is_future]": "true" });
+    expect(query(blog.where("website", "is_url", false))).toEqual({ "filter[website:is_url]": "false" });
+    expect(query(blog.where("title", "is_alpha"))).toEqual({ "filter[title:is_alpha]": "true" });
+  });
+
+  it("serialises dates, regex and array conditions", () => {
+    expect(query(blog.where("date", "is_after", new Date("2026-10-10T00:00:00Z")))).toEqual({
+      "filter[date:is_after]": "2026-10-10T00:00:00.000Z",
+    });
+    expect(query(blog.where("date", "is_before", "2026-10-10"))).toEqual({ "filter[date:is_before]": "2026-10-10" });
+    expect(query(blog.where("title", "matches", "^Hello"))).toEqual({ "filter[title:matches]": "^Hello" });
+    expect(query(blog.where("tags", "overlaps", ["php", "javascript"]))).toEqual({
+      "filter[tags:overlaps]": "php|javascript",
+    });
+  });
+
+  it("works on collection trees too", () => {
+    expect(query(cms.collections("pages").tree().where("title", "matches", "^A"))).toEqual({
+      "filter[title:matches]": "^A",
+    });
+  });
+
+  it("rejects wrong condition shapes at compile time", () => {
+    // @ts-expect-error overlaps takes a list
+    blog.where("tags", "overlaps", "php");
+    // @ts-expect-error boolean conditions take a boolean
+    blog.where("website", "is_url", "yes");
+  });
+});
+
+describe("taxonomy filters", () => {
+  const blog = cms.collections("blog");
+
+  it("compiles any, not and all (merged) with comma-separated terms", () => {
+    const q = blog
+      .whereTaxonomyIn("tags", ["php", "statamic"])
+      .whereTaxonomyNotIn("tags", ["drafts"])
+      .whereTaxonomy("tags", "javascript")
+      .whereTaxonomy("tags", ["statamic", "vue"]);
+    expect(q.toRequest().query).toEqual({
+      "filter[taxonomy:tags:any]": "php,statamic",
+      "filter[taxonomy:tags:not]": "drafts",
+      "filter[taxonomy:tags:all]": "javascript,statamic,vue",
+    });
+    expect(blog.whereTaxonomyIn("tags", ["php"]).url()).toBe(
+      "https://cms.test/api/collections/blog/entries?filter[taxonomy:tags:any]=php",
+    );
+  });
+
+  it("combines with other options and keeps find() away", () => {
+    const q = blog.where("featured", true).whereTaxonomyIn("tags", ["php"]).limit(2);
+    expect(q.toRequest().query).toEqual({
+      "filter[featured:is]": "true",
+      "filter[taxonomy:tags:any]": "php",
+      limit: 2,
+    });
+    expect("find" in blog.whereTaxonomyIn("tags", ["php"])).toBe(false);
+  });
+
+  it("only allows taxonomies in allowed_filters, and only on entries", () => {
+    // @ts-expect-error categories is not in allowed_filters
+    blog.whereTaxonomyIn("categories", ["a"]);
+    // @ts-expect-error terms have no taxonomy filters
+    cms.taxonomies("tags").whereTaxonomyIn("tags", ["a"]);
+    // @ts-expect-error assets have no taxonomy filters
+    cms.assets("images").whereTaxonomy("tags", "a");
+    // @ts-expect-error taxonomy filters are not plain fields
+    blog.where("taxonomy:tags", "php");
+  });
+
+  it("allows any taxonomy without a schema", () => {
+    const loose = createStatamicClient({ baseUrl: "https://cms.test", fetch });
+    expect(loose.collections("x").whereTaxonomy("anything", "a").toRequest().query).toEqual({
+      "filter[taxonomy:anything:all]": "a",
+    });
   });
 });
 

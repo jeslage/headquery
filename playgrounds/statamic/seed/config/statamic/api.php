@@ -12,7 +12,8 @@ return [
     */
     'resources' => [
         'collections' => [
-            'blog' => ['allowed_filters' => ['title', 'slug', 'featured']],
+            // taxonomy:tags enables filter[taxonomy:tags:{any|not|all}] (exported as a systemFilter).
+            'blog' => ['allowed_filters' => ['title', 'slug', 'featured', 'date', 'tags', 'taxonomy:tags']],
             'pages' => ['allowed_filters' => ['title']],
         ],
         'navs' => [

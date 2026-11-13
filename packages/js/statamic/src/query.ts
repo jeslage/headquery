@@ -7,17 +7,18 @@ import {
   type RunOptions,
 } from "@headquery/core";
 import type {
+  BooleanCondition,
   DataList,
   KeysOfUnion,
   ListCondition,
   NavTree,
   Paginated,
   PickedUnion,
-  PresenceCondition,
   Scalar,
   ScalarCondition,
   Single,
   SortField,
+  TaxonomyFilter,
 } from "./types";
 
 /**
@@ -59,16 +60,47 @@ export class ListQuery<Item, Filterable extends string, Picked extends keyof Ite
   where<F extends Filterable & keyof Item>(
     field: F,
     condition: ScalarCondition,
-    value: FieldValue<Item, F> | Scalar,
+    value: FieldValue<Item, F> | Scalar | Date,
   ): ListQuery<Item, Filterable, Picked>;
   where<F extends Filterable & keyof Item>(
     field: F,
     condition: ListCondition,
     values: Array<FieldValue<Item, F> | Scalar>,
   ): ListQuery<Item, Filterable, Picked>;
-  where<F extends Filterable & keyof Item>(field: F, condition: PresenceCondition): ListQuery<Item, Filterable, Picked>;
+  where<F extends Filterable & keyof Item>(
+    field: F,
+    condition: BooleanCondition,
+    value?: boolean,
+  ): ListQuery<Item, Filterable, Picked>;
   where(field: string, a?: unknown, b?: unknown): ListQuery<Item, Filterable, Picked> {
     return this.with({ filters: addFilter(this.state.filters, field, a, b) });
+  }
+
+  /**
+   * Entries that have all these terms, like Statamic's `whereTaxonomy()`; repeated calls add
+   * terms (`filter[taxonomy:{taxonomy}:all]=a,b`). Needs `taxonomy:{taxonomy}` in `allowed_filters`.
+   */
+  whereTaxonomy<T extends TaxonomyFilter<Filterable>>(
+    taxonomy: T,
+    terms: string | string[],
+  ): ListQuery<Item, Filterable, Picked> {
+    return this.taxonomy(taxonomy, "all", ([] as string[]).concat(terms), true);
+  }
+
+  /** Entries that have any of these terms (`filter[taxonomy:{taxonomy}:any]=a,b`). */
+  whereTaxonomyIn<T extends TaxonomyFilter<Filterable>>(
+    taxonomy: T,
+    terms: string[],
+  ): ListQuery<Item, Filterable, Picked> {
+    return this.taxonomy(taxonomy, "any", terms);
+  }
+
+  /** Entries that have none of these terms (`filter[taxonomy:{taxonomy}:not]=a,b`). */
+  whereTaxonomyNotIn<T extends TaxonomyFilter<Filterable>>(
+    taxonomy: T,
+    terms: string[],
+  ): ListQuery<Item, Filterable, Picked> {
+    return this.taxonomy(taxonomy, "not", terms);
   }
 
   /** `sort=a,-b`. Later calls replace earlier ones. */
@@ -117,6 +149,13 @@ export class ListQuery<Item, Filterable extends string, Picked extends keyof Ite
   async first(options?: RunOptions): Promise<Pick<Item, Picked> | null> {
     const res = await this.limit(1).page(1).get(options);
     return res.data[0] ?? null;
+  }
+
+  // Statamic separates taxonomy terms with commas (not LIST_SEPARATOR).
+  private taxonomy(taxonomy: string, modifier: string, terms: string[], merge?: boolean) {
+    const key = `filter[taxonomy:${taxonomy}:${modifier}]`;
+    const prev = merge && this.state.filters[key];
+    return this.with({ filters: { ...this.state.filters, [key]: (prev ? [prev, ...terms] : terms).join(",") } });
   }
 
   // Always a plain ListQuery: `find()` is only offered before any list option is set.
@@ -244,14 +283,18 @@ export class TreeQuery<Page, Picked extends KeysOfUnion<Page> = KeysOfUnion<Page
   where<F extends Filterable & keyof Page>(
     field: F,
     condition: ScalarCondition,
-    value: FieldValue<Page, F> | Scalar,
+    value: FieldValue<Page, F> | Scalar | Date,
   ): TreeQuery<Page, Picked, Filterable>;
   where<F extends Filterable & keyof Page>(
     field: F,
     condition: ListCondition,
     values: Array<FieldValue<Page, F> | Scalar>,
   ): TreeQuery<Page, Picked, Filterable>;
-  where<F extends Filterable & keyof Page>(field: F, condition: PresenceCondition): TreeQuery<Page, Picked, Filterable>;
+  where<F extends Filterable & keyof Page>(
+    field: F,
+    condition: BooleanCondition,
+    value?: boolean,
+  ): TreeQuery<Page, Picked, Filterable>;
   where(field: string, a?: unknown, b?: unknown): TreeQuery<Page, Picked, Filterable> {
     return this.with({ filters: addFilter(this.state.filters, field, a, b) });
   }
@@ -325,11 +368,30 @@ export class IndexQuery<Item> implements Compilable<DataList<Item>> {
   }
 }
 
-/** Adds `filter[field:condition]=value`. Two arguments mean `is`, unless the second is a presence condition. */
+/** Conditions that are true or false for a field; without a value they send `true`. */
+const BOOLEAN_CONDITIONS = new Set<unknown>([
+  "exists",
+  "doesnt_exist",
+  "is_future",
+  "is_past",
+  "is_alpha",
+  "is_alpha_numeric",
+  "is_numeric",
+  "is_url",
+  "is_embeddable",
+  "is_email",
+  "is_numberwang",
+]);
+
+/**
+ * Adds `filter[field:condition]=value`. Two arguments mean `is`, unless the second is a
+ * boolean condition (`exists`, `is_future`, `is_url`, …), which then gets the value `true`.
+ */
 function addFilter(filters: Record<string, string>, field: string, a: unknown, b: unknown): Record<string, string> {
-  const presence = a === "exists" || a === "doesnt_exist";
-  const condition = b === undefined && !presence ? "is" : (a as string);
-  const value = b === undefined ? (presence ? true : a) : b;
-  const serialized = Array.isArray(value) ? value.map(String).join(LIST_SEPARATOR) : String(value);
+  const flag = BOOLEAN_CONDITIONS.has(a);
+  const condition = b === undefined && !flag ? "is" : (a as string);
+  const value = b === undefined ? (flag ? true : a) : b;
+  const str = (v: unknown) => (v instanceof Date ? v.toISOString() : String(v));
+  const serialized = Array.isArray(value) ? value.map(str).join(LIST_SEPARATOR) : str(value);
   return { ...filters, [`filter[${field}:${condition}]`]: serialized };
 }

@@ -76,14 +76,44 @@ const cms = createStatamicClient({ baseUrl: "https://cms.example.com" });
 cms.collections("blog")
   .where("title", "contains", "release")    // filter[title:contains]=release
   .where("slug", "in", ["a", "b"])          // filter[slug:in]=a|b
-  .where("featured", "exists");             // filter[featured:exists]=true
+  .where("featured", "exists")              // filter[featured:exists]=true
+  .where("date", "is_after", "2026-01-01")  // filter[date:is_after]=2026-01-01
+  .where("tags", "overlaps", ["php", "js"]) // filter[tags:overlaps]=php|js
+  .where("title", "matches", "^Release");   // filter[title:matches]=^Release
 ```
 
-| Kind | Conditions |
-| --- | --- |
-| Scalar | `is` `not` `contains` `doesnt_contain` `starts_with` `doesnt_start_with` `ends_with` `doesnt_end_with` `gt` `gte` `lt` `lte` |
-| List | `in` `not_in` (values joined with `\|`) |
-| Presence | `exists` `doesnt_exist` |
+| Kind | Conditions | Value |
+| --- | --- | --- |
+| Scalar | `is` `not` `contains` `doesnt_contain` `starts_with` `doesnt_start_with` `ends_with` `doesnt_end_with` `gt` `gte` `lt` `lte` | one value |
+| Regex | `matches` `doesnt_match` | pattern without delimiters |
+| Date | `is_after` `is_before` | date string or `Date` (sent as ISO) |
+| List | `in` `not_in`, `overlaps` `doesnt_overlap` (array fields) | array, joined with `\|` |
+| Boolean | `exists` `doesnt_exist`, `is_future` `is_past`, `is_alpha` `is_alpha_numeric` `is_numeric` `is_url` `is_embeddable` `is_email` | none (`true`) or `false` to negate |
+
+Boolean conditions need no value: `.where("date", "is_future")` sends `true`,
+`.where("website", "is_url", false)` negates. Because of that, `.where(field, "is_url")` always
+means the condition; to match the literal string, write `.where(field, "is", "is_url")`.
+Statamic reads a purely numeric date like `"2026"` as "now", so pass full dates.
+
+## Taxonomy filters
+
+Filter entries by taxonomy terms with the same methods as Statamic's query builder. Add
+`taxonomy:{handle}` to the collection's `allowed_filters` (e.g. `'taxonomy:tags'`); only those
+taxonomies type-check.
+
+```ts twoslash
+import "./generated/cms.generated";
+import { createStatamicClient } from "@headquery/statamic";
+const cms = createStatamicClient({ baseUrl: "https://cms.example.com" });
+// ---cut---
+cms.collections("blog").whereTaxonomyIn("tags", ["php", "statamic"]); // any:  filter[taxonomy:tags:any]=php,statamic
+cms.collections("blog").whereTaxonomy("tags", "php");                 // all:  filter[taxonomy:tags:all]=php
+cms.collections("blog").whereTaxonomyNotIn("tags", ["drafts"]);       // none: filter[taxonomy:tags:not]=drafts
+```
+
+- `whereTaxonomy()` called again for the same taxonomy adds terms: entries must have all of them.
+- Terms are slugs, joined with commas (not `|`).
+- Taxonomy filters only work on entry lists, not on collection trees, terms or assets.
 
 Statamic only accepts filters on fields listed in the collection's `allowed_filters`.
 With generated types, other fields are a type error:

@@ -67,7 +67,7 @@ export type LooseNavPage = { id: string; entry_id: string | null } & Record<stri
 
 export type RegisteredSchema = Register extends { schema: infer S extends StatamicSchemaShape } ? S : LooseSchema;
 
-/** Conditions supported by Statamic's API filters (same as the collection tag). */
+/** Conditions with one value (Statamic's API filters, same as the collection tag). */
 export type ScalarCondition =
   | "is"
   | "not"
@@ -80,13 +80,48 @@ export type ScalarCondition =
   | "gt"
   | "gte"
   | "lt"
-  | "lte";
+  | "lte"
+  /** Regular expression, without delimiters. */
+  | "matches"
+  | "doesnt_match"
+  /** Dates: pass a date string or a `Date`. Numeric strings like `"2026"` are read as "now" by Statamic. */
+  | "is_after"
+  | "is_before";
 
-export type ListCondition = "in" | "not_in";
+/** Conditions with several values, sent joined with `|`. `overlaps` is for array fields. */
+export type ListCondition = "in" | "not_in" | "overlaps" | "doesnt_overlap";
+
 export type PresenceCondition = "exists" | "doesnt_exist";
-export type Condition = ScalarCondition | ListCondition | PresenceCondition;
+
+/**
+ * Conditions that are true or false for a field: `.where(field, "is_future")` sends `true`,
+ * `.where(field, "is_url", false)` negates.
+ */
+export type BooleanCondition =
+  | PresenceCondition
+  | "is_future"
+  | "is_past"
+  | "is_alpha"
+  | "is_alpha_numeric"
+  | "is_numeric"
+  | "is_url"
+  | "is_embeddable"
+  | "is_email"
+  | "is_numberwang";
+
+export type Condition = ScalarCondition | ListCondition | BooleanCondition;
 
 export type Scalar = string | number | boolean;
+
+/**
+ * Taxonomies usable in `whereTaxonomy*()`: the `T` of `"taxonomy:T"` entries in the filterable
+ * union (Statamic `allowed_filters: ['taxonomy:tags']`). Any taxonomy without generated types.
+ */
+export type TaxonomyFilter<Filterable extends string> = string extends Filterable
+  ? string
+  : Filterable extends `taxonomy:${infer T}`
+    ? T
+    : never;
 
 /** `"title"` sorts ascending, `"-title"` descending. Nested fields use `->` in Statamic. */
 export type SortField<F extends string> = F | `-${F}`;
