@@ -1,0 +1,47 @@
+# `headquery init`
+
+Run once per project. `init` asks where the schema comes from and where the types should go,
+and writes `headquery.config.ts`. Then it offers three more steps, each a yes/no question.
+
+```bash
+npx headquery init --base-url https://cms.example.com   # schema endpoint
+npx headquery init --from schema.json                   # exported file
+```
+
+Before `@headquery/codegen` is installed, run `npx @headquery/codegen init`: `npx headquery`
+would look for an npm package called `headquery`.
+
+Without `--base-url` or `--from`, `init` suggests `HEADQUERY_BASE_URL` from the environment,
+`.env.local` or `.env`.
+
+## What it writes
+
+| Step | Details |
+| --- | --- |
+| Config file | `headquery.config.ts` (`.mts` or `.mjs` where Node can't load `.ts` configs). See [Config file](/codegen/config). |
+| Client file | Only when an adapter (e.g. `@headquery/statamic`) is installed. Written next to the generated types (`src/cms.ts`), passes the generated `Schema` explicitly and reads the base URL from env depending on the framework: `NEXT_PUBLIC_HEADQUERY_BASE_URL` (Next.js), `VITE_HEADQUERY_BASE_URL` (Vite), `HEADQUERY_BASE_URL` (Node), a literal URL for Nuxt (use `runtimeConfig`). The framework is detected from `package.json` and can be changed in the prompt. |
+| `package.json` scripts | `cms:types` (`headquery generate`) and `cms:types:check` (`headquery generate --check`). Existing scripts are never changed. |
+| Env lines | Endpoint only: `HEADQUERY_BASE_URL`, `HEADQUERY_SCHEMA_TOKEN` (empty) and the client's variable, appended to `.env.local` or `.env` (if neither exists, `init` asks for a name). Keys that are already set stay unchanged. The config then loads that file with `process.loadEnvFile`. `init` warns if the file isn't in `.gitignore`. |
+
+An existing config or client file is only overwritten after confirmation or with `--force`.
+At the end, `init` prints the steps that are left, including what to set up on the CMS.
+
+The generated types go to `src/cms.generated.ts` by default, or `lib/…` or the project root
+when there is no `src/` folder.
+
+The client file is a starting point. The framework guides show how to adapt it, e.g. for
+server-only tokens in [Next.js](/frameworks/nextjs#client-setup) or `runtimeConfig` in
+[Nuxt](/frameworks/nuxt#client-setup).
+
+## Flags
+
+| Flag | Description |
+| --- | --- |
+| `--base-url` | CMS origin, e.g. `https://cms.example.com` |
+| `--from` | Full schema endpoint URL or a local schema file, instead of `--base-url` |
+| `--out` | Output `.ts` file for the types |
+| `--framework` | `next`, `nuxt`, `vite` or `node` (default: detected) |
+| `--no-client`, `--no-scripts`, `--no-env` | Skip a step |
+| `--env-file` | Env file to add the lines to |
+| `--yes`, `-y` | No prompts: use flags and defaults, all steps on (also when stdin isn't a terminal) |
+| `--force` | Overwrite an existing config and client file |

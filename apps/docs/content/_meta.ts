@@ -3,11 +3,13 @@ import type { MetaRecord } from "nextra";
 export default {
   index: "Introduction",
   "getting-started": "Getting started",
+  codegen: "Codegen",
+  client: "Client",
   cms: "CMS",
-  caching: "Caching & URLs",
-  "data-fetching": "Data fetching libraries",
+  "-- integrations": { type: "separator", title: "Integrations" },
   frameworks: "Frameworks",
-  errors: "Errors",
+  "data-fetching": "Data fetching libraries",
+  "-- project": { type: "separator", title: "Project" },
   motivation: "Motivation",
   roadmap: "Roadmap",
 } satisfies MetaRecord;

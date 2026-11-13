@@ -1,0 +1,47 @@
+# Client options
+
+Every CMS adapter's client factory (e.g. `createStatamicClient`) takes the same options:
+
+```ts twoslash
+// @filename: cms.generated.ts
+export type { Schema } from "./generated/cms.generated";
+// @filename: cms.ts
+// ---cut---
+import { createStatamicClient } from "@headquery/statamic";
+import type { Schema } from "./cms.generated";
+
+export const cms = createStatamicClient<Schema>({
+  baseUrl: "https://cms.example.com",
+  fetchOptions: { cache: "force-cache" },
+});
+```
+
+| Option | Default | Description |
+| --- | --- | --- |
+| `baseUrl` | — | Origin of the CMS, e.g. `https://cms.example.com` |
+| `apiPrefix` | `/api` | Path of the CMS's REST API (for Statamic: `statamic.api.route`) |
+| `token` | — | Sent as `Authorization: Bearer <token>` |
+| `headers` | — | Extra headers for every request |
+| `fetch` | `globalThis.fetch` | Custom fetch (SSR frameworks, tests, polyfills) |
+| `fetchOptions` | — | Merged into every fetch call, e.g. `{ cache: "force-cache" }` or Next's `{ next: { revalidate: 60 } }` |
+
+## Per call
+
+`.get({ signal, fetchOptions })` accepts an `AbortSignal` and fetch options that override the
+client's:
+
+```ts twoslash
+import "./generated/cms.generated";
+import { createStatamicClient } from "@headquery/statamic";
+const cms = createStatamicClient({ baseUrl: "https://cms.example.com" });
+// ---cut---
+const controller = new AbortController();
+
+await cms.global("settings").get({ signal: controller.signal, fetchOptions: { cache: "no-store" } });
+```
+
+## Where the client file comes from
+
+[`headquery init`](/codegen/init) writes a client file (`src/cms.ts`) that passes the
+generated `Schema` and reads `baseUrl` from env. Import `cms` from it wherever you query.
+Why the `Schema` generic is there is explained under [Types](/client/types).

@@ -1,105 +1,14 @@
-import { Steps, Tabs } from "nextra/components";
+import { Cards } from "nextra/components";
 
-# Getting started (Statamic)
+# Getting started
 
-<Steps>
+Pick your CMS for a step-by-step guide from CMS setup to your first typed query:
 
-### Enable Statamic's REST API
+<br />
+<Cards.Card title="Statamic" href="/cms/statamic/getting-started" arrow />
 
-The REST API is a Statamic Pro feature and off by default. Enable both in the CMS's `.env`:
+## Requirements
 
-```dotenv
-STATAMIC_PRO_ENABLED=true
-STATAMIC_API_ENABLED=true
-```
-
-Then enable the resources you want to query in `config/statamic/api.php`. Add the fields you
-want to filter on to `allowed_filters`. headquery only exports enabled resources, and only
-`allowed_filters` fields can be used in `.where()`.
-
-### Install the addon
-
-```bash
-composer require headquery/statamic
-php artisan vendor:publish --tag=headquery-config   # optional
-```
-
-### Install the client
-
-```bash
-npm install @headquery/statamic
-npm install -D @headquery/codegen
-```
-
-### Generate types
-
-Run `init` once. It asks where the schema comes from and where the types should go, and writes
-`headquery.config.ts`. It also offers to (each step is a yes/no question):
-
-- create a typed client file (`src/cms.ts`) when `@headquery/statamic` is installed. It reads the base
-  URL from env the way your framework expects (detected from `package.json`, changeable in the prompt),
-- add `cms:types` and `cms:types:check` scripts to `package.json`,
-- add the `HEADQUERY_*` lines to `.env.local` or `.env` (asks for a file name if neither exists).
-
-<Tabs items={["Same project", "Separate frontend repo"]}>
-  <Tabs.Tab>
-    ```bash
-    php please headquery:schema --out=schema.json
-    npx headquery init --from schema.json
-    ```
-  </Tabs.Tab>
-  <Tabs.Tab>
-    Enable the [schema endpoint](/cms/statamic/schema-endpoint) on the CMS, then:
-
-    ```bash
-    npx headquery init --base-url https://cms.example.com
-    ```
-  </Tabs.Tab>
-</Tabs>
-
-Then set `HEADQUERY_SCHEMA_TOKEN` (for the schema endpoint) and generate the types, and again
-whenever the content model changes:
-
-```bash
-npm run cms:types   # = npx headquery generate
-```
-
-Add `--check` in CI to fail when the generated file is out of date. All options are on the
-[typed schema](/cms/statamic/typed-schema) page.
-
-### Query
-
-`init` wrote a client like this (here for Next.js) to `src/cms.ts`:
-
-```ts
-import { createStatamicClient } from "@headquery/statamic";
-import type { Schema } from "./cms.generated";
-
-export const cms = createStatamicClient<Schema>({
-  baseUrl: process.env.NEXT_PUBLIC_HEADQUERY_BASE_URL ?? "https://cms.example.com",
-});
-```
-
-Import it wherever you query:
-
-```ts
-import { cms } from "./cms";
-
-const { data } = await cms.global("settings").get();
-```
-
-</Steps>
-
-## Client options
-
-| Option | Default | Description |
-| --- | --- | --- |
-| `baseUrl` | — | Origin of the CMS, e.g. `https://cms.example.com` |
-| `apiPrefix` | `/api` | Matches Statamic's `statamic.api.route` |
-| `token` | — | Sent as `Authorization: Bearer <token>` |
-| `headers` | — | Extra headers for every request |
-| `fetch` | `globalThis.fetch` | Custom fetch (SSR frameworks, tests, polyfills) |
-| `fetchOptions` | — | Merged into every fetch call, e.g. `{ cache: "force-cache" }` or Next's `{ next: { revalidate: 60 } }` |
-
-Per call, `.get({ signal, fetchOptions })` accepts an `AbortSignal` and fetch options
-that override the client's.
+- Node.js ≥ 20 in the frontend. Node ≥ 22.18 lets the CLI load a `headquery.config.ts`
+  directly; on older versions `init` writes `headquery.config.mjs` instead.
+- A CMS version supported by its plugin, listed on the CMS's overview page.

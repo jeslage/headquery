@@ -1,8 +1,40 @@
 # Nuxt
 
-In Nuxt, use `useAsyncData` with `query.url()` as the key and `.get()` as the handler. The
-request runs on the server during SSR, the result is sent to the client in the payload, and
-components that build the same query share one entry because the key is the URL.
+In Nuxt, create the client once and fetch with `useAsyncData`, keyed by `query.url()`.
+
+## Client setup [#client-setup]
+
+[`headquery init`](/codegen/init) writes a client file next to the generated types. Generate
+both into `utils/` so Nuxt auto-imports `cms` everywhere:
+
+```bash
+npx headquery init --framework nuxt --out utils/cms.generated.ts   # client: utils/cms.ts
+```
+
+```ts twoslash
+// @filename: cms.generated.ts
+export type { Schema } from "./generated/cms.generated";
+// @filename: cms.ts
+// ---cut---
+// utils/cms.ts
+import { createStatamicClient } from "@headquery/statamic";
+import type { Schema } from "./cms.generated";
+
+export const cms = createStatamicClient<Schema>({
+  // To set it per environment, use runtimeConfig.public in nuxt.config and pass it in here.
+  baseUrl: "https://cms.example.com",
+});
+```
+
+If your API needs a `token`, don't put it in this shared client: code in `utils/` also ends up
+in the browser bundle. Read it from private `runtimeConfig` and use that client only in server
+code, or keep the API public and read-only.
+
+## Fetching data
+
+Use `useAsyncData` with `query.url()` as the key and `.get()` as the handler. The request runs
+on the server during SSR, the result is sent to the client in the payload, and components that
+build the same query share one entry because the key is the URL.
 
 ```ts twoslash
 import "./generated/cms.generated";
@@ -36,7 +68,7 @@ const { data } = await useFetch<Awaited<ReturnType<typeof latest.get>>>(latest.u
 ```
 
 But it bypasses the headquery client: the `token`, `headers` and `fetchOptions` from
-`createStatamicClient` are not applied, errors are not [`HeadqueryHttpError`](/errors), and the
+`createStatamicClient` are not applied, errors are not [`HeadqueryHttpError`](/client/errors), and the
 result type has to be passed by hand. Prefer `useAsyncData` unless you specifically want
 Nuxt's `$fetch`.
 
@@ -90,19 +122,3 @@ const { data } = await useAsyncData(post.url(), async (_nuxtApp, { signal }) => 
   }
 });
 ```
-
-## Client setup
-
-Create the client once, for example in `utils/cms.ts`, so Nuxt auto-imports it:
-
-```ts twoslash
-import "./generated/cms.generated";
-// ---cut---
-import { createStatamicClient } from "@headquery/statamic";
-
-export const cms = createStatamicClient({ baseUrl: "https://cms.example.com" });
-```
-
-If your API needs a `token`, don't put it in this shared client: code in `utils/` also ends up
-in the browser bundle. Read it from private `runtimeConfig` and use that client only in server
-code, or keep the API public and read-only.
