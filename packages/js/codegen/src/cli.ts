@@ -1,7 +1,7 @@
 import { defineCommand, runMain } from "citty";
 import pkg from "../package.json";
-import { generateCommand } from "./commands/generate";
-import { initCommand } from "./commands/init";
+import { generateCommand } from "./cli/generate";
+import { initCommand } from "./cli/init/command";
 
 const main = defineCommand({
   meta: {

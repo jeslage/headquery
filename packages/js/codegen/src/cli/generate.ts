@@ -1,10 +1,12 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, relative, resolve } from "node:path";
 import { defineCommand } from "citty";
-import { findConfig, loadConfig, resolveOptions } from "../config";
-import { generate, loadSchema, SchemaLoadError } from "../index";
-import { formatLoadError } from "../troubleshoot";
-import { fail, guarded, ok, style } from "./shared";
+import { findConfig, loadConfig, type ResolvedOptions, resolveOptions } from "../config";
+import { generate, type Target } from "../generate";
+import { loadSchema, SchemaLoadError } from "../load";
+import { guarded } from "./guarded";
+import { fail, link, ok, style } from "./output";
+import { formatLoadError } from "./troubleshoot";
 
 const args = {
   config: {
@@ -42,6 +44,8 @@ const args = {
   },
 } as const;
 
+const shown = (path: string) => relative(process.cwd(), path) || path;
+
 export const generateCommand = defineCommand({
   meta: {
     name: "generate",
@@ -52,7 +56,7 @@ export const generateCommand = defineCommand({
     // An explicit --config must exist; without it, a config file is optional.
     const configPath = args.config ? resolve(args.config) : await findConfig(process.cwd());
     const config = configPath ? { config: await loadConfig(configPath), path: configPath } : undefined;
-    if (configPath) console.log(style("dim", `using ${relative(process.cwd(), configPath) || configPath}`));
+    if (configPath) console.log(style("dim", `using ${shown(configPath)}`));
 
     const options = resolveOptions(
       {
@@ -68,45 +72,50 @@ export const generateCommand = defineCommand({
       config,
       process.env,
     );
-    if (!options.from || !options.out) {
+    const { from, out } = options;
+    if (!from || !out) {
       throw new Error(
         "no schema source or output file. Run `headquery init` to create a config, or pass --base-url/--from and --out.",
       );
     }
 
-    let schema: unknown;
-    try {
-      schema = await loadSchema(options.from, options.token ? { token: options.token } : {});
-    } catch (error) {
-      if (!(error instanceof SchemaLoadError)) throw error;
-      // statamic is the only target so far, and the default when the schema decides.
-      console.error(
-        formatLoadError(error, options.target ?? "statamic", {
-          width: process.stderr.columns,
-          style: (format, text) => style(format, text, process.stderr),
-        }),
-      );
-      process.exit(1);
-    }
+    const schema = await loadOrExplain(from, options);
     const code = generate(schema, {
       ...(options.target ? { target: options.target } : {}),
       ...(options.module ? { moduleName: options.module } : {}),
     });
-    const out = options.out;
-    const shown = relative(process.cwd(), out) || out;
 
     if (args.check) {
       const current = await readFile(out, "utf8").catch(() => "");
       if (current !== code) {
-        fail(`${shown} is out of date. Run \`headquery generate\` without --check.`);
+        fail(`${shown(out)} is out of date. Run \`headquery generate\` without --check.`);
         process.exit(1);
       }
-      ok(`${shown} is up to date`);
+      ok(`${shown(out)} is up to date`);
       return;
     }
 
     await mkdir(dirname(out), { recursive: true });
     await writeFile(out, code);
-    ok(`wrote ${shown}`);
+    ok(`wrote ${shown(out)}`);
   }),
 });
+
+/** Load the schema; if that fails, print the troubleshooting report and exit 1. */
+async function loadOrExplain(from: string, options: ResolvedOptions): Promise<unknown> {
+  try {
+    return await loadSchema(from, options.token ? { token: options.token } : {});
+  } catch (error) {
+    if (!(error instanceof SchemaLoadError)) throw error;
+    // statamic is the only target so far, and the default when the schema decides.
+    const target: Target = options.target ?? "statamic";
+    const report = formatLoadError(error, target, {
+      width: process.stderr.columns,
+      style: (format, text) => style(format, text, process.stderr),
+      link: (url) => link(url, process.stderr),
+    });
+    // A blank line after the report keeps it apart from the next prompt.
+    console.error(`${report}\n`);
+    process.exit(1);
+  }
+}

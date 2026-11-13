@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { loadSchema, SchemaLoadError } from "../src";
-import { formatLoadError, troubleshoot } from "../src/troubleshoot";
+import { formatLoadError, troubleshoot } from "../src/cli/troubleshoot";
 
 const URL_ = "https://cms.test/api/headquery/schema";
 
@@ -69,21 +69,30 @@ describe("troubleshoot (statamic)", () => {
     expect(await likely(networkError("ERR_SSL_PACKET_LENGTH_TOO_LONG", "x"))).toContain("use http://");
   });
 
-  it("always lists common problems for endpoint errors, but not for files", async () => {
-    const error = await failWith(networkError("EWHATEVER", "x"));
-    const { likely, common } = troubleshoot(error, "statamic");
+  it("links the troubleshooting docs, also without a likely cause", async () => {
+    const { likely, docs } = troubleshoot(await failWith(networkError("EWHATEVER", "x")), "statamic");
     expect(likely).toBeUndefined();
-    expect(common.map((p) => p.label)).toEqual(["404", "401", "ECONNREFUSED", "Certificate", "HTML"]);
-    // an unknown network error still points at the connection row
-    expect(common.filter((p) => p.matches(error)).map((p) => p.label)).toEqual(["ECONNREFUSED"]);
+    expect(docs).toMatch(/\/cms\/statamic\/troubleshooting$/);
+  });
+
+  it("links the section of the likely cause", async () => {
+    const anchor = async (fetchImpl: typeof fetch) => (await hint(fetchImpl)).docs.split("#")[1];
+    expect(await anchor(respond("", { status: 404 }))).toBe("404-not-found");
+    expect(await anchor(respond("", { status: 401 }))).toBe("401-unauthorized");
+    expect(await anchor(respond("", { status: 503 }))).toBe("500-internal-server-error");
+    expect(await anchor(respond("<html>", { status: 200 }))).toBe("not-json");
+    expect(await anchor(networkError("ECONNREFUSED", "x"))).toBe("econnrefused");
+    expect(await anchor(networkError("EAI_AGAIN", "x"))).toBe("enotfound");
+    expect(await anchor(networkError("SELF_SIGNED_CERT_IN_CHAIN", "x"))).toBe("certificate");
+    expect(await anchor(networkError("ERR_SSL_PACKET_LENGTH_TOO_LONG", "x"))).toBe("tls");
+    expect(await anchor(respond("", { status: 418 }))).toBeUndefined();
     const file = (await loadSchema("does-not-exist.json").catch((e: unknown) => e)) as SchemaLoadError;
-    expect(troubleshoot(file, "statamic")).toMatchObject({ common: [] });
     expect(troubleshoot(file, "statamic").likely?.join(" ")).toContain("php please headquery:schema");
   });
 });
 
 describe("formatLoadError", () => {
-  it("leads with the status and shows the response, the cause and the matching problem", async () => {
+  it("leads with the status and shows the response, the cause and the docs link", async () => {
     const error = await failWith(
       respond(`{"message":"Not Found"}`, {
         status: 404,
@@ -100,31 +109,28 @@ describe("formatLoadError", () => {
         Token     not sent
         Response  {"message":"Not Found"}
 
-        Likely cause
+        ● Likely cause
           The schema route doesn't answer. The CMS's .env needs the schema route
           (without a token it stays 404) and Statamic's REST API, which is a Pro
           feature:
+
             HEADQUERY_SCHEMA_ROUTE=true
             HEADQUERY_SCHEMA_TOKEN=<same value as in the frontend>
             STATAMIC_API_ENABLED=true
             STATAMIC_PRO_ENABLED=true
+
           Then clear the cached config on the CMS:
+
             php artisan config:clear
+
           If you changed statamic.api.route or headquery.schema.path, set
           \`from.apiPrefix\` / \`from.schemaPath\` in the config.
 
-        Common problems with Statamic
-        › 404           Schema route or REST API off: the CMS needs
-                        HEADQUERY_SCHEMA_ROUTE=true, HEADQUERY_SCHEMA_TOKEN,
-                        STATAMIC_API_ENABLED=true and STATAMIC_PRO_ENABLED=true, then
-                        \`php artisan config:clear\`.
-          401           HEADQUERY_SCHEMA_TOKEN in the frontend is missing or differs
-                        from the CMS.
-          ECONNREFUSED  The CMS isn't running, or the host, port or http/https in
-                        HEADQUERY_BASE_URL is wrong.
-          Certificate   Node doesn't trust local Herd/Valet HTTPS:
-                        NODE_OPTIONS=--use-system-ca, NODE_EXTRA_CA_CERTS or http://.
-          HTML          Not JSON: wrong base URL or API prefix (statamic.api.route)."
+        ╭─ → More help ───────────────────────────────────────────────────────────╮
+        │ The troubleshooting docs explain this error step by step, with the      │
+        │ commands to fix it:                                                     │
+        │ https://headquery.vercel.app/cms/statamic/troubleshooting#404-not-found │
+        ╰─────────────────────────────────────────────────────────────────────────╯"
     `);
   });
 
@@ -135,6 +141,15 @@ describe("formatLoadError", () => {
     );
     expect(text).toContain("✗ Couldn't reach the CMS: ECONNREFUSED");
     expect(text).toMatch(/Error\s+connect ECONNREFUSED 127\.0\.0\.1:8000/);
-    expect(text).toContain("› ECONNREFUSED");
+    expect(text).toContain("Is the CMS running?");
+  });
+
+  it("renders the docs URL through the link option, on its own line in the box", async () => {
+    const text = formatLoadError(await failWith(respond("", { status: 401 })), "statamic", {
+      link: (url) => `<${url}>`,
+    });
+    expect(text).toMatch(
+      /\n {2}│ <https:\/\/headquery\.vercel\.app\/cms\/statamic\/troubleshooting#401-unauthorized> +│\n/,
+    );
   });
 });

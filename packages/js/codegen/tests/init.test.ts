@@ -20,7 +20,7 @@ import {
   renderClient,
   renderConfig,
   renderNextSteps,
-} from "../src/init";
+} from "../src/cli/init";
 
 const ctx = (overrides: Partial<InitContext> = {}): InitContext => ({
   env: {},
@@ -298,7 +298,7 @@ describe("renderNextSteps", () => {
     expect(text).toContain("pnpm add -D @headquery/codegen");
     expect(text).toContain("Set HEADQUERY_SCHEMA_TOKEN in .env.local");
     expect(text).toContain("pnpm cms:types");
-    expect(text).toContain("Import `cms` from src/cms.ts");
+    expect(text).toContain("Import `cms` from src/cms.ts.");
     expect(text).not.toContain(`"cms:types"`);
     expect(text).not.toContain("HEADQUERY_BASE_URL=");
   });
@@ -307,19 +307,19 @@ describe("renderNextSteps", () => {
     const url = renderNextSteps({ ...base, source: { baseUrl: "https://cms.test" }, adapter: "@headquery/statamic" });
     expect(url).toContain(
       [
-        "2. On the CMS: the REST API is a Statamic Pro feature and off by default. Add to its .env:",
+        "  2. Set up Statamic",
+        "     The REST API is a Statamic Pro feature and off by default. Add to the CMS's .env:",
         "",
-        "   STATAMIC_PRO_ENABLED=true",
-        "   STATAMIC_API_ENABLED=true",
-        "   HEADQUERY_SCHEMA_ROUTE=true",
-        "   HEADQUERY_SCHEMA_TOKEN=<a long random token>",
-        "",
+        "       STATAMIC_PRO_ENABLED=true",
+        "       STATAMIC_API_ENABLED=true",
+        "       HEADQUERY_SCHEMA_ROUTE=true",
+        "       HEADQUERY_SCHEMA_TOKEN=<a long random token>",
       ].join("\n"),
     );
-    expect(url).toContain("   php artisan config:clear");
+    expect(url).toContain("\n       php artisan config:clear\n");
     const file = renderNextSteps({ ...base, source: "schema.json", adapter: "@headquery/statamic" });
     expect(file).not.toContain("HEADQUERY_SCHEMA_ROUTE");
-    expect(file).toContain("   php please headquery:schema --out=schema.json");
+    expect(file).toContain("\n       php please headquery:schema --out=schema.json");
     expect(renderNextSteps({ ...base, source: "schema.json" })).not.toContain("STATAMIC_API_ENABLED");
   });
 
