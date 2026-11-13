@@ -1,0 +1,102 @@
+# Troubleshooting
+
+When the schema can't be loaded, `headquery generate` prints the underlying error (not just
+`fetch failed`), the most likely cause and a link to this page. Find the error from the first
+line of the report below.
+
+## `404 Not Found` [#404-not-found]
+
+The schema route or Statamic's REST API is off. The route stays off (404) until **both**
+variables are set, and the REST API is a Statamic Pro feature. Add to the CMS's `.env`:
+
+```dotenv
+HEADQUERY_SCHEMA_ROUTE=true
+HEADQUERY_SCHEMA_TOKEN=<a long random token>
+STATAMIC_API_ENABLED=true
+STATAMIC_PRO_ENABLED=true
+```
+
+Then clear the cached config on the CMS:
+
+```bash
+php artisan config:clear
+```
+
+If you changed `statamic.api.route` or `headquery.schema.path`, set `from.apiPrefix` /
+`from.schemaPath` in `headquery.config.ts`.
+
+## `401 Unauthorized` [#401-unauthorized]
+
+The frontend sent no token, or a different one than the CMS expects. Set the same value as on
+the CMS in your env file:
+
+```dotenv
+HEADQUERY_SCHEMA_TOKEN=<same value as in the CMS's .env>
+```
+
+You can also pass it as `token` in the config or with `--token`. The report shows whether a
+token was sent at all.
+
+## `ECONNREFUSED` [#econnrefused]
+
+Nothing is listening at that address: the CMS isn't running, or the host or port in
+`HEADQUERY_BASE_URL` is wrong. Check that the URL opens in the browser.
+
+## `ENOTFOUND` [#enotfound]
+
+The host doesn't resolve. Check `HEADQUERY_BASE_URL` for typos. `*.test` domains from Herd or
+Valet only resolve on the machine that serves them, so they don't work in CI or from another
+computer.
+
+## `ETIMEDOUT` [#etimedout]
+
+The CMS didn't answer in time. Check for a firewall, a VPN or a wrong port.
+
+## `SELF_SIGNED_CERT_IN_CHAIN` and other certificate errors [#certificate]
+
+Node doesn't trust the HTTPS certificate. Local Herd and Valet sites use their own certificate
+authority, which is in the system keychain but not in Node's list. Let Node use the system
+certificates (Node ≥ 22.15):
+
+```bash
+NODE_OPTIONS=--use-system-ca npx headquery generate
+```
+
+Or point Node at the CA file:
+
+```bash
+# Herd
+NODE_EXTRA_CA_CERTS="$HOME/Library/Application Support/Herd/config/valet/CA/LaravelValetCASelfSigned.pem" npx headquery generate
+# Valet
+NODE_EXTRA_CA_CERTS="$HOME/.config/valet/CA/LaravelValetCASelfSigned.pem" npx headquery generate
+```
+
+Or use the `http://` URL of the site instead.
+
+## `ERR_SSL_…` or `EPROTO` [#tls]
+
+The connection broke during the TLS handshake, usually because an `https://` URL points to a
+server that only speaks HTTP (for example `php artisan serve`). Use `http://`:
+
+```dotenv
+HEADQUERY_BASE_URL=http://127.0.0.1:8000
+```
+
+## `500 Internal Server Error` [#500-internal-server-error]
+
+The CMS failed while exporting the schema. The error is in the CMS's log,
+`storage/logs/laravel.log`.
+
+## The schema endpoint didn't return JSON [#not-json]
+
+The URL points to a page, not the schema endpoint. Often it's an HTML page or a redirect to
+one. Check the base URL and the API prefix (`statamic.api.route`, default `/api`).
+
+## Couldn't read the schema file: `ENOENT` [#file-not-found]
+
+The schema file in `from` doesn't exist. Relative paths in the config resolve against the
+config file's folder. Export the schema on the CMS:
+
+```bash
+php please headquery:schema --out=schema.json
+```

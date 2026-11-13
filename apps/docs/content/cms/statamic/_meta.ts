@@ -5,4 +5,5 @@ export default {
   "typed-schema": "Typed schema",
   "schema-endpoint": "Schema endpoint",
   "custom-fieldtypes": "Custom fieldtypes",
+  troubleshooting: "Troubleshooting",
 } satisfies MetaRecord;
