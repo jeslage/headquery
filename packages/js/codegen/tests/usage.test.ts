@@ -47,7 +47,7 @@ describe("generated types work with @headquery/statamic", () => {
   });
 
   it("types globals", () => {
-    expectTypeOf(cms.global("settings").get)
+    expectTypeOf(cms.globals("settings").get)
       .returns.resolves.toHaveProperty("data")
       .toHaveProperty("site_name")
       .toEqualTypeOf<string | null>();

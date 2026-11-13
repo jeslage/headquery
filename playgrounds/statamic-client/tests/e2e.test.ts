@@ -105,7 +105,7 @@ describe.skipIf(!baseUrl)(`Statamic playground (${baseUrl})`, () => {
     });
 
     it("fetches a global set", async () => {
-      const { data } = await cms.global("settings").get();
+      const { data } = await cms.globals("settings").get();
       expect(data.site_name).toBe("headquery playground");
       expect(data.social.map((s) => s.network)).toEqual([
         { key: "github", value: "github", label: "GitHub" },

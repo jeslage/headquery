@@ -25,4 +25,4 @@ await show("title contains 'GET'", blog.where("title", "contains", "GET").fields
 await show("slug in [...]", blog.where("slug", "in", ["hello-headquery", "statamic-addon"]).fields(["slug"]));
 await show("single entry by slug", blog.find("hello-headquery").fields(["title", "stage", "tags", "hero"]));
 await show("tags", cms.taxonomies("tags").fields(["title", "slug"]));
-await show("settings global", cms.global("settings"));
+await show("settings global", cms.globals("settings"));

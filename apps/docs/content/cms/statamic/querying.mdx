@@ -16,7 +16,7 @@ takes a handle and starts a query, like `Entry::query()->where('collection', 'bl
 | `collections(handle)` | entries: `GET /collections/{handle}/entries` | id or slug |
 | `taxonomies(handle)` | terms: `GET /taxonomies/{handle}/terms` | slug |
 | `assets(container)` | assets: `GET /assets/{container}` | path |
-| `globals()` / `global(handle)` | `GET /globals` | `GET /globals/{handle}` |
+| `globals()` / `globals(handle)` | all sets: `GET /globals` | – (`globals(handle)` is `GET /globals/{handle}`) |
 | `navs()` | navigations: `GET /navs` | – |
 
 Trees: `collections(handle).tree()` (structured collections) and `navs(handle).tree()`.
@@ -143,7 +143,7 @@ const tag = await cms.taxonomies("tags").find("javascript").get(); // null if mi
 
 ## Globals
 
-`global(handle)` fetches one global set (`GET /globals/{handle}`), `globals()` all of them
+`globals(handle)` fetches one global set (`GET /globals/{handle}`), `globals()` all of them
 (`GET /globals`). In the list, `handle` tells the sets apart:
 
 ```ts twoslash
@@ -151,7 +151,7 @@ import "./generated/cms.generated";
 import { createStatamicClient } from "@headquery/statamic";
 const cms = createStatamicClient({ baseUrl: "https://cms.example.com" });
 // ---cut---
-const settings = await cms.global("settings").get();
+const settings = await cms.globals("settings").get();
 settings.data.site_name;
 //            ^?
 
@@ -226,7 +226,7 @@ const cms = createStatamicClient({ baseUrl: "https://cms.example.com" });
 // ---cut---
 const [navigation, settings] = await Promise.all([
   cms.navs("main").tree().fields(["title", "url", "entry_id"]).get(),
-  cms.global("settings").get(),
+  cms.globals("settings").get(),
 ]);
 ```
 

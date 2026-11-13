@@ -121,7 +121,7 @@ describe("single resources", () => {
       path: "/taxonomies/tags/terms/php",
       query: { site: "de" },
     });
-    expect(cms.global("settings").toRequest().path).toBe("/globals/settings");
+    expect(cms.globals("settings").toRequest().path).toBe("/globals/settings");
   });
 });
 
@@ -144,9 +144,9 @@ describe("find()", () => {
     await expect(status(500).taxonomies("tags").find("php").get()).rejects.toBeInstanceOf(HeadqueryHttpError);
   });
 
-  it("keeps global() throwing on 404", async () => {
-    await expect(status(404).global("settings").get()).rejects.toBeInstanceOf(HeadqueryHttpError);
-    expectTypeOf(cms.global("settings").get).returns.resolves.not.toBeNullable();
+  it("keeps globals(handle) throwing on 404", async () => {
+    await expect(status(404).globals("settings").get()).rejects.toBeInstanceOf(HeadqueryHttpError);
+    expectTypeOf(cms.globals("settings").get).returns.resolves.not.toBeNullable();
   });
 
   it("is only offered before list options, which it would ignore", () => {

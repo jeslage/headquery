@@ -44,5 +44,5 @@ const cms = createStatamicClient({
 });
 
 // or per call
-await cms.global("settings").get({ fetchOptions: { cache: "no-store" } });
+await cms.globals("settings").get({ fetchOptions: { cache: "no-store" } });
 ```

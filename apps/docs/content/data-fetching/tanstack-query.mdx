@@ -50,7 +50,7 @@ export function hq<T>(query: Query<T>) {
   });
 }
 
-const settings = cms.global("settings");
+const settings = cms.globals("settings");
 
 useQuery(hq(settings));
 await queryClient.prefetchQuery(hq(settings));

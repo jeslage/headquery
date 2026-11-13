@@ -137,7 +137,7 @@ import { createStatamicClient } from "@headquery/statamic";
 const cms = createStatamicClient({ baseUrl: "https://cms.example.com" });
 // ---cut---
 // always fresh
-await cms.global("settings").get({ fetchOptions: { cache: "no-store" } });
+await cms.globals("settings").get({ fetchOptions: { cache: "no-store" } });
 
 // cache for an hour, and tag it for on-demand revalidation
 await cms

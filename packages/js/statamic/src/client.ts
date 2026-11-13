@@ -42,9 +42,8 @@ export interface StatamicClient<S extends StatamicSchemaShape> {
     container: K,
   ): FlatResourceQuery<AssetContainersOf<S>[K]["item"], AssetContainersOf<S>[K]["filterable"]>;
 
-  /** `GET /globals/{handle}` */
-  global<K extends Handle<S["globals"]>>(handle: K): SingleQuery<S["globals"][K]>;
-
+  /** `GET /globals/{handle}`: one global set. Throws on 404 (a missing set is a config error). */
+  globals<K extends Handle<S["globals"]>>(handle: K): SingleQuery<S["globals"][K]>;
   /** `GET /globals`: all global sets; tell them apart by `handle`. */
   globals(): IndexQuery<S["globals"][keyof S["globals"]]>;
 
@@ -78,8 +77,10 @@ export function createStatamicClient<S extends StatamicSchemaShape = RegisteredS
     }) as never,
     taxonomies: (taxonomy) => new ResourceQuery(core, `/taxonomies/${seg(taxonomy)}/terms`),
     assets: (container) => new ResourceQuery(core, `/assets/${seg(container)}`, assetPath),
-    global: (handle) => new SingleQuery(core, `/globals/${seg(handle)}`),
-    globals: () => new IndexQuery(core, "/globals"),
+    globals: ((handle?: string) =>
+      handle === undefined
+        ? new IndexQuery(core, "/globals")
+        : new SingleQuery(core, `/globals/${seg(handle)}`)) as never,
     navs: ((handle?: string) =>
       handle === undefined
         ? new IndexQuery(core, "/navs")

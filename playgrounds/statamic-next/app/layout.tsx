@@ -7,7 +7,7 @@ import { cms } from "@/lib/statamic";
 import "./globals.css";
 
 export async function generateMetadata(): Promise<Metadata> {
-  const { data } = await cms.global("settings").fields(["site_name"]).get();
+  const { data } = await cms.globals("settings").fields(["site_name"]).get();
 
   return { title: data.site_name ?? "headquery playground" };
 }
@@ -36,7 +36,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   // Two independent GET requests, fetched in parallel.
   const [{ data: navigation }, { data: settings }] = await Promise.all([
     cms.navs("main").tree().fields(["title", "url", "entry_id"]).get(),
-    cms.global("settings").get(),
+    cms.globals("settings").get(),
   ]);
   return (
     <html lang="en">

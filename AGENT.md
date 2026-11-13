@@ -166,7 +166,7 @@ does not understand.
   by Statamic. Sort: `sort=a,-b`. Also `fields=`, `limit=`, `page=`, `site=`.
 - Client API (method = first REST path segment): `collections(c)`, `taxonomies(t)`, `assets(c)` return a `ResourceQuery` (a `ListQuery` plus
   `find(key)`, which only exists before list options are set and resolves 404 to `null`);
-  `global(h)`/`globals()`, `navs()`/`navs(h).tree()`. `collections(c).tree()` exists only for
+  `globals()`/`globals(h)`, `navs()`/`navs(h).tree()`. `collections(c).tree()` exists only for
   structured collections (IR `structure`); it's a `TreeQuery` that, unlike nav trees, accepts filters.
 - Response: `{ data, links, meta }` for entry/term/asset lists, `{ data }` for single items and for
   the unpaginated `/globals`, `/navs` and nav trees. Trees also accept `max_depth=`.
