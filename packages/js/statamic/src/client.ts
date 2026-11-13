@@ -5,7 +5,9 @@ import type {
   NavInfo,
   RegisteredSchema,
   ResourceShape,
+  StatamicForm,
   StatamicSchemaShape,
+  StatamicSite,
   StatamicUser,
 } from "./types";
 
@@ -62,6 +64,14 @@ export interface StatamicClient<S extends StatamicSchemaShape> {
   /** `GET /globals`: all global sets; tell them apart by `handle`. */
   globals(): IndexQuery<S["globals"][keyof S["globals"]]>;
 
+  /** `GET /forms/{handle}`: one form with its fields. Throws on 404 (a missing form is a config error). */
+  forms(handle: string): SingleQuery<StatamicForm>;
+  /** `GET /forms`: all forms enabled in `resources.forms`. */
+  forms(): IndexQuery<StatamicForm>;
+
+  /** `GET /sites`: all sites (handle, name, locale, url). Off unless `resources.sites` is enabled. */
+  sites(): IndexQuery<StatamicSite>;
+
   /**
    * Users: `GET /users`, filterable with `resources.users.allowed_filters` (also on fields the
    * API doesn't return, like `roles`). `.find(id)` fetches one user (`GET /users/{id}`) or `null`.
@@ -87,6 +97,9 @@ export function createStatamicClient<S extends StatamicSchemaShape = RegisteredS
   const seg = encodeURIComponent;
   // Asset paths keep their folder slashes, like Statamic's own `api_url`.
   const assetPath = (path: string) => path.replace(/^\/+/, "").split("/").map(seg).join("/");
+  // `globals()` / `forms()`: the list without a handle, one item with it.
+  const listOrOne = (path: string) => (handle?: string) =>
+    handle === undefined ? new IndexQuery(core, path) : new SingleQuery(core, `${path}/${seg(handle)}`);
 
   return {
     core,
@@ -98,11 +111,10 @@ export function createStatamicClient<S extends StatamicSchemaShape = RegisteredS
     }) as never,
     taxonomies: (taxonomy) => new ResourceQuery(core, `/taxonomies/${seg(taxonomy)}/terms`),
     assets: (container) => new ResourceQuery(core, `/assets/${seg(container)}`, assetPath),
-    globals: ((handle?: string) =>
-      handle === undefined
-        ? new IndexQuery(core, "/globals")
-        : new SingleQuery(core, `/globals/${seg(handle)}`)) as never,
+    globals: listOrOne("/globals") as never,
     users: () => new ResourceQuery(core, "/users"),
+    forms: listOrOne("/forms") as never,
+    sites: () => new IndexQuery(core, "/sites"),
     navs: ((handle?: string) =>
       handle === undefined
         ? new IndexQuery(core, "/navs")

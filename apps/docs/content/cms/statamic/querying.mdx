@@ -19,6 +19,8 @@ takes a handle and starts a query, like `Entry::query()->where('collection', 'bl
 | `globals()` / `globals(handle)` | all sets: `GET /globals` | – (`globals(handle)` is `GET /globals/{handle}`) |
 | `users()` | users: `GET /users` | id |
 | `navs()` | navigations: `GET /navs` | – |
+| `forms()` / `forms(handle)` | all forms: `GET /forms` | – (`forms(handle)` is `GET /forms/{handle}`) |
+| `sites()` | sites: `GET /sites` | – |
 
 Trees: `collections(handle).tree()` (structured collections) and `navs(handle).tree()`.
 
@@ -339,6 +341,71 @@ user?.data.is_super;
 - `.find()` takes the id only. To look a user up by email, use
   `.where("email", "is", email).first()`. Single users ignore `fields`, so `.find()` has no
   `.fields()`.
+
+## Forms
+
+`forms(handle)` fetches a form with its fields (`GET /forms/{handle}`), `forms()` all forms
+enabled in `config/statamic/api.php` (`'forms' => ['contact' => true]`). Use it to render a
+form in your frontend; submissions go through Statamic's form routes, not the REST API.
+
+```ts twoslash
+import "./generated/cms.generated";
+import { createStatamicClient } from "@headquery/statamic";
+const cms = createStatamicClient({ baseUrl: "https://cms.example.com" });
+// ---cut---
+const { data: form } = await cms.forms("contact").get();
+
+for (const field of Object.values(form.fields)) {
+  field.type;     // fieldtype, e.g. "text", "select"
+  field.validate; // e.g. ["required", "email"]
+  //    ^?
+}
+```
+
+`fields` is keyed by field handle, in blueprint order. Every field has `handle`, `type` and
+`width`; `display`, `instructions`, `validate` and fieldtype config (`options`, `input_type`, …)
+are only present when set. Like `globals(handle)`, a missing form throws (404).
+
+## Sites
+
+`sites()` lists the sites (`GET /sites`): `handle`, `name`, `locale`, `short_locale` and `url`.
+The handles are what `.site(handle)` takes. Statamic only serves it with
+`'sites' => true` in `config/statamic/api.php`.
+
+```ts twoslash
+import "./generated/cms.generated";
+import { createStatamicClient } from "@headquery/statamic";
+const cms = createStatamicClient({ baseUrl: "https://cms.example.com" });
+// ---cut---
+const { data: sites } = await cms.sites().get();
+const german = sites.find((site) => site.short_locale === "de");
+if (german) await cms.collections("blog").site(german.handle).get();
+```
+
+## Other endpoints
+
+The metadata endpoints (`/collections`, `/collections/{c}`, `/taxonomies`, `/asset-containers`,
+`/navs/{nav}`, …) and `/ping` have no builder methods. `cms.send()` reaches them with the same
+base URL, API prefix, token, headers and errors as every query; pass the response type yourself:
+
+```ts twoslash
+import "./generated/cms.generated";
+import { createStatamicClient } from "@headquery/statamic";
+const cms = createStatamicClient({ baseUrl: "https://cms.example.com" });
+// ---cut---
+const { data: collections } = await cms.send<{ data: Array<{ handle: string; title: string }> }>({
+  method: "GET",
+  path: "/collections",
+});
+
+const { ping } = await cms.send<{ ping: string }>({ method: "GET", path: "/ping" });
+
+// The deterministic URL, e.g. as a cache key, without sending:
+cms.core.url({ method: "GET", path: "/collections/blog" });
+```
+
+To use such a request with `cms.run()` or a framework adapter, wrap it as a query:
+`{ toRequest: () => ({ method: "GET", path: "/collections" }) }`.
 
 ## Immutability
 

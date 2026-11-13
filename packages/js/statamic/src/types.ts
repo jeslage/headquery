@@ -177,6 +177,39 @@ export interface StatamicUser {
   api_url: string;
 }
 
+/** A form from `GET /forms` or `GET /forms/{handle}`. Submissions go through Statamic's form routes. */
+export interface StatamicForm {
+  handle: string;
+  title: string;
+  /** Keyed by field handle, in blueprint order. */
+  fields: Record<string, StatamicFormField>;
+  api_url: string;
+}
+
+/** A form field: its handle, fieldtype and blueprint config (only the keys that are set). */
+export interface StatamicFormField {
+  handle: string;
+  /** Fieldtype, e.g. `text`, `textarea`, `select`, `checkboxes`, `assets`. */
+  type: string;
+  /** Width in percent (`100`, `50`, …). */
+  width: number;
+  display?: string;
+  instructions?: string;
+  /** Laravel validation rules, e.g. `["required", "email"]`. */
+  validate?: string[];
+  /** Fieldtype config such as `options`, `input_type` or `placeholder`. */
+  [key: string]: unknown;
+}
+
+/** A site from `GET /sites` (off unless `resources.sites` is enabled). */
+export interface StatamicSite {
+  handle: string;
+  name: string;
+  locale: string;
+  short_locale: string;
+  url: string;
+}
+
 /** One navigation as listed by `GET /navs`. */
 export interface NavInfo {
   handle: string;

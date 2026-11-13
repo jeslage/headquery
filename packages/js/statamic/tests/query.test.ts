@@ -1,5 +1,11 @@
 import { describe, expect, expectTypeOf, it, vi } from "vitest";
-import { createStatamicClient, HeadqueryHttpError, type StatamicUser } from "../src";
+import {
+  createStatamicClient,
+  HeadqueryHttpError,
+  type StatamicForm,
+  type StatamicSite,
+  type StatamicUser,
+} from "../src";
 
 interface BlogEntry {
   id: string;
@@ -241,6 +247,29 @@ describe("users", () => {
     one.fields;
     // @ts-expect-error users only return the fixed StatamicUser fields
     cms.users().fields(["roles"]);
+  });
+});
+
+describe("forms and sites", () => {
+  it("builds the list and single-form requests", () => {
+    expect(cms.forms().toRequest()).toEqual({ method: "GET", path: "/forms", query: {} });
+    expect(cms.forms("contact us").toRequest().path).toBe("/forms/contact%20us");
+    expect(cms.sites().url()).toBe("https://cms.test/api/sites");
+  });
+
+  it("types forms and sites", () => {
+    expectTypeOf(cms.forms().get).returns.resolves.toEqualTypeOf<{ data: StatamicForm[] }>();
+    expectTypeOf(cms.forms("contact").get).returns.resolves.toEqualTypeOf<{ data: StatamicForm }>();
+    expectTypeOf(cms.sites().get).returns.resolves.toEqualTypeOf<{ data: StatamicSite[] }>();
+    expectTypeOf<StatamicForm["fields"][string]["validate"]>().toEqualTypeOf<string[] | undefined>();
+  });
+
+  it("throws on a missing form instead of resolving to null", async () => {
+    const missing = createStatamicClient({
+      baseUrl: "https://cms.test",
+      fetch: async () => new Response("{}", { status: 404 }),
+    });
+    await expect(missing.forms("nope").get()).rejects.toBeInstanceOf(HeadqueryHttpError);
   });
 });
 

@@ -162,7 +162,8 @@ does not understand.
   `/collections/{c}/entries`, `/collections/{c}/entries/{id}`, `/taxonomies/{t}/terms`,
   `/taxonomies/{t}/terms/{slug}`, `/collections/{c}/tree`, `/globals`, `/globals/{handle}`, `/navs`, `/navs/{n}/tree`,
   `/assets/{container}`, `/assets/{container}/{path}` (path keeps its slashes, segments encoded),
-  `/users`, `/users/{id}`.
+  `/users`, `/users/{id}`, `/forms`, `/forms/{handle}`, `/sites`. Metadata endpoints and `/ping` are
+  left to `cms.send()` on purpose (bundle size).
 - Filters: `filter[field:condition]=value`; only fields in `allowed_filters` are accepted
   by Statamic. Sort: `sort=a,-b`. Also `fields=`, `limit=`, `page=`, `site=`.
 - Client API (method = first REST path segment): `collections(c)`, `taxonomies(t)`, `assets(c)` return a `ResourceQuery` (a `ListQuery` plus
@@ -210,6 +211,9 @@ fields); `fields=` narrows lists only, single users ignore it. Filters come from
 `resources.users.allowed_filters` (no handles), may target fields that aren't returned, and
 `password`/`password_hash` are always forbidden; so `where()` is open (`WhereField`) for users.
 On Stache, `roles` only matches with `contains`. `/users/{id}` is id only.
+Forms are `{ handle, title, fields, api_url }` (no honeypot on API routes); `fields` is keyed by handle
+in blueprint order, each field has `handle type width` plus only the config keys that are set.
+Unknown or unexposed forms 404. `/sites` is `{ data: [{ handle name locale short_locale url }] }`.
 Collection trees (`/collections/{c}/tree`) have the same `{ page, depth, children }` items; pages are
 the entries plus `entry_id`, and `id === entry_id` (no separate branch id). Unpublished entries are
 left out. Filters (from `allowed_filters`, 422 otherwise) apply per level, so a non-matching parent
@@ -259,7 +263,7 @@ it for blueprint fields in fixtures or the seed.
    against real Statamic; verify the unverified assumptions above; add Testbench-based
    tests for exporter, command and route.
 2. Contract/e2e tests: JS client against the running playground in CI.
-3. Remaining Statamic resources: forms, sites; multi-site helpers.
+3. Statamic: multi-site helpers. Every REST endpoint is covered (metadata endpoints and `/ping` via `cms.send()`).
    (Navigation and collection trees, the globals list and assets are done.)
 4. Codegen: `--check` in docs/CI recipes, ETag-aware fetch. (Config file `headquery.config.ts`
    is done: `packages/js/codegen/src/config.ts`.)

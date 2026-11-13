@@ -303,6 +303,51 @@ describe.skipIf(!baseUrl)(`Statamic playground (${baseUrl})`, () => {
     });
   });
 
+  describe("forms, sites and send()", () => {
+    it("lists only the forms enabled in resources.forms", async () => {
+      const { data } = await cms.forms().get();
+      expect(data.map((f) => f.handle)).toEqual(["contact"]);
+    });
+
+    it("returns a form's fields keyed by handle, in blueprint order, without the honeypot", async () => {
+      const { data } = await cms.forms("contact").get();
+      expect(Object.keys(data).sort()).toEqual(["api_url", "fields", "handle", "title"]);
+      expect(Object.keys(data.fields)).toEqual(["name", "email", "topic", "message"]);
+      expect(data.fields.email).toMatchObject({
+        handle: "email",
+        type: "text",
+        width: 100,
+        display: "Email",
+        input_type: "email",
+        validate: ["required", "email"],
+      });
+      expect(data.fields.topic?.options).toEqual({ support: "Support", sales: "Sales" });
+      expect(data.fields.message?.validate).toBeUndefined();
+    });
+
+    it("throws 404 for unknown forms", async () => {
+      const err = await cms
+        .forms("nope")
+        .get()
+        .catch((e: unknown) => e);
+      expect((err as HeadqueryHttpError).status).toBe(404);
+    });
+
+    it("lists sites", async () => {
+      const { data } = await cms.sites().get();
+      expect(data).toEqual([{ handle: "default", name: "Statamic", locale: "en", short_locale: "en", url: "/" }]);
+    });
+
+    it("reaches metadata endpoints and ping through send()", async () => {
+      expect(await cms.send<{ ping: string }>({ method: "GET", path: "/ping" })).toEqual({ ping: "pong" });
+      const { data } = await cms.send<{ data: Array<{ handle: string; title: string }> }>({
+        method: "GET",
+        path: "/collections",
+      });
+      expect(data.map((c) => c.handle).sort()).toEqual(["blog", "pages"]);
+    });
+  });
+
   describe("assets", () => {
     const assets = cms.assets("assets");
 

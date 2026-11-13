@@ -56,6 +56,7 @@ mirrors a Statamic site root and contains a content model that follows
 | Asset container | `assets`             | SVGs in `public/assets` (one in `icons/`, with a space), `files/notes.txt`; blueprint field `alt`              |
 | User            | `author@example.com` | relation target for `author`, has no password                                                                  |
 | User            | `editor@example.com` | role `editor` (`resources/users/roles.yaml`), for user filters                                               |
+| Form            | `contact`            | name, email (validation), topic (select), message; plus `'sites' => true` for `/sites`                    |
 
 `seed/config/statamic/api.php` replaces the skeleton's API config: it exposes all of the
 above, sets `allowed_filters` to the fixture's filterable fields and turns off API caching.

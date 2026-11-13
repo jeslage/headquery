@@ -29,7 +29,10 @@ return [
         'globals' => [
             'settings' => true,
         ],
-        'forms' => false,
+        'forms' => [
+            'contact' => true,
+        ],
+        'sites' => true,
         // Users have no handles, so allowed_filters sits directly on the resource.
         'users' => ['allowed_filters' => ['name', 'email', 'roles']],
     ],
