@@ -21,6 +21,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
           navbar={<Navbar logo={<b>headquery</b>} projectLink={REPO} />}
           pageMap={await getPageMap()}
           docsRepositoryBase={`${REPO}/tree/main/apps/docs`}
+          sidebar={{ defaultMenuCollapseLevel: 1, autoCollapse: true }}
           footer={<Footer>MIT {new Date().getFullYear()} © headquery</Footer>}
         >
           {children}

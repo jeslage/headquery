@@ -1,0 +1,44 @@
+# `headquery generate`
+
+Loads the schema and writes the types. With a [config file](/codegen/config) (written by
+[`init`](/codegen/init)), no flags are needed:
+
+```bash
+npx headquery generate          # or: npm run cms:types
+npx headquery generate --check  # CI: exit 1 if the file is out of date
+```
+
+Without a config file, pass the source and the output:
+
+```bash
+npx headquery generate --from schema.json --out src/cms.generated.ts
+npx headquery generate --base-url https://cms.example.com --out src/cms.generated.ts
+```
+
+When the schema can't be loaded, the CLI prints the underlying error, the most likely cause
+and a link to the CMS's troubleshooting page, e.g.
+[Statamic](/cms/statamic/troubleshooting).
+
+## Flags
+
+Flags override the config file.
+
+| Flag | Description |
+| --- | --- |
+| `--from` | Schema source: full http(s) URL of the schema endpoint, or a local JSON file |
+| `--base-url` | CMS origin instead of `--from`; fetches `<base-url><api-prefix><schema-path>` |
+| `--api-prefix` | API prefix of the CMS (default: `/api`) |
+| `--schema-path` | Schema route below the API prefix (default: `/headquery/schema`) |
+| `--out` | Output `.ts` file |
+| `--token` | Bearer token for the schema endpoint (default: `$HEADQUERY_SCHEMA_TOKEN`) |
+| `--target` | Adapter target (default: taken from the schema, e.g. `statamic`) |
+| `--module` | Module to augment (default: `@headquery/<target>`) |
+| `--check` | Don't write; exit 1 if the output file is out of date (for CI) |
+| `--config` | Config file (default: `headquery.config.{ts,mts,mjs,js}` in the current directory) |
+
+## What it generates
+
+One interface per resource (`BlogEntry`, `TagsTerm`, `SettingsGlobal`, …) and a `Schema`
+type that the client uses. How the client picks it up is explained under
+[Types](/client/types). How CMS fields map to TypeScript is listed per CMS, e.g.
+[Statamic field types](/cms/statamic/field-types).

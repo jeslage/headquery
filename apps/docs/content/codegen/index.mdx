@@ -1,0 +1,53 @@
+# Codegen
+
+`@headquery/codegen` turns your CMS's content model into a TypeScript module. The client
+picks it up, so collection handles autocomplete, `.where()` only accepts filterable fields
+and results are typed. It works the same for every CMS: the CMS plugin exports a
+CMS-neutral schema, and the CLI generates the types from it.
+
+```
+CMS plugin ──▶ schema (JSON) ──▶ headquery generate ──▶ cms.generated.ts ──▶ typed client
+```
+
+The CLI is the `headquery` bin of `@headquery/codegen`:
+
+| Command | Description |
+| --- | --- |
+| [`headquery init`](/codegen/init) | Run once: writes `headquery.config.ts`, a typed client file, `package.json` scripts and env lines |
+| [`headquery generate`](/codegen/generate) | Loads the schema and writes the types. Reads the [config file](/codegen/config); flags override it |
+
+## Schema sources [#schema-sources]
+
+The CLI reads the schema from a file or fetches it from the CMS:
+
+| | File | Endpoint |
+| --- | --- | --- |
+| Best for | Frontend in the same repo as the CMS | Frontend in its own repo, CI |
+| How | Export with the CMS plugin's CLI command, e.g. `php please headquery:schema` | `GET <api>/headquery/schema` with a bearer token |
+| Config | `from: "./schema.json"` | `from: { baseUrl: "https://cms.example.com" }` + `HEADQUERY_SCHEMA_TOKEN` |
+| CMS setup | Nothing extra | Turn on the route and set a token on the CMS |
+
+The schema only describes the content model (handles, field names and types), not your
+content. Each CMS's getting started guide explains how to export it; for Statamic see
+[Getting started](/cms/statamic/getting-started#schema).
+
+## When to regenerate
+
+Run `headquery generate` (or `npm run cms:types` after `init`) whenever a blueprint, a
+field or the API config changes. Commit the generated file: the frontend then builds without
+access to the CMS, and the diff shows how the content model changed.
+
+In CI, check that the committed file is current:
+
+```bash
+npx headquery generate --check
+```
+
+It exits with 1 when the output would change. With the endpoint, set `HEADQUERY_BASE_URL`
+and `HEADQUERY_SCHEMA_TOKEN` as CI secrets.
+
+## Without codegen
+
+Everything works without generated types. The client then falls back to loose types: any
+handle, any field, items typed as `{ id: string } & Record<string, unknown>`. See
+[Types](/client/types).

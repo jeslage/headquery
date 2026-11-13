@@ -1,7 +1,8 @@
 import { access } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
-import type { Target } from "./index";
+import type { Target } from "./generate";
+import { isUrl, trimTrailingSlash } from "./url";
 
 /** A CMS to fetch the schema from; the endpoint URL is `baseUrl + apiPrefix + schemaPath`. */
 export interface SchemaEndpoint {
@@ -54,7 +55,6 @@ export const DEFAULT_SCHEMA_PATHS: Record<Target, string> = {
   statamic: "/headquery/schema",
 };
 
-const isUrl = (value: string) => /^https?:\/\//i.test(value);
 const segment = (value: string) => {
   const trimmed = value.replace(/^\/+|\/+$/g, "");
   return trimmed ? `/${trimmed}` : "";
@@ -69,7 +69,7 @@ export function schemaEndpointUrl(endpoint: SchemaEndpoint, target: Target = "st
   if (schemaPath === undefined) {
     throw new Error(`headquery codegen: no default schemaPath for target "${target}"; set from.schemaPath`);
   }
-  return endpoint.baseUrl.replace(/\/+$/, "") + segment(endpoint.apiPrefix ?? DEFAULT_API_PREFIX) + segment(schemaPath);
+  return trimTrailingSlash(endpoint.baseUrl) + segment(endpoint.apiPrefix ?? DEFAULT_API_PREFIX) + segment(schemaPath);
 }
 
 /** Return the absolute path of the first config file in `cwd`, if any. */

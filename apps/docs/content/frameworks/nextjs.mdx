@@ -7,16 +7,39 @@ and data cache key on it automatically.
 
 ## Client setup
 
-Create the client in a server-only module:
+[`headquery init`](/codegen/init) writes this client to `src/cms.ts` for Next.js projects:
 
 ```ts twoslash
-import "./generated/cms.generated";
+// @filename: cms.generated.ts
+export type { Schema } from "./generated/cms.generated";
+// @filename: cms.ts
 // ---cut---
-// lib/cms.ts
+// src/cms.ts (written by headquery init)
+import { createStatamicClient } from "@headquery/statamic";
+import type { Schema } from "./cms.generated";
+
+export const cms = createStatamicClient<Schema>({
+  baseUrl: process.env.NEXT_PUBLIC_HEADQUERY_BASE_URL ?? "https://cms.example.com",
+});
+```
+
+It reads a `NEXT_PUBLIC_` variable, so the same client works in Server and Client Components.
+That is enough while your API is public and read-only.
+
+As soon as you add a `token`, an internal CMS URL or `next` fetch options, make the client
+server-only:
+
+```ts twoslash
+// @filename: cms.generated.ts
+export type { Schema } from "./generated/cms.generated";
+// @filename: cms.ts
+// ---cut---
+// src/cms.ts
 import "server-only";
 import { createStatamicClient } from "@headquery/statamic";
+import type { Schema } from "./cms.generated";
 
-export const cms = createStatamicClient({
+export const cms = createStatamicClient<Schema>({
   baseUrl: process.env.HEADQUERY_BASE_URL!,
   // Next's data cache: revalidate CMS responses every 60 seconds
   fetchOptions: { next: { revalidate: 60 } },
@@ -33,9 +56,8 @@ On the server the import does nothing. That matters for three reasons:
   missing in the browser.
 - **Server-only settings don't leak.** `next: { revalidate }` only has an effect on the server.
 
-If your API is public and read-only (no `token`, public CMS URL), you don't need it, and one
-client can serve both sides. Otherwise, use a separate public client in the browser, as shown
-in [Client Components](#client-components).
+For data fetched in the browser, add a separate public client, as shown in
+[Client Components](#client-components).
 
 ## Server Components
 
@@ -154,12 +176,15 @@ Data that is fetched in the browser (search, filters, infinite lists) needs a se
 that only uses public settings: a `NEXT_PUBLIC_` URL, no `token` and no `next` fetch options.
 
 ```ts twoslash
-import "./generated/cms.generated";
+// @filename: cms.generated.ts
+export type { Schema } from "./generated/cms.generated";
+// @filename: cms-public.ts
 // ---cut---
-// lib/cms-public.ts
+// src/cms-public.ts
 import { createStatamicClient } from "@headquery/statamic";
+import type { Schema } from "./cms.generated";
 
-export const publicCms = createStatamicClient({
+export const publicCms = createStatamicClient<Schema>({
   baseUrl: process.env.NEXT_PUBLIC_HEADQUERY_BASE_URL!,
 });
 ```
@@ -177,23 +202,43 @@ import "./generated/cms.generated";
 import { createStatamicClient } from "@headquery/statamic";
 const publicCms = createStatamicClient({ baseUrl: "https://cms.example.com" });
 // ---cut---
-// app/blog/search.tsx
+// app/blog/blog-filter.tsx
 "use client";
 
 import { useState } from "react";
 import useSWR from "swr";
 
-export function PostSearch() {
+type Sort = "-date" | "title";
+
+export function BlogFilter() {
   const [term, setTerm] = useState("");
-  const query = term ? publicCms.collection("blog").entries().where("title", "contains", term).limit(10) : null;
-  const { data } = useSWR(query?.url() ?? null, () => query!.get());
+  const [featured, setFeatured] = useState(false);
+  const [sort, setSort] = useState<Sort>("-date");
+
+  // Builders are immutable: add a filter only when it's set.
+  let query = publicCms.collection("blog").entries().sort(sort).limit(10);
+  if (term) query = query.where("title", "contains", term);
+  if (featured) query = query.where("featured", true);
+
+  // Same filters → same URL → same cache entry, whatever order they were set in.
+  const { data, isLoading } = useSWR(query.url(), () => query.get(), { keepPreviousData: true });
 
   return (
     <>
       <input value={term} onChange={(event) => setTerm(event.target.value)} placeholder="Search posts" />
-      <ul>
+      <label>
+        <input type="checkbox" checked={featured} onChange={(event) => setFeatured(event.target.checked)} />
+        Featured only
+      </label>
+      <select value={sort} onChange={(event) => setSort(event.target.value as Sort)}>
+        <option value="-date">Newest first</option>
+        <option value="title">Title A–Z</option>
+      </select>
+      <ul aria-busy={isLoading}>
         {data?.data.map((post) => (
-          <li key={post.id}>{post.title}</li>
+          <li key={post.id}>
+            {post.title} {post.featured && "★"}
+          </li>
         ))}
       </ul>
     </>
