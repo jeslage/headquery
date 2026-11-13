@@ -7,6 +7,7 @@ use Statamic\Facades\AssetContainer;
 use Statamic\Facades\Collection;
 use Statamic\Facades\GlobalSet;
 use Statamic\Facades\Nav;
+use Statamic\Facades\Site;
 use Statamic\Facades\Taxonomy;
 use Statamic\Fields\Field;
 use Statamic\Fields\Fields;
@@ -20,7 +21,8 @@ use Statamic\Statamic;
  * only fields listed in `allowed_filters` are marked filterable — the schema
  * mirrors what the REST API actually serves. Allowed filters that are not
  * blueprint fields (system fields like `date` or an asset's `basename`) are
- * listed in `systemFilters`.
+ * listed in `systemFilters`. Sites are always exported (the content model
+ * includes them, `site=` accepts their handles), independent of `resources.sites`.
  *
  * Uses Statamic's public API (Collection::all(), entryBlueprints(),
  * Blueprint::fields()->all(), Field::type()/config()); checked manually against
@@ -129,6 +131,7 @@ class SchemaExporter
             'schemaVersion' => self::SCHEMA_VERSION,
             'cms' => ['name' => 'statamic', 'version' => (string) Statamic::version()],
             'generatedAt' => now()->toIso8601ZuluString(),
+            'sites' => $this->sites(),
             // Empty maps must encode as {} in JSON, hence the object casts.
             'resources' => (object) array_map(function (array $byHandle) {
                 ksort($byHandle);
@@ -136,6 +139,19 @@ class SchemaExporter
                 return (object) $byHandle;
             }, $resources),
         ];
+    }
+
+    /**
+     * Sites keyed by handle, in config order (the first is the default site).
+     * Single-site installs export their one site.
+     */
+    protected function sites(): object
+    {
+        return (object) Site::all()
+            ->mapWithKeys(fn ($site) => [
+                $site->handle() => ['name' => (string) $site->name(), 'locale' => (string) $site->locale()],
+            ])
+            ->all();
     }
 
     /**

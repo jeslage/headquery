@@ -18,6 +18,11 @@
       }
     },
     "generatedAt": { "type": "string", "format": "date-time" },
+    "sites": {
+      "description": "Sites of a multi-site CMS, keyed by handle, in the CMS's order (the first is the default site). Single-site installs export their one site. Optional: schemas exported before sites were added have none.",
+      "type": "object",
+      "additionalProperties": { "$ref": "#/$defs/site" }
+    },
     "resources": {
       "description": "Resources grouped by kind; each kind maps handle → resource. Handles only need to be unique within a kind.",
       "type": "object",
@@ -35,6 +40,14 @@
     }
   },
   "$defs": {
+    "site": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string" },
+        "locale": { "description": "The site's locale as configured in the CMS, e.g. `en_US`.", "type": "string" }
+      }
+    },
     "resourceMap": {
       "type": "object",
       "additionalProperties": { "$ref": "#/$defs/resource" }
