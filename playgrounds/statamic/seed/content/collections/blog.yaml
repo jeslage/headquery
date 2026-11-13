@@ -8,3 +8,6 @@ date_behavior:
 taxonomies:
   - tags
 revisions: false
+sites:
+  - default
+  - de

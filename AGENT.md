@@ -182,7 +182,8 @@ does not understand.
 
 ### Known unverified assumptions (verify against the playground first)
 
-The playground targets Statamic 6 (the addon supports `^5.0 || ^6.0`).
+The playground targets Statamic 6 (the addon supports `^5.0 || ^6.0`) and is multi-site
+(`default`, `de`; `setup.sh` enables `multisite` when seeding).
 
 - `SchemaExporter` has been run manually against Statamic 6.40 in the seeded playground
   (output validates against `schema-v1.json`), but has no automated tests yet — only
@@ -225,6 +226,16 @@ the root. Asset *fields* on entries are shallow (`id url permalink api_url alt`,
 The asset path route accepts literal slashes and `%2F`.
 `status` is a reserved field handle in Statamic (it's the entry's publish status) — don't use
 it for blueprint fields in fixtures or the seed.
+Multi-site (`site=<handle>`): entry and term lists **without `site` return every site's items**
+(mixed, counted together in `meta.total`); single items, globals and trees default to the default
+site. Honored by entries, terms, globals (single and list), collection trees and nav trees; an
+unknown handle is a 404 there (but a 500 on the `/globals` list, a Statamic bug). `/navs`, `/forms`,
+`/sites`, `/users` and `/assets` ignore `site`. `find(id)` with `site` returns that site's
+localization of the entry (either the origin or a localization id works); `find(slug)` looks in one
+site (default without `site`); not localized → 404. Localizations inherit unset fields from the
+origin and carry `origin_id`; terms fall back to the origin's values. `/sites` trims the trailing
+slash from `url`. Statamic's `please multisite` command fails on Statamic 6 installs that already
+have `content/globals/default/` — the seed was converted by hand.
 
 ## Conventions
 

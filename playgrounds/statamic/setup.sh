@@ -155,6 +155,12 @@ if [ "$seed" = 1 ]; then
   # config/statamic/api.php exposing it. Overwrites the skeleton's api.php.
   echo "Copying demo content from seed/..."
   cp -R seed/. .
+  # The seed has two sites (resources/sites.yaml: default, de); multisite needs Pro (set above).
+  sed -i.bak "s/'multisite' => false,/'multisite' => true,/" config/statamic/system.php && rm -f config/statamic/system.php.bak
+  if ! grep -q "'multisite' => true," config/statamic/system.php; then
+    echo "Could not enable multisite in config/statamic/system.php." >&2
+    exit 1
+  fi
   sync_files
   run_php please stache:refresh
 fi

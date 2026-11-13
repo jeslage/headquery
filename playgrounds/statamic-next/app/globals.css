@@ -80,3 +80,14 @@ blockquote {
   padding-left: 1rem;
   font-style: italic;
 }
+
+header .sites {
+  display: flex;
+  gap: 0.5rem;
+  margin-left: auto;
+  font-size: 0.9rem;
+}
+
+.meta a + a {
+  margin-left: 0.5rem;
+}

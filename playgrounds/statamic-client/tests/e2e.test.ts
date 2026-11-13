@@ -6,7 +6,9 @@ import { cms } from "../src/client";
 import type { AssetsAsset, BlogEntry, HqAsset, HqAssetBase } from "../src/cms";
 import { baseUrl } from "../src/env";
 
-const blog = cms.collections("blog");
+const entries = cms.collections("blog");
+// The playground is multi-site: lists without `site` return the entries of every site.
+const blog = entries.site("default");
 
 describe.skipIf(!baseUrl)(`Statamic playground (${baseUrl})`, () => {
   describe("collection entries", () => {
@@ -127,7 +129,7 @@ describe.skipIf(!baseUrl)(`Statamic playground (${baseUrl})`, () => {
 
   describe("single entry", () => {
     it("fetches by slug and returns the documented field shapes", async () => {
-      const { data } = (await blog.find("hello-headquery").get())!;
+      const { data } = (await entries.find("hello-headquery").get())!;
       expect(data).toMatchObject({
         title: "Hello headquery",
         slug: "hello-headquery",
@@ -141,19 +143,19 @@ describe.skipIf(!baseUrl)(`Statamic playground (${baseUrl})`, () => {
     });
 
     it("returns empty relations as null (single) and [] (multiple)", async () => {
-      const { data } = (await blog.find("statamic-addon").fields(["hero", "related"]).get())!;
+      const { data } = (await entries.find("statamic-addon").fields(["hero", "related"]).get())!;
       expect(data.hero).toBeNull();
       expect(data.related).toEqual([]);
     });
 
     it("hides unpublished entries: find() resolves to null on 404", async () => {
-      expect(await blog.find("unpublished-draft").get()).toBeNull();
+      expect(await entries.find("unpublished-draft").get()).toBeNull();
     });
   });
 
   describe("taxonomies and globals", () => {
     it("lists and fetches terms", async () => {
-      const terms = await cms.taxonomies("tags").fields(["slug"]).get();
+      const terms = await cms.taxonomies("tags").site("default").fields(["slug"]).get();
       expect(terms.data.map((t) => t.slug).sort()).toEqual(["javascript", "php", "statamic"]);
       const { data } = (await cms.taxonomies("tags").find("php").get())!;
       expect(data).toMatchObject({ slug: "php", title: "PHP" });
@@ -335,7 +337,10 @@ describe.skipIf(!baseUrl)(`Statamic playground (${baseUrl})`, () => {
 
     it("lists sites", async () => {
       const { data } = await cms.sites().get();
-      expect(data).toEqual([{ handle: "default", name: "Statamic", locale: "en", short_locale: "en", url: "/" }]);
+      expect(data).toEqual([
+        { handle: "default", name: "English", locale: "en_US", short_locale: "en", url: "/" },
+        { handle: "de", name: "Deutsch", locale: "de_DE", short_locale: "de", url: "/de" },
+      ]);
     });
 
     it("reaches metadata endpoints and ping through send()", async () => {
@@ -345,6 +350,103 @@ describe.skipIf(!baseUrl)(`Statamic playground (${baseUrl})`, () => {
         path: "/collections",
       });
       expect(data.map((c) => c.handle).sort()).toEqual(["blog", "pages"]);
+    });
+  });
+
+  describe("multi-site", () => {
+    // Seed (de): a localization of hello-headquery, the de-only entry nur-auf-deutsch, Startseite and
+    // Über uns in the pages tree, a localized php term title and settings.site_name, and a de nav tree.
+    const helloId = "0b6d3f4e-1c2a-4b8f-9e7d-3a1f5c6b7d01";
+    const halloId = "de000000-0000-4000-8000-000000000001";
+
+    it("lists the entries and terms of every site without `site`, one site with it", async () => {
+      const all = await entries.sort("title").fields(["title", "locale"]).get();
+      expect(all.data.map((e) => [e.title, e.locale])).toEqual([
+        ["Cacheable GET requests", "default"],
+        ["Exporting the content model", "default"],
+        ["Hallo headquery", "de"],
+        ["Hello headquery", "default"],
+        ["Nur auf Deutsch", "de"],
+      ]);
+      const de = await entries.site("de").sort("title").fields(["slug"]).get();
+      expect(de.data.map((e) => e.slug)).toEqual(["hallo-headquery", "nur-auf-deutsch"]);
+      expect(de.meta).toMatchObject({ total: 2 });
+      const terms = await cms.taxonomies("tags").fields(["slug", "locale"]).get();
+      expect(terms.data).toHaveLength(6);
+    });
+
+    it("combines site with filters", async () => {
+      const res = await entries.site("de").where("featured", true).fields(["slug"]).get();
+      expect(res.data).toEqual([{ slug: "hallo-headquery" }]);
+    });
+
+    it("inherits unlocalized fields from the origin", async () => {
+      const { data } = (await entries.find(halloId).get())!;
+      expect(data).toMatchObject({
+        title: "Hallo headquery",
+        locale: "de",
+        origin_id: helloId,
+        featured: true,
+        reading_time: 4,
+        url: "/de/blog/hallo-headquery",
+      });
+      expect(data.tags.map((t) => t.slug)).toEqual(["javascript", "statamic"]);
+    });
+
+    it("find(id) with site returns that site's localization; find(slug) looks in one site", async () => {
+      expect((await entries.find(helloId).site("de").fields(["id"]).get())?.data).toEqual({ id: halloId });
+      expect((await entries.find(halloId).site("default").fields(["id"]).get())?.data).toEqual({ id: helloId });
+      // Without site, slugs are looked up in the default site only.
+      expect(await entries.find("hallo-headquery").get()).toBeNull();
+      expect((await entries.find("hallo-headquery").site("de").fields(["id"]).get())?.data).toEqual({ id: halloId });
+      expect(await entries.find("hello-headquery").site("de").get()).toBeNull();
+      // Not localized in de.
+      expect(await entries.find("0b6d3f4e-1c2a-4b8f-9e7d-3a1f5c6b7d02").site("de").get()).toBeNull();
+    });
+
+    it("localizes terms and globals, falling back to the origin", async () => {
+      const terms = await cms.taxonomies("tags").site("de").sort("slug").fields(["slug", "title"]).get();
+      expect(terms.data).toEqual([
+        { slug: "javascript", title: "JavaScript" },
+        { slug: "php", title: "PHP (de)" },
+        { slug: "statamic", title: "Statamic" },
+      ]);
+      expect((await cms.taxonomies("tags").find("php").site("de").get())?.data.title).toBe("PHP (de)");
+      const { data } = await cms.globals("settings").site("de").get();
+      expect(data.site_name).toBe("headquery Spielwiese");
+      expect(data.social).toHaveLength(2);
+      expect((await cms.globals().site("de").get()).data[0]?.site_name).toBe("headquery Spielwiese");
+    });
+
+    it("fetches a site's collection and nav tree; without site, the default site's", async () => {
+      const pages = await cms.collections("pages").tree().site("de").fields(["title", "url"]).get();
+      expect(pages.data.map((n) => n.page)).toEqual([
+        { title: "Startseite", url: "/de" },
+        { title: "Über uns", url: "/de/about" },
+      ]);
+      const nav = await cms.navs("main").tree().site("de").get();
+      expect(nav.data.map((i) => [i.page.title, i.page.entry_id])).toEqual([
+        ["Hallo headquery", halloId],
+        ["GitHub", null],
+      ]);
+      expect((await cms.navs("main").tree().get()).data[0]?.page.title).toBe("Hello headquery");
+    });
+
+    it("404s for unknown sites on site-aware endpoints and ignores site elsewhere", async () => {
+      const status = (p: Promise<unknown>) => p.then(() => 200).catch((e: HeadqueryHttpError) => e.status);
+      expect(await status(entries.site("xx").get())).toBe(404);
+      // find() resolves the 404 to null.
+      expect(await cms.taxonomies("tags").find("php").site("xx").get()).toBeNull();
+      expect(await status(cms.globals("settings").site("xx").get())).toBe(404);
+      expect(await status(cms.collections("pages").tree().site("xx").get())).toBe(404);
+      expect(await status(cms.navs("main").tree().site("xx").get())).toBe(404);
+      // Statamic bug: an unknown site on the globals list is a 500.
+      expect(await status(cms.globals().site("xx").get())).toBe(500);
+      expect(await status(cms.navs().site("xx").get())).toBe(200);
+      expect(await status(cms.forms().site("xx").get())).toBe(200);
+      expect(await status(cms.sites().site("xx").get())).toBe(200);
+      expect(await status(cms.users().site("xx").get())).toBe(200);
+      expect(await status(cms.assets("assets").site("xx").get())).toBe(200);
     });
   });
 

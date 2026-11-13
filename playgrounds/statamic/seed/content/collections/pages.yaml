@@ -4,3 +4,6 @@ revisions: false
 structure:
   root: true
   max_depth: 3
+sites:
+  - default
+  - de
