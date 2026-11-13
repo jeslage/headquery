@@ -14,8 +14,19 @@ export interface IrSchema {
   schemaVersion: typeof SCHEMA_VERSION;
   cms: { name: string; version?: string };
   generatedAt?: string;
+  /**
+   * Sites keyed by handle, in the CMS's order (the first is the default site). Single-site
+   * installs export their one site. Absent in schemas exported before sites were added.
+   */
+  sites?: Record<string, IrSite>;
   /** Resources grouped by kind, each keyed by handle. Handles only need to be unique within a kind. */
   resources: IrResources;
+}
+
+export interface IrSite {
+  name?: string;
+  /** The site's locale as configured in the CMS, e.g. `en_US`. */
+  locale?: string;
 }
 
 export interface IrResources {
@@ -110,6 +121,12 @@ export function assertIrSchema(input: unknown): asserts input is IrSchema {
   }
   if (!isObject(input.cms) || typeof input.cms.name !== "string") {
     throw new IrSchemaError("Schema is missing cms.name");
+  }
+  if (input.sites !== undefined) {
+    if (!isObject(input.sites)) throw new IrSchemaError("sites must be an object of handle → site");
+    for (const [handle, site] of Object.entries(input.sites)) {
+      if (!isObject(site)) throw new IrSchemaError(`Site "${handle}" must be an object`);
+    }
   }
   if (!isObject(input.resources)) throw new IrSchemaError("Schema is missing resources");
   for (const [kind, resources] of Object.entries(input.resources)) {

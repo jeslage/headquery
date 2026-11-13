@@ -8,6 +8,7 @@ type Props = { params: Promise<{ site: string; slug: string }> };
 
 /** Pre-render every published post of each site at build time (`site` comes from the layout). */
 export async function generateStaticParams({ params }: { params: { site: string } }) {
+  if (!isSite(params.site)) return [];
   const { data } = await cms.collections("blog").site(params.site).fields(["slug"]).get();
   return data.map((post) => ({ slug: post.slug }));
 }

@@ -3,8 +3,8 @@ import { DEFAULT_SITE, siteFromPath } from "./lib/sites";
 
 /**
  * Routes live under `app/[site]/`. URLs with a site prefix (`/de/…`) map onto that segment as they
- * are; everything else belongs to the default site and is rewritten to `/default/…`, so its public
- * URLs stay unprefixed like Statamic's. `/default/…` itself redirects to the unprefixed URL.
+ * are; everything else belongs to the default site and is rewritten to `/en/…`, so its public
+ * URLs stay unprefixed like Statamic's. `/en/…` itself redirects to the unprefixed URL.
  */
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;

@@ -36,6 +36,7 @@ export type {
   Scalar,
   ScalarCondition,
   Single,
+  SiteHandle,
   SortField,
   StatamicForm,
   StatamicFormField,

@@ -2,6 +2,10 @@
   "schemaVersion": 1,
   "cms": { "name": "statamic", "version": "5.0.0" },
   "generatedAt": "2026-11-05T10:00:00Z",
+  "sites": {
+    "default": { "name": "English", "locale": "en_US" },
+    "de": { "name": "Deutsch", "locale": "de_DE" }
+  },
   "resources": {
     "collection": {
       "blog": {

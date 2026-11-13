@@ -17,6 +17,14 @@ describe("assertIrSchema", () => {
     expect(() => assertIrSchema({ schemaVersion: 99, cms: { name: "x" }, resources: {} })).toThrow(IrSchemaError);
   });
 
+  it("accepts schemas without sites and rejects malformed ones", () => {
+    const base = { schemaVersion: 1, cms: { name: "x" }, resources: {} };
+    expect(() => assertIrSchema(base)).not.toThrow();
+    expect(() => assertIrSchema({ ...base, sites: { default: { locale: "en_US" } } })).not.toThrow();
+    expect(() => assertIrSchema({ ...base, sites: ["default"] })).toThrow(/sites/);
+    expect(() => assertIrSchema({ ...base, sites: { de: "de_DE" } })).toThrow(/Site "de"/);
+  });
+
   it("rejects fields without a type", () => {
     expect(() =>
       assertIrSchema({

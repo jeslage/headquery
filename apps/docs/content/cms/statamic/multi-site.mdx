@@ -1,0 +1,115 @@
+# Multi-site
+
+On a [multi-site](https://statamic.dev/multi-site) Statamic install, every query takes
+`.site(handle)`, which sends `site=<handle>`. With generated types, `.site()` only accepts the
+handles of your sites:
+
+```ts twoslash
+import "./generated/cms.generated";
+import { createStatamicClient } from "@headquery/statamic";
+const cms = createStatamicClient({ baseUrl: "https://cms.example.com" });
+// ---cut---
+const posts = await cms.collections("blog").site("de").sort("-date").get();
+const post = await cms.collections("blog").find("hallo-headquery").site("de").get();
+const settings = await cms.globals("settings").site("de").get();
+const tree = await cms.navs("main").tree().site("de").get();
+```
+
+```ts twoslash
+// @errors: 2345
+import "./generated/cms.generated";
+import { createStatamicClient } from "@headquery/statamic";
+const cms = createStatamicClient({ baseUrl: "https://cms.example.com" });
+// ---cut---
+cms.collections("blog").site("dee");
+```
+
+`.site()` takes the site's **handle** from `resources/sites.yaml` (`default`, `de`), not its
+language or locale.
+
+## Typed site handles
+
+The schema export (`php please headquery:schema` and the schema endpoint) always includes the
+sites, also on single-site installs and independent of `'sites' => true` in the API config.
+`headquery generate` turns them into `sites: "default" | "de"` in the generated `Schema`. After
+adding or renaming a site in Statamic, regenerate the types.
+
+Use `SiteHandle` for your own code, e.g. a map of URL prefixes per site that has to cover every
+site:
+
+```ts twoslash
+import "./generated/cms.generated";
+// ---cut---
+import type { SiteHandle } from "@headquery/statamic";
+
+const prefixes = { default: "", de: "/de" } satisfies Record<SiteHandle, string>;
+```
+
+Without generated types, or with types generated before site support, `SiteHandle` is `string`.
+It comes from the generated file's [registration](/client/types#registration), not from the
+client's generic. Both are in the same file, so `createStatamicClient<Schema>()` gets typed
+handles too, unless TypeScript resolves a second copy of `@headquery/statamic` (then
+registration, and with it `SiteHandle`, doesn't apply).
+
+## How Statamic handles `site`
+
+| Endpoint | Without `site` | Unknown site |
+| --- | --- | --- |
+| Entry and term lists | items of **every** site, mixed | 404 |
+| One entry or term (`.find()`) | default site | 404 (`null` with `find()`) |
+| `globals(handle)`, collection and nav trees | default site | 404 |
+| `globals()` | default site | 500 (Statamic bug) |
+| `navs()`, `forms()`, `sites()`, `users()`, `assets()` | `site` is ignored | `site` is ignored |
+
+**Lists without `site` return the entries of all sites**, counted together in `meta.total`. On a
+multi-site install, pass `.site()` on every entry and term list:
+
+```ts twoslash
+import "./generated/cms.generated";
+import { createStatamicClient } from "@headquery/statamic";
+const cms = createStatamicClient({ baseUrl: "https://cms.example.com" });
+// ---cut---
+// Both languages, mixed
+const all = await cms.collections("blog").get();
+// Only the default site
+const english = await cms.collections("blog").site("default").get();
+```
+
+Entries:
+
+- A localized entry has its own id and slug, plus `locale` and `origin_id` (the id of the entry
+  it was localized from).
+- Fields that are not set in the localization are inherited from the origin.
+- `.find(slug)` looks the slug up in one site: the default site without `.site()`. Slugs of
+  other sites are 404 (`null`).
+- `.find(id).site(handle)` returns that site's version of the entry, whether you pass the
+  origin's id or the id of another localization. It's `null` when the entry isn't localized in
+  that site. That makes a language switcher one request per site:
+
+```ts twoslash
+import "./generated/cms.generated";
+import { createStatamicClient } from "@headquery/statamic";
+const cms = createStatamicClient({ baseUrl: "https://cms.example.com" });
+// ---cut---
+import type { SiteHandle } from "@headquery/statamic";
+
+async function translations(id: string, sites: SiteHandle[]) {
+  const found = await Promise.all(
+    sites.map((site) => cms.collections("blog").find(id).site(site).fields(["title", "url"]).get()),
+  );
+  return found.flatMap((res) => (res ? [res.data] : []));
+}
+```
+
+Terms, globals and trees:
+
+- Terms keep their slug in every site; localized values fall back to the origin's.
+- Global sets return the site's values; values that aren't localized are inherited.
+- Collection and nav trees are separate per site. Entry URLs (`url`) include the site's prefix
+  (`/de/blog/…`).
+
+## Sites list
+
+`sites()` lists the sites (`GET /sites`), but only with `'sites' => true` in
+`config/statamic/api.php`. `handle` is typed as `SiteHandle`; `url` has no trailing slash
+(`/de`). For type-checking you don't need it: the handles come from the schema export.

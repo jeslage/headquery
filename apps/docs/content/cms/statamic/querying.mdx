@@ -1,3 +1,5 @@
+import { Callout } from "nextra/components";
+
 # Querying
 
 `@headquery/statamic` wraps Statamic's [REST Content API](https://statamic.dev/rest-api).
@@ -141,7 +143,7 @@ const page2 = await cms.collections("blog")
   .sort("-date", "title")   // sort=-date,title (later calls replace earlier ones)
   .limit(20)
   .page(2)
-  .site("de")               // multi-site
+  .site("de")               // site handle, see Multi-site
   .get();
 
 page2.meta.total;
@@ -149,6 +151,12 @@ page2.links.next;
 ```
 
 `.first()` sends `limit=1&page=1` and returns the first item or `null`.
+
+<Callout type="warning">
+  On a multi-site install, pass `.site()` on every entry and term list: without it, Statamic returns
+  the items of **all** sites, mixed and counted together in `meta.total`. Single items, globals and
+  trees use the default site. See [Multi-site](/cms/statamic/multi-site).
+</Callout>
 
 ## Selecting fields
 
@@ -370,7 +378,8 @@ are only present when set. Like `globals(handle)`, a missing form throws (404).
 
 `sites()` lists the sites (`GET /sites`): `handle`, `name`, `locale`, `short_locale` and `url`.
 The handles are what `.site(handle)` takes. Statamic only serves it with
-`'sites' => true` in `config/statamic/api.php`.
+`'sites' => true` in `config/statamic/api.php`. How `site` affects each endpoint (and that
+entry lists without it return every site) is on [Multi-site](/cms/statamic/multi-site).
 
 ```ts twoslash
 import "./generated/cms.generated";

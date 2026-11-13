@@ -106,6 +106,9 @@ Notes:
 ## The IR (intermediate schema)
 
 - Defined in `spec/ir/schema-v1.json`, mirrored in `packages/js/schema/src/index.ts`.
+- `sites` (optional, top level): handle → `{ name, locale }` in the CMS's order. Always exported
+  (independent of `resources.sites`); codegen emits `sites: "a" | "b"`, which types `.site()`
+  via `SiteHandle` (from `Register`, `string` without it).
 - `resources` is grouped by kind (`collection taxonomy global navigation assetContainer`),
   each a map handle → resource, because Statamic handles are only unique per kind.
   Navigations also carry `collections` (linkable collections) and `maxDepth`.
@@ -183,7 +186,7 @@ does not understand.
 ### Known unverified assumptions (verify against the playground first)
 
 The playground targets Statamic 6 (the addon supports `^5.0 || ^6.0`) and is multi-site
-(`default`, `de`; `setup.sh` enables `multisite` when seeding).
+(`en` is the default site, `de`; `setup.sh` enables `multisite` when seeding).
 
 - `SchemaExporter` has been run manually against Statamic 6.40 in the seeded playground
   (output validates against `schema-v1.json`), but has no automated tests yet — only
@@ -274,13 +277,11 @@ have `content/globals/default/` — the seed was converted by hand.
    against real Statamic; verify the unverified assumptions above; add Testbench-based
    tests for exporter, command and route.
 2. Contract/e2e tests: JS client against the running playground in CI.
-3. Statamic: multi-site helpers. Every REST endpoint is covered (metadata endpoints and `/ping` via `cms.send()`).
-   (Navigation and collection trees, the globals list and assets are done.)
-4. Codegen: `--check` in docs/CI recipes, ETag-aware fetch. (Config file `headquery.config.ts`
+3. Codegen: `--check` in docs/CI recipes, ETag-aware fetch. (Config file `headquery.config.ts`
    is done: `packages/js/codegen/src/config.ts`.)
-5. Framework adapters: `@headquery/vue` (composables), `@headquery/react` (hooks),
+4. Framework adapters: `@headquery/vue` (composables), `@headquery/react` (hooks),
    then Nuxt/Next integrations (SSR, `revalidate`, caching keys via `query.url()`).
-6. Next CMS: Kirby. KQL is `POST /api/query` (not HTTP-cacheable) → the Kirby Composer
+5. Next CMS: Kirby. KQL is `POST /api/query` (not HTTP-cacheable) → the Kirby Composer
    package likely needs a GET route that accepts the query and forwards to KQL. Reuse/align
    with `kirby-types`. Then Craft (native API is GraphQL; consider Element API or
    Craft Query API for REST/GET).

@@ -17,6 +17,7 @@ import type {
   Scalar,
   ScalarCondition,
   Single,
+  SiteHandle,
   SortField,
   TaxonomyFilter,
 } from "./types";
@@ -128,8 +129,8 @@ export class ListQuery<Item, Filterable extends string, Picked extends keyof Ite
     return this.with({ page });
   }
 
-  /** Multi-site: `site=<handle>`. */
-  site(handle: string): ListQuery<Item, Filterable, Picked> {
+  /** Multi-site: `site=<handle>`, one of the registered schema's site handles. */
+  site(handle: SiteHandle): ListQuery<Item, Filterable, Picked> {
     return this.with({ site: handle });
   }
 
@@ -230,8 +231,8 @@ export class SingleQuery<Item, Picked extends keyof Item = keyof Item, OrNull ex
     private readonly state: SingleState = {},
   ) {}
 
-  /** Multi-site: `site=<handle>`. */
-  site(handle: string): SingleQuery<Item, Picked, OrNull> {
+  /** Multi-site: `site=<handle>`, one of the registered schema's site handles. */
+  site(handle: SiteHandle): SingleQuery<Item, Picked, OrNull> {
     return new SingleQuery(this.client, this.path, { ...this.state, site: handle });
   }
 
@@ -319,8 +320,8 @@ export class TreeQuery<Page, Picked extends KeysOfUnion<Page> = KeysOfUnion<Page
     return this.with({ maxDepth: depth });
   }
 
-  /** Multi-site: `site=<handle>`. */
-  site(handle: string): TreeQuery<Page, Picked, Filterable> {
+  /** Multi-site: `site=<handle>`, one of the registered schema's site handles. */
+  site(handle: SiteHandle): TreeQuery<Page, Picked, Filterable> {
     return this.with({ site: handle });
   }
 
@@ -363,8 +364,8 @@ export class IndexQuery<Item> implements Compilable<DataList<Item>> {
     private readonly state: { site?: string } = {},
   ) {}
 
-  /** Multi-site: `site=<handle>`. */
-  site(handle: string): IndexQuery<Item> {
+  /** Multi-site: `site=<handle>`, one of the registered schema's site handles. */
+  site(handle: SiteHandle): IndexQuery<Item> {
     return new IndexQuery(this.client, this.path, { ...this.state, site: handle });
   }
 

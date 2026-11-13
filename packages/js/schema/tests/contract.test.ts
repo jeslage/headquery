@@ -23,6 +23,13 @@ describe("spec/ir/schema-v1.json", () => {
     expect(ok).toBe(true);
   });
 
+  it("accepts sites with name and locale only", () => {
+    const base = { schemaVersion: 1, cms: { name: "statamic" }, resources: {} };
+    expect(validate({ ...base, sites: { default: { name: "English", locale: "en_US" }, de: {} } })).toBe(true);
+    expect(validate({ ...base, sites: { de: { url: "/de" } } })).toBe(false);
+    expect(validate({ ...base, sites: ["default"] })).toBe(false);
+  });
+
   it("rejects an enum field without values", () => {
     const ok = validate({
       schemaVersion: 1,

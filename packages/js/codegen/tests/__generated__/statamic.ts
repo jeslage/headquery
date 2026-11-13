@@ -279,6 +279,8 @@ export interface Schema {
   assetContainers: {
     assets: { item: AssetsAsset; filterable: "alt" | "basename" | "folder" };
   };
+  /** Site handles for `.site()`: default (English, en_US), de (Deutsch, de_DE). */
+  sites: "default" | "de";
 }
 
 declare module "@headquery/statamic" {

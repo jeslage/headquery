@@ -57,12 +57,12 @@ mirrors a Statamic site root and contains a content model that follows
 | User            | `author@example.com` | relation target for `author`, has no password                                                                  |
 | User            | `editor@example.com` | role `editor` (`resources/users/roles.yaml`), for user filters                                               |
 | Form            | `contact`            | name, email (validation), topic (select), message; plus `'sites' => true` for `/sites`                    |
-| Sites           | `default`, `de`      | multisite (`resources/sites.yaml`, `/de/`); see below                                                          |
+| Sites           | `en`, `de`           | multisite (`resources/sites.yaml`, `/de/`); see below                                                          |
 
 ### Sites
 
 `setup.sh` turns on `multisite` in `config/statamic/system.php` when it seeds, so content
-lives in per-site folders (`content/collections/blog/default/`, `…/de/`, the same for
+lives in per-site folders (`content/collections/blog/en/`, `…/de/`, the same for
 trees and globals). The `de` site has:
 
 - `blog`: `Hallo headquery` (localization of `hello-headquery`, only the title is
@@ -149,10 +149,10 @@ certificate works without extra flags on Node ≥ 22.19. On older Node, set
 homepage that lists blog posts and a `/blog/[slug]` page for each post (pre-rendered with
 `generateStaticParams`, `notFound()` on 404, `revalidate: 60` through `fetchOptions`).
 
-It serves both sites with Statamic's URLs: `/`, `/blog/hello-headquery` for `default` and
+It serves both sites with Statamic's URLs: `/`, `/blog/hello-headquery` for `en` and
 `/de`, `/de/blog/hallo-headquery` for `de`. Routes live under `app/[site]/` (one root layout
 per site; nav and globals are fetched with `.site(site)`), and `proxy.ts` rewrites unprefixed
-URLs to `/default/…`. The sites and their prefixes are listed in `lib/sites.ts`. Posts link to
+URLs to `/en/…`. The sites and their prefixes are listed in `lib/sites.ts`. Posts link to
 their translations via `find(id).site(other)`.
 
 ```bash

@@ -4,6 +4,7 @@ export default {
   index: "Overview",
   "getting-started": "Getting started",
   querying: "Querying",
+  "multi-site": "Multi-site",
   "field-types": "Field types",
   "custom-fieldtypes": "Custom fieldtypes",
   troubleshooting: "Troubleshooting",

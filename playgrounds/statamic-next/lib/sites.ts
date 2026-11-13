@@ -2,9 +2,20 @@
 // serves them: the default site without a prefix, every other site under its Statamic URL prefix,
 // so Statamic's `url` fields (`/blog/…`, `/de/blog/…`) are this app's routes as well.
 // No "server-only": proxy.ts imports this too.
+// Keyed by the generated site handles (SiteHandle, from lib/cms.ts), so adding or removing a site in
+// Statamic and regenerating the types (`pnpm cms:types`) turns a missing entry here into a type error.
+
+import type { SiteHandle } from "@headquery/statamic";
+
+interface SiteConfig {
+  prefix: string;
+  lang: string;
+  label: string;
+  t: { allPosts: string; tags: string; related: string; alsoIn: string; notFound: string };
+}
 
 export const SITES = {
-  default: {
+  en: {
     prefix: "",
     lang: "en",
     label: "English",
@@ -16,13 +27,14 @@ export const SITES = {
     label: "Deutsch",
     t: { allPosts: "Alle Beiträge", tags: "Tags", related: "Verwandt", alsoIn: "Auch auf", notFound: "Nicht gefunden" },
   },
-} as const;
+} as const satisfies Record<SiteHandle, SiteConfig>;
 
-export type Site = keyof typeof SITES;
+export type Site = keyof typeof SITES & SiteHandle;
 
 export const SITE_HANDLES = Object.keys(SITES) as Site[];
 
-export const DEFAULT_SITE: Site = "default";
+/** Served without a prefix; the first site in sites.yaml, like Statamic's default site. */
+export const DEFAULT_SITE: Site = "en";
 
 export function isSite(handle: string): handle is Site {
   return Object.hasOwn(SITES, handle);
