@@ -16,6 +16,15 @@ describe("generate (statamic)", () => {
   it("rejects invalid schemas", () => {
     expect(() => generate({ schemaVersion: 2 })).toThrow(/schemaVersion/);
   });
+
+  it("emits site handles in the CMS's order, and none for schemas without sites", () => {
+    const base = { schemaVersion: 1, cms: { name: "statamic" }, resources: {} };
+    expect(generate({ ...base, sites: { fr: {}, default: { locale: "en_US" } } })).toContain(
+      '  /** Site handles for `.site()`: fr, default (en_US). */\n  sites: "fr" | "default";\n',
+    );
+    expect(generate(base)).not.toContain("sites:");
+    expect(generate({ ...base, sites: {} })).not.toContain("sites:");
+  });
 });
 
 describe("fieldType", () => {

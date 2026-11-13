@@ -10,6 +10,8 @@ export interface StatamicSchemaShape {
   navigations: Record<string, NavigationShape>;
   /** Optional so schemas generated before asset support still match. */
   assetContainers?: Record<string, ResourceShape>;
+  /** Site handles (`"default" | "de"`). Optional so schemas generated before site support still match. */
+  sites?: string;
 }
 
 export interface NavigationShape {
@@ -66,6 +68,13 @@ export type AssetContainersOf<S extends StatamicSchemaShape> = S extends {
 export type LooseNavPage = { id: string; entry_id: string | null } & Record<string, unknown>;
 
 export type RegisteredSchema = Register extends { schema: infer S extends StatamicSchemaShape } ? S : LooseSchema;
+
+/**
+ * Handles `.site()` accepts: the registered schema's sites, or any string without generated types
+ * (or with types generated before site support). Taken from `Register` rather than a client
+ * generic, so it is `string` for `createStatamicClient<Schema>()` without registration.
+ */
+export type SiteHandle = RegisteredSchema extends { sites: infer H extends string } ? H : string;
 
 /** Conditions with one value (Statamic's API filters, same as the collection tag). */
 export type ScalarCondition =
@@ -203,7 +212,8 @@ export interface StatamicFormField {
 
 /** A site from `GET /sites` (off unless `resources.sites` is enabled). */
 export interface StatamicSite {
-  handle: string;
+  /** One of the registered schema's site handles (any string without generated types). */
+  handle: SiteHandle;
   name: string;
   locale: string;
   short_locale: string;

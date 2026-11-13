@@ -356,6 +356,7 @@ export function generateStatamic(schema: IrSchema, options: StatamicGenerateOpti
     `  globals: {${block(globals)}};`,
     `  navigations: {${block(navigations)}};`,
     `  assetContainers: {${block(assetContainers)}};`,
+    ...sitesType(schema),
     "}",
   ].join("\n");
 
@@ -368,6 +369,20 @@ export function generateStatamic(schema: IrSchema, options: StatamicGenerateOpti
   ].join("\n");
 
   return `${[header, HELPERS, ...out, schemaType, augmentation].join("\n\n")}\n`;
+}
+
+/** `sites: "default" | "de";` in the CMS's order; nothing for schemas exported without sites. */
+function sitesType(schema: IrSchema): string[] {
+  const sites = Object.entries(schema.sites ?? {});
+  if (!sites.length) return [];
+  const info = sites.map(([handle, s]) => {
+    const details = [s.name, s.locale].filter(Boolean).join(", ");
+    return details ? `${handle} (${details})` : handle;
+  });
+  return [
+    `  /** Site handles for \`.site()\`: ${info.join(", ")}. */`,
+    `  sites: ${sites.map(([handle]) => JSON.stringify(handle)).join(" | ")};`,
+  ];
 }
 
 function block(lines: string[]): string {

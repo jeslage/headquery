@@ -2,6 +2,7 @@ import { describe, expect, expectTypeOf, it, vi } from "vitest";
 import {
   createStatamicClient,
   HeadqueryHttpError,
+  type SiteHandle,
   type StatamicForm,
   type StatamicSite,
   type StatamicUser,
@@ -247,6 +248,13 @@ describe("users", () => {
     one.fields;
     // @ts-expect-error users only return the fixed StatamicUser fields
     cms.users().fields(["roles"]);
+  });
+});
+
+describe("site handles", () => {
+  it("accept any string without a registered schema", () => {
+    expectTypeOf<SiteHandle>().toEqualTypeOf<string>();
+    expectTypeOf<StatamicSite["handle"]>().toEqualTypeOf<string>();
   });
 });
 

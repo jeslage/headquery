@@ -1,4 +1,4 @@
-import { createStatamicClient } from "@headquery/statamic";
+import { createStatamicClient, type SiteHandle, type StatamicSite } from "@headquery/statamic";
 import { describe, expectTypeOf, it } from "vitest";
 // Importing the generated snapshot registers its Schema via module augmentation.
 import type {
@@ -127,5 +127,25 @@ describe("generated types work with @headquery/statamic", () => {
   it("types users with the fixed Statamic user fields", () => {
     const q = cms.users().where("roles", "contains", "editor").fields(["email", "is_super"]);
     expectTypeOf(q.first).returns.resolves.toEqualTypeOf<{ email: string; is_super: boolean } | null>();
+  });
+
+  it("only accepts the registered site handles in site()", () => {
+    expectTypeOf<SiteHandle>().toEqualTypeOf<"default" | "de">();
+    expectTypeOf<StatamicSite["handle"]>().toEqualTypeOf<"default" | "de">();
+
+    cms.collections("blog").site("de").where("featured", true);
+    cms.collections("blog").find("hello").site("default");
+    cms.collections("pages").tree().site("de");
+    cms.taxonomies("tags").site("de");
+    cms.globals("settings").site("de");
+    cms.globals().site("de");
+    cms.navs("main").tree().site("de");
+
+    // @ts-expect-error typo in the site handle
+    cms.collections("blog").site("dee");
+    // @ts-expect-error site handles, not languages
+    cms.globals("settings").site("en");
+    // @ts-expect-error unknown site on a tree
+    cms.navs("main").tree().site("fr");
   });
 });

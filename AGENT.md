@@ -69,7 +69,7 @@ playgrounds/statamic-next/            private Next.js app (App Router) using the
 
 ## Commands
 
-```bash
+````bash
 pnpm install
 pnpm build                 # turbo: builds all JS packages in dependency order (not docs/playgrounds)
 pnpm test:js               # vitest + tsc --noEmit for every JS package
@@ -88,7 +88,7 @@ pnpm --filter @headquery-internal/playground-statamic-client types      # regene
 pnpm --filter @headquery-internal/playground-statamic-client try        # scratch script
 pnpm --filter @headquery-internal/playground-statamic-client test:e2e   # codegen + e2e tests + tsc
 pnpm --filter @headquery-internal/playground-statamic-next dev          # Next.js app (env in .env.local)
-```
+````
 
 PHP package directly:
 
@@ -97,6 +97,7 @@ cd packages/php/statamic && composer install && composer test
 ```
 
 Notes:
+
 - JS tests run `vitest run && tsc --noEmit`. Type-level assertions (`expectTypeOf`,
   `@ts-expect-error`) are only enforced by the `tsc` step — keep it in the test script.
 - Tests in adapters import other workspace packages through their built `dist/`, so
@@ -106,6 +107,9 @@ Notes:
 ## The IR (intermediate schema)
 
 - Defined in `spec/ir/schema-v1.json`, mirrored in `packages/js/schema/src/index.ts`.
+- `sites` (optional, top level): handle → `{ name, locale }` in the CMS's order. Always exported
+  (independent of `resources.sites`); codegen emits `sites: "a" | "b"`, which types `.site()`
+  via `SiteHandle` (from `Register`, `string` without it).
 - `resources` is grouped by kind (`collection taxonomy global navigation assetContainer`),
   each a map handle → resource, because Statamic handles are only unique per kind.
   Navigations also carry `collections` (linkable collections) and `maxDepth`.
@@ -136,7 +140,7 @@ does not understand.
 
 - Nextra 4 (App Router) with `output: "export"`; pages are MDX in `apps/docs/content/`,
   navigation order in `_meta.ts` files.
-- Code samples marked ```` ```ts twoslash ```` are type-checked against the real workspace
+- Code samples marked ` ```ts twoslash ` are type-checked against the real workspace
   packages and against types generated from `spec/statamic/fixtures/schema.json`
   (`apps/docs/generated/`, gitignored, written by the `codegen` pre-script). Import them
   with `import "./generated/cms.generated";` above a `// ---cut---` line.
@@ -182,7 +186,8 @@ does not understand.
 
 ### Known unverified assumptions (verify against the playground first)
 
-The playground targets Statamic 6 (the addon supports `^5.0 || ^6.0`).
+The playground targets Statamic 6 (the addon supports `^5.0 || ^6.0`) and is multi-site
+(`en` is the default site, `de`; `setup.sh` enables `multisite` when seeding).
 
 - `SchemaExporter` has been run manually against Statamic 6.40 in the seeded playground
   (output validates against `schema-v1.json`), but has no automated tests yet — only
@@ -221,10 +226,20 @@ drops its subtree. Unstructured collections 404. Nav trees ignore `filter[...]`.
 collections carry `structure: { maxDepth?, expectsRoot? }` in the IR; codegen emits `{Name}TreePage`.
 Assets from `/assets/...` carry all `AugmentedAsset` keys (`HqAssetBase`) plus blueprint fields;
 `width height ratio` are `null` for non-images but `orientation` is `"square"`; `folder` is `/` at
-the root. Asset *fields* on entries are shallow (`id url permalink api_url alt`, `HqAsset`).
+the root. Asset _fields_ on entries are shallow (`id url permalink api_url alt`, `HqAsset`).
 The asset path route accepts literal slashes and `%2F`.
 `status` is a reserved field handle in Statamic (it's the entry's publish status) — don't use
 it for blueprint fields in fixtures or the seed.
+Multi-site (`site=<handle>`): entry and term lists **without `site` return every site's items**
+(mixed, counted together in `meta.total`); single items, globals and trees default to the default
+site. Honored by entries, terms, globals (single and list), collection trees and nav trees; an
+unknown handle is a 404 there (but a 500 on the `/globals` list, a Statamic bug). `/navs`, `/forms`,
+`/sites`, `/users` and `/assets` ignore `site`. `find(id)` with `site` returns that site's
+localization of the entry (either the origin or a localization id works); `find(slug)` looks in one
+site (default without `site`); not localized → 404. Localizations inherit unset fields from the
+origin and carry `origin_id`; terms fall back to the origin's values. `/sites` trims the trailing
+slash from `url`. Statamic's `please multisite` command fails on Statamic 6 installs that already
+have `content/globals/default/` — the seed was converted by hand.
 
 ## Conventions
 

@@ -57,6 +57,25 @@ mirrors a Statamic site root and contains a content model that follows
 | User            | `author@example.com` | relation target for `author`, has no password                                                                  |
 | User            | `editor@example.com` | role `editor` (`resources/users/roles.yaml`), for user filters                                               |
 | Form            | `contact`            | name, email (validation), topic (select), message; plus `'sites' => true` for `/sites`                    |
+| Sites           | `en`, `de`           | multisite (`resources/sites.yaml`, `/de/`); see below                                                          |
+
+### Sites
+
+`setup.sh` turns on `multisite` in `config/statamic/system.php` when it seeds, so content
+lives in per-site folders (`content/collections/blog/en/`, `…/de/`, the same for
+trees and globals). The `de` site has:
+
+- `blog`: `Hallo headquery` (localization of `hello-headquery`, only the title is
+  overridden) and `Nur auf Deutsch` (exists only in `de`, no origin). The other blog
+  entries are not localized.
+- `pages`: `Startseite` and `Über uns` (localizations of Home and About) in its own tree.
+- `tags`: `php` has a localized title (`localizations.de` in the term file); the other
+  terms fall back to the origin.
+- `settings`: a localized `site_name`; `social` is inherited.
+- `main` nav: its own tree linking the `de` blog entry plus the GitHub link.
+
+Entry and term lists without `site=` return **all** sites, so tests that count entries
+must pass `site`.
 
 `seed/config/statamic/api.php` replaces the skeleton's API config: it exposes all of the
 above, sets `allowed_filters` to the fixture's filterable fields and turns off API caching.
@@ -129,6 +148,12 @@ certificate works without extra flags on Node ≥ 22.19. On older Node, set
 `playgrounds/statamic-next` is a small Next.js (App Router) app built on the client: a
 homepage that lists blog posts and a `/blog/[slug]` page for each post (pre-rendered with
 `generateStaticParams`, `notFound()` on 404, `revalidate: 60` through `fetchOptions`).
+
+It serves both sites with Statamic's URLs: `/`, `/blog/hello-headquery` for `en` and
+`/de`, `/de/blog/hallo-headquery` for `de`. Routes live under `app/[site]/` (one root layout
+per site; nav and globals are fetched with `.site(site)`), and `proxy.ts` rewrites unprefixed
+URLs to `/en/…`. The sites and their prefixes are listed in `lib/sites.ts`. Posts link to
+their translations via `find(id).site(other)`.
 
 ```bash
 cp playgrounds/statamic-next/.env.example playgrounds/statamic-next/.env.local  # set HEADQUERY_BASE_URL
