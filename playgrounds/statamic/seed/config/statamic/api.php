@@ -30,7 +30,8 @@ return [
             'settings' => true,
         ],
         'forms' => false,
-        'users' => false,
+        // Users have no handles, so allowed_filters sits directly on the resource.
+        'users' => ['allowed_filters' => ['name', 'email', 'roles']],
     ],
 
     'route' => env('STATAMIC_API_ROUTE', 'api'),

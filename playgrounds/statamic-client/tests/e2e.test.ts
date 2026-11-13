@@ -263,6 +263,46 @@ describe.skipIf(!baseUrl)(`Statamic playground (${baseUrl})`, () => {
     });
   });
 
+  describe("users", () => {
+    // Only seed users: a local install may contain real accounts.
+    const seedUsers = cms.users().where("email", "ends_with", "@example.com");
+    const ada = "5f0c2c1e-7a4b-4d8e-9a51-2b7e6c0d1a01";
+
+    it("lists users with exactly the fixed Statamic user fields", async () => {
+      const res = await seedUsers.sort("name").get();
+      expect(res.data.map((u) => u.email)).toEqual(["author@example.com", "editor@example.com"]);
+      expect(Object.keys(res.data[0]!).sort()).toEqual(["api_url", "email", "id", "is_super", "name"]);
+      expect(res.data[0]).toMatchObject({ id: ada, name: "Ada Author", is_super: false });
+      expect(res.meta).toMatchObject({ current_page: 1, total: 2 });
+    });
+
+    it("narrows list fields and filters on fields the API doesn't return", async () => {
+      expect((await seedUsers.sort("-name").fields(["name"]).get()).data).toEqual([
+        { name: "Eddie Editor" },
+        { name: "Ada Author" },
+      ]);
+      // Stache stores roles so that only `contains` matches them.
+      expect((await seedUsers.where("roles", "contains", "editor").fields(["email"]).get()).data).toEqual([
+        { email: "editor@example.com" },
+      ]);
+    });
+
+    it("rejects password filters", async () => {
+      const err = await cms
+        .users()
+        .where("password", "x")
+        .get()
+        .catch((e: unknown) => e);
+      expect((err as HeadqueryHttpError).status).toBe(422);
+    });
+
+    it("finds one user by id, or null", async () => {
+      const found = await cms.users().find(ada).get();
+      expect(found?.data).toMatchObject({ id: ada, email: "author@example.com" });
+      expect(await cms.users().find("nope").get()).toBeNull();
+    });
+  });
+
   describe("assets", () => {
     const assets = cms.assets("assets");
 

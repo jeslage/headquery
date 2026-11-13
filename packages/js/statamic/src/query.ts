@@ -36,9 +36,18 @@ interface ListState {
   fields?: string[];
 }
 
-type FieldValue<Item, F extends keyof Item> = Item[F] extends Scalar | null | undefined
-  ? Exclude<Item[F], null | undefined>
+type FieldValue<Item, F> = F extends keyof Item
+  ? Item[F] extends Scalar | null | undefined
+    ? Exclude<Item[F], null | undefined>
+    : Scalar
   : Scalar;
+
+/**
+ * Fields `where()` accepts: the filterable fields of the item, or any field name when the
+ * filters are open (`string`: users, whose filters may target fields the API doesn't return,
+ * and clients without generated types).
+ */
+type WhereField<Item, Filterable extends string> = string extends Filterable ? string : Filterable & keyof Item;
 
 /**
  * Immutable list query for collection entries, taxonomy terms and assets.
@@ -56,18 +65,21 @@ export class ListQuery<Item, Filterable extends string, Picked extends keyof Ite
   ) {}
 
   /** `filter[field]=value` (condition `is`). */
-  where<F extends Filterable & keyof Item>(field: F, value: FieldValue<Item, F>): ListQuery<Item, Filterable, Picked>;
-  where<F extends Filterable & keyof Item>(
+  where<F extends WhereField<Item, Filterable>>(
+    field: F,
+    value: FieldValue<Item, F>,
+  ): ListQuery<Item, Filterable, Picked>;
+  where<F extends WhereField<Item, Filterable>>(
     field: F,
     condition: ScalarCondition,
     value: FieldValue<Item, F> | Scalar | Date,
   ): ListQuery<Item, Filterable, Picked>;
-  where<F extends Filterable & keyof Item>(
+  where<F extends WhereField<Item, Filterable>>(
     field: F,
     condition: ListCondition,
     values: Array<FieldValue<Item, F> | Scalar>,
   ): ListQuery<Item, Filterable, Picked>;
-  where<F extends Filterable & keyof Item>(
+  where<F extends WhereField<Item, Filterable>>(
     field: F,
     condition: BooleanCondition,
     value?: boolean,
@@ -279,18 +291,21 @@ export class TreeQuery<Page, Picked extends KeysOfUnion<Page> = KeysOfUnion<Page
    * `filter[field:condition]=value`, applied per level: a page that doesn't match is
    * dropped together with its children.
    */
-  where<F extends Filterable & keyof Page>(field: F, value: FieldValue<Page, F>): TreeQuery<Page, Picked, Filterable>;
-  where<F extends Filterable & keyof Page>(
+  where<F extends WhereField<Page, Filterable>>(
+    field: F,
+    value: FieldValue<Page, F>,
+  ): TreeQuery<Page, Picked, Filterable>;
+  where<F extends WhereField<Page, Filterable>>(
     field: F,
     condition: ScalarCondition,
     value: FieldValue<Page, F> | Scalar | Date,
   ): TreeQuery<Page, Picked, Filterable>;
-  where<F extends Filterable & keyof Page>(
+  where<F extends WhereField<Page, Filterable>>(
     field: F,
     condition: ListCondition,
     values: Array<FieldValue<Page, F> | Scalar>,
   ): TreeQuery<Page, Picked, Filterable>;
-  where<F extends Filterable & keyof Page>(
+  where<F extends WhereField<Page, Filterable>>(
     field: F,
     condition: BooleanCondition,
     value?: boolean,

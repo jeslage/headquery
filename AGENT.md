@@ -161,7 +161,8 @@ does not understand.
 - REST API base: `/{statamic.api.route}` (default `/api`). Endpoints used:
   `/collections/{c}/entries`, `/collections/{c}/entries/{id}`, `/taxonomies/{t}/terms`,
   `/taxonomies/{t}/terms/{slug}`, `/collections/{c}/tree`, `/globals`, `/globals/{handle}`, `/navs`, `/navs/{n}/tree`,
-  `/assets/{container}`, `/assets/{container}/{path}` (path keeps its slashes, segments encoded).
+  `/assets/{container}`, `/assets/{container}/{path}` (path keeps its slashes, segments encoded),
+  `/users`, `/users/{id}`.
 - Filters: `filter[field:condition]=value`; only fields in `allowed_filters` are accepted
   by Statamic. Sort: `sort=a,-b`. Also `fields=`, `limit=`, `page=`, `site=`.
 - Client API (method = first REST path segment): `collections(c)`, `taxonomies(t)`, `assets(c)` return a `ResourceQuery` (a `ListQuery` plus
@@ -204,6 +205,11 @@ Filters: all collection-tag conditions work in the API (`queryCondition()`), inc
 `is_after`/`is_before` (string = date, `true`/numeric = now), `overlaps` (`|` values) and the boolean
 `is_*` checks (`true`/`false`). Taxonomy filters `filter[taxonomy:{t}:{any|not|all}]=a,b` use commas,
 need `taxonomy:{t}` in `allowed_filters` (exported as `systemFilters`) and only apply to entry lists.
+Users (`/users`) always return exactly `id email name is_super api_url` (`StatamicUser`, no blueprint
+fields); `fields=` narrows lists only, single users ignore it. Filters come from
+`resources.users.allowed_filters` (no handles), may target fields that aren't returned, and
+`password`/`password_hash` are always forbidden; so `where()` is open (`WhereField`) for users.
+On Stache, `roles` only matches with `contains`. `/users/{id}` is id only.
 Collection trees (`/collections/{c}/tree`) have the same `{ page, depth, children }` items; pages are
 the entries plus `entry_id`, and `id === entry_id` (no separate branch id). Unpublished entries are
 left out. Filters (from `allowed_filters`, 422 otherwise) apply per level, so a non-matching parent
@@ -253,7 +259,7 @@ it for blueprint fields in fixtures or the seed.
    against real Statamic; verify the unverified assumptions above; add Testbench-based
    tests for exporter, command and route.
 2. Contract/e2e tests: JS client against the running playground in CI.
-3. Remaining Statamic resources: users, forms; multi-site helpers.
+3. Remaining Statamic resources: forms, sites; multi-site helpers.
    (Navigation and collection trees, the globals list and assets are done.)
 4. Codegen: `--check` in docs/CI recipes, ETag-aware fetch. (Config file `headquery.config.ts`
    is done: `packages/js/codegen/src/config.ts`.)

@@ -1,5 +1,5 @@
 import { describe, expect, expectTypeOf, it, vi } from "vitest";
-import { createStatamicClient, HeadqueryHttpError } from "../src";
+import { createStatamicClient, HeadqueryHttpError, type StatamicUser } from "../src";
 
 interface BlogEntry {
   id: string;
@@ -207,6 +207,40 @@ describe("taxonomy filters", () => {
     expect(loose.collections("x").whereTaxonomy("anything", "a").toRequest().query).toEqual({
       "filter[taxonomy:anything:all]": "a",
     });
+  });
+});
+
+describe("users", () => {
+  it("compiles the list with open filters, sort and fields", () => {
+    const q = cms
+      .users()
+      .where("email", "ends_with", "@acme.com")
+      .where("roles", "contains", "editor") // not a returned field, still filterable
+      .sort("name")
+      .fields(["name", "email"]);
+    expect(q.toRequest()).toEqual({
+      method: "GET",
+      path: "/users",
+      query: {
+        "filter[email:ends_with]": "@acme.com",
+        "filter[roles:contains]": "editor",
+        sort: ["name"],
+        fields: ["name", "email"],
+      },
+    });
+    expectTypeOf(q.get)
+      .returns.resolves.toHaveProperty("data")
+      .toEqualTypeOf<Array<Pick<StatamicUser, "name" | "email">>>();
+  });
+
+  it("finds one user by id, without fields() (Statamic ignores it there)", () => {
+    const one = cms.users().find("abc 1");
+    expect(one.toRequest().path).toBe("/users/abc%201");
+    expectTypeOf(one.get).returns.resolves.toEqualTypeOf<{ data: StatamicUser } | null>();
+    // @ts-expect-error single users always return all fields
+    one.fields;
+    // @ts-expect-error users only return the fixed StatamicUser fields
+    cms.users().fields(["roles"]);
   });
 });
 

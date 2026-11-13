@@ -1,11 +1,26 @@
 import { type ClientOptions, type CoreClient, createCoreClient } from "@headquery/core";
 import { IndexQuery, ResourceQuery, SingleQuery, TreeQuery } from "./query";
-import type { AssetContainersOf, NavInfo, RegisteredSchema, ResourceShape, StatamicSchemaShape } from "./types";
+import type {
+  AssetContainersOf,
+  NavInfo,
+  RegisteredSchema,
+  ResourceShape,
+  StatamicSchemaShape,
+  StatamicUser,
+} from "./types";
 
 type Handle<T> = Extract<keyof T, string>;
 
 /** `ResourceQuery` without `tree()`: taxonomies, asset containers and unstructured collections. */
 export type FlatResourceQuery<Item, Filterable extends string> = Omit<ResourceQuery<Item, Filterable>, "tree">;
+
+/**
+ * Users: a list query plus `find(id)`. A single user has no `fields()`, because Statamic ignores
+ * `fields` there and always returns all of `StatamicUser`.
+ */
+export type UsersQuery = Omit<FlatResourceQuery<StatamicUser, string>, "find"> & {
+  find(id: string): Omit<SingleQuery<StatamicUser, keyof StatamicUser, true>, "fields">;
+};
 
 /** Query on one collection; `tree()` only exists for structured collections. */
 export type CollectionQuery<R extends ResourceShape> = R extends { tree: infer Page }
@@ -47,6 +62,12 @@ export interface StatamicClient<S extends StatamicSchemaShape> {
   /** `GET /globals`: all global sets; tell them apart by `handle`. */
   globals(): IndexQuery<S["globals"][keyof S["globals"]]>;
 
+  /**
+   * Users: `GET /users`, filterable with `resources.users.allowed_filters` (also on fields the
+   * API doesn't return, like `roles`). `.find(id)` fetches one user (`GET /users/{id}`) or `null`.
+   */
+  users(): UsersQuery;
+
   /** One navigation; `.tree()` fetches its page tree (`GET /navs/{handle}/tree`). */
   navs<K extends Handle<S["navigations"]>>(handle: K): { tree(): TreeQuery<S["navigations"][K]["page"]> };
   /** `GET /navs`: all navigations (handle, title, max depth). */
@@ -81,6 +102,7 @@ export function createStatamicClient<S extends StatamicSchemaShape = RegisteredS
       handle === undefined
         ? new IndexQuery(core, "/globals")
         : new SingleQuery(core, `/globals/${seg(handle)}`)) as never,
+    users: () => new ResourceQuery(core, "/users"),
     navs: ((handle?: string) =>
       handle === undefined
         ? new IndexQuery(core, "/navs")

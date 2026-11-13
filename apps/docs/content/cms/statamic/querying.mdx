@@ -17,6 +17,7 @@ takes a handle and starts a query, like `Entry::query()->where('collection', 'bl
 | `taxonomies(handle)` | terms: `GET /taxonomies/{handle}/terms` | slug |
 | `assets(container)` | assets: `GET /assets/{container}` | path |
 | `globals()` / `globals(handle)` | all sets: `GET /globals` | – (`globals(handle)` is `GET /globals/{handle}`) |
+| `users()` | users: `GET /users` | id |
 | `navs()` | navigations: `GET /navs` | – |
 
 Trees: `collections(handle).tree()` (structured collections) and `navs(handle).tree()`.
@@ -304,6 +305,40 @@ Assets include Statamic's system fields (`HqAssetBase`: `path`, `basename`, `fol
 `size_bytes`, `width`, `height`, `mime_type`, …) plus the container blueprint's fields.
 `width`, `height` and `ratio` are `null` for files that aren't images or videos. Asset
 *fields* on entries are smaller (`HqAsset`: `id`, `url`, `permalink`, `api_url`, `alt`).
+
+## Users
+
+`users()` lists users (`GET /users`), `.find(id)` fetches one (`GET /users/{id}`) or `null`.
+Statamic always returns the same fields for a user, whatever the user blueprint contains:
+`id`, `email`, `name`, `is_super` and `api_url` (`StatamicUser`).
+
+```ts twoslash
+import "./generated/cms.generated";
+import { createStatamicClient } from "@headquery/statamic";
+const cms = createStatamicClient({ baseUrl: "https://cms.example.com" });
+// ---cut---
+const editors = await cms
+  .users()
+  .where("email", "ends_with", "@example.com")
+  .where("roles", "contains", "editor")
+  .sort("name")
+  .fields(["name", "email"])
+  .get();
+
+const user = await cms.users().find("5f0c2c1e-7a4b-4d8e-9a51-2b7e6c0d1a01").get();
+user?.data.is_super;
+//         ^?
+```
+
+- Enable users and their filters directly on the resource, it has no handles:
+  `'users' => ['allowed_filters' => ['name', 'email', 'roles']]`. Statamic never allows
+  filtering on `password`.
+- Filters may use fields the API doesn't return (`roles`, `groups`, blueprint fields), so
+  `where()` accepts any field name for users. Statamic answers 422 for fields that aren't allowed.
+- On flat-file users, roles only match with `contains`.
+- `.find()` takes the id only. To look a user up by email, use
+  `.where("email", "is", email).first()`. Single users ignore `fields`, so `.find()` has no
+  `.fields()`.
 
 ## Immutability
 

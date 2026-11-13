@@ -1,6 +1,12 @@
 export type { ClientOptions, RunOptions } from "@headquery/core";
 export { HeadqueryError, HeadqueryHttpError, HeadqueryNetworkError } from "@headquery/core";
-export { type CollectionQuery, createStatamicClient, type FlatResourceQuery, type StatamicClient } from "./client";
+export {
+  type CollectionQuery,
+  createStatamicClient,
+  type FlatResourceQuery,
+  type StatamicClient,
+  type UsersQuery,
+} from "./client";
 export { IndexQuery, LIST_SEPARATOR, ListQuery, ResourceQuery, SingleQuery, TreeQuery } from "./query";
 export type {
   AssetContainersOf,
@@ -32,5 +38,6 @@ export type {
   Single,
   SortField,
   StatamicSchemaShape,
+  StatamicUser,
   TaxonomyFilter,
 } from "./types";

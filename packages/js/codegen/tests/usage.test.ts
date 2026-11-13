@@ -123,4 +123,9 @@ describe("generated types work with @headquery/statamic", () => {
     // @ts-expect-error the pages collection doesn't allow taxonomy filters
     cms.collections("pages").whereTaxonomyIn("tags", ["php"]);
   });
+
+  it("types users with the fixed Statamic user fields", () => {
+    const q = cms.users().where("roles", "contains", "editor").fields(["email", "is_super"]);
+    expectTypeOf(q.first).returns.resolves.toEqualTypeOf<{ email: string; is_super: boolean } | null>();
+  });
 });

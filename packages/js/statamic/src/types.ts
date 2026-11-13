@@ -165,6 +165,18 @@ export interface NavTree<P> {
   data: Array<NavTreeItem<P>>;
 }
 
+/**
+ * A user from `GET /users` or `GET /users/{id}`. Statamic always returns exactly these fields,
+ * whatever the user blueprint contains.
+ */
+export interface StatamicUser {
+  id: string;
+  email: string;
+  name: string | null;
+  is_super: boolean;
+  api_url: string;
+}
+
 /** One navigation as listed by `GET /navs`. */
 export interface NavInfo {
   handle: string;
