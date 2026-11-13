@@ -37,7 +37,7 @@ const cms = createStatamicClient({ baseUrl: "https://cms.example.com" });
 // ---cut---
 const controller = new AbortController();
 
-await cms.global("settings").get({ signal: controller.signal, fetchOptions: { cache: "no-store" } });
+await cms.globals("settings").get({ signal: controller.signal, fetchOptions: { cache: "no-store" } });
 ```
 
 ## Where the client file comes from

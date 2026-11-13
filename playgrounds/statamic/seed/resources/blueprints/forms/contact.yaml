@@ -1,0 +1,37 @@
+title: Contact
+tabs:
+  main:
+    display: Main
+    sections:
+      -
+        fields:
+          -
+            handle: name
+            field:
+              type: text
+              display: Name
+              validate:
+                - required
+          -
+            handle: email
+            field:
+              type: text
+              input_type: email
+              display: Email
+              instructions: 'We reply within two days.'
+              validate:
+                - required
+                - email
+          -
+            handle: topic
+            field:
+              type: select
+              display: Topic
+              options:
+                support: Support
+                sales: Sales
+          -
+            handle: message
+            field:
+              type: textarea
+              display: Message

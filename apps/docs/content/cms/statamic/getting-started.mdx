@@ -169,8 +169,7 @@ const cms = createStatamicClient({ baseUrl: "https://cms.example.com" });
 // import { cms } from "./cms";
 
 const { data: posts } = await cms
-  .collection("blog")
-  .entries()
+  .collections("blog")
   .where("featured", true)
   .sort("-date")
   .fields(["title", "slug", "date"])

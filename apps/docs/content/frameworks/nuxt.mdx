@@ -43,7 +43,7 @@ const cms = createStatamicClient({ baseUrl: "https://cms.example.com" });
 // ---cut---
 import { useAsyncData } from "nuxt/app"; // auto-imported in a Nuxt app
 
-const latest = cms.collection("blog").entries().sort("-date").limit(10).fields(["title", "slug", "date"]);
+const latest = cms.collections("blog").sort("-date").limit(10).fields(["title", "slug", "date"]);
 
 const { data, status, error } = await useAsyncData(latest.url(), (_nuxtApp, { signal }) => latest.get({ signal }));
 //      ^?
@@ -62,7 +62,7 @@ const cms = createStatamicClient({ baseUrl: "https://cms.example.com" });
 // ---cut---
 import { useFetch } from "nuxt/app";
 
-const latest = cms.collection("blog").entries().sort("-date").limit(10);
+const latest = cms.collections("blog").sort("-date").limit(10);
 
 const { data } = await useFetch<Awaited<ReturnType<typeof latest.get>>>(latest.url());
 ```
@@ -86,7 +86,7 @@ import { useAsyncData } from "nuxt/app";
 import { computed, ref } from "vue";
 
 const page = ref(1);
-const posts = computed(() => cms.collection("blog").entries().sort("-date").limit(10).page(page.value));
+const posts = computed(() => cms.collections("blog").sort("-date").limit(10).page(page.value));
 
 const { data } = await useAsyncData(
   () => posts.value.url(),
@@ -109,7 +109,7 @@ declare const slug: string;
 import { HeadqueryHttpError } from "@headquery/statamic";
 import { createError, useAsyncData } from "nuxt/app";
 
-const post = cms.collection("blog").entry(slug);
+const post = cms.collections("blog").find(slug);
 
 const { data } = await useAsyncData(post.url(), async (_nuxtApp, { signal }) => {
   try {

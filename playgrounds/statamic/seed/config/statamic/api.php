@@ -12,7 +12,9 @@ return [
     */
     'resources' => [
         'collections' => [
-            'blog' => ['allowed_filters' => ['title', 'slug', 'featured']],
+            // taxonomy:tags enables filter[taxonomy:tags:{any|not|all}] (exported as a systemFilter).
+            'blog' => ['allowed_filters' => ['title', 'slug', 'featured', 'date', 'tags', 'taxonomy:tags']],
+            'pages' => ['allowed_filters' => ['title']],
         ],
         'navs' => [
             'main' => true,
@@ -21,13 +23,18 @@ return [
             'tags' => ['allowed_filters' => ['title']],
         ],
         'assets' => [
-            'assets' => true,
+            // basename and folder are system fields: exported as `systemFilters`.
+            'assets' => ['allowed_filters' => ['alt', 'basename', 'folder']],
         ],
         'globals' => [
             'settings' => true,
         ],
-        'forms' => false,
-        'users' => false,
+        'forms' => [
+            'contact' => true,
+        ],
+        'sites' => true,
+        // Users have no handles, so allowed_filters sits directly on the resource.
+        'users' => ['allowed_filters' => ['name', 'email', 'roles']],
     ],
 
     'route' => env('STATAMIC_API_ROUTE', 'api'),

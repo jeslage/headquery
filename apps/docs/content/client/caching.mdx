@@ -19,7 +19,7 @@ import "./generated/cms.generated";
 import { createStatamicClient } from "@headquery/statamic";
 const cms = createStatamicClient({ baseUrl: "https://cms.example.com" });
 // ---cut---
-const query = cms.collection("blog").entries().where("featured", true).limit(3);
+const query = cms.collections("blog").where("featured", true).limit(3);
 
 query.url();
 // https://cms.example.com/api/collections/blog/entries?filter[featured:is]=true&limit=3
@@ -44,5 +44,5 @@ const cms = createStatamicClient({
 });
 
 // or per call
-await cms.global("settings").get({ fetchOptions: { cache: "no-store" } });
+await cms.globals("settings").get({ fetchOptions: { cache: "no-store" } });
 ```

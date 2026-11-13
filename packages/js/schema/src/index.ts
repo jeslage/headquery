@@ -41,10 +41,26 @@ export interface IrResource {
   title?: string;
   /** Fields keyed by handle. For collections this is the union of all entry blueprints. */
   fields: Record<string, IrField>;
+  /**
+   * Handles that may be used in API filters but are not blueprint fields, e.g. system fields
+   * like `date` or an asset's `basename`. Blueprint fields carry `filterable` instead.
+   */
+  systemFilters?: string[];
+  /**
+   * Set for collections whose entries form a page tree (Statamic: structured collections),
+   * which can be fetched as a whole via the collection's tree endpoint.
+   */
+  structure?: IrStructure;
+}
+
+export interface IrStructure {
+  maxDepth?: number;
+  /** The first page is the root (home) page. */
+  expectsRoot?: boolean;
 }
 
 /** A navigation tree. `fields` are the navigation blueprint's fields, present on every page. */
-export interface IrNavigation extends IrResource {
+export interface IrNavigation extends Omit<IrResource, "systemFilters" | "structure"> {
   /** Handles of collections whose entries can be linked as pages. */
   collections?: string[];
   maxDepth?: number;
@@ -105,6 +121,13 @@ export function assertIrSchema(input: unknown): asserts input is IrSchema {
       if (!isObject(resource) || !isObject(resource.fields)) {
         throw new IrSchemaError(`Resource "${kind}.${handle}" must have fields`);
       }
+      const { systemFilters } = resource;
+      if (systemFilters !== undefined && !(Array.isArray(systemFilters) && systemFilters.every(isString))) {
+        throw new IrSchemaError(`Resource "${kind}.${handle}" systemFilters must be an array of strings`);
+      }
+      if (resource.structure !== undefined && !isObject(resource.structure)) {
+        throw new IrSchemaError(`Resource "${kind}.${handle}" structure must be an object`);
+      }
       for (const [field, def] of Object.entries(resource.fields)) {
         if (!isObject(def) || typeof def.type !== "string") {
           throw new IrSchemaError(`Field "${kind}.${handle}.${field}" must have a type`);
@@ -112,6 +135,10 @@ export function assertIrSchema(input: unknown): asserts input is IrSchema {
       }
     }
   }
+}
+
+function isString(v: unknown): v is string {
+  return typeof v === "string";
 }
 
 function isObject(v: unknown): v is Record<string, unknown> {

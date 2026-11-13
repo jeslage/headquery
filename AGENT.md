@@ -111,7 +111,9 @@ Notes:
   Navigations also carry `collections` (linkable collections) and `maxDepth`.
 - Field types: `string number boolean date enum array object relation asset richtext blocks unknown`.
 - `filterable: true` mirrors Statamic's `allowed_filters` — codegen turns it into the
-  `filterable` union that restricts `.where()`.
+  `filterable` union that restricts `.where()`. Allowed filters that are not blueprint fields
+  (system fields like `basename`, `folder`, `date`) go into the resource's `systemFilters`
+  (additive, schemaVersion 1). `allowed_filters: true`/`['*']` can't list them, so none are emitted.
 - Empty field maps and resource maps must encode as JSON `{}` (PHP: cast to `(object)`).
 
 **Changing the IR** requires, in one PR: JSON Schema, TS types, codegen, all PHP mappers,
@@ -158,10 +160,17 @@ does not understand.
 
 - REST API base: `/{statamic.api.route}` (default `/api`). Endpoints used:
   `/collections/{c}/entries`, `/collections/{c}/entries/{id}`, `/taxonomies/{t}/terms`,
-  `/taxonomies/{t}/terms/{slug}`, `/globals`, `/globals/{handle}`, `/navs`, `/navs/{n}/tree`.
+  `/taxonomies/{t}/terms/{slug}`, `/collections/{c}/tree`, `/globals`, `/globals/{handle}`, `/navs`, `/navs/{n}/tree`,
+  `/assets/{container}`, `/assets/{container}/{path}` (path keeps its slashes, segments encoded),
+  `/users`, `/users/{id}`, `/forms`, `/forms/{handle}`, `/sites`. Metadata endpoints and `/ping` are
+  left to `cms.send()` on purpose (bundle size).
 - Filters: `filter[field:condition]=value`; only fields in `allowed_filters` are accepted
   by Statamic. Sort: `sort=a,-b`. Also `fields=`, `limit=`, `page=`, `site=`.
-- Response: `{ data, links, meta }` for entry/term lists, `{ data }` for single items and for
+- Client API (method = first REST path segment): `collections(c)`, `taxonomies(t)`, `assets(c)` return a `ResourceQuery` (a `ListQuery` plus
+  `find(key)`, which only exists before list options are set and resolves 404 to `null`);
+  `globals()`/`globals(h)`, `navs()`/`navs(h).tree()`. `collections(c).tree()` exists only for
+  structured collections (IR `structure`); it's a `TreeQuery` that, unlike nav trees, accepts filters.
+- Response: `{ data, links, meta }` for entry/term/asset lists, `{ data }` for single items and for
   the unpaginated `/globals`, `/navs` and nav trees. Trees also accept `max_depth=`.
 - Addon pieces: `FieldMapper` (pure, unit-tested; maps fieldtype+config → IR),
   `SchemaExporter` (walks collections/taxonomies/globals/navs, respects `statamic.api.resources`
@@ -177,7 +186,7 @@ The playground targets Statamic 6 (the addon supports `^5.0 || ^6.0`).
 
 - `SchemaExporter` has been run manually against Statamic 6.40 in the seeded playground
   (output validates against `schema-v1.json`), but has no automated tests yet — only
-  `FieldMapper` is unit-tested. It does not export asset containers yet.
+  `FieldMapper` is unit-tested. Asset containers are read from `resources.assets`.
 - Bard output type (`HqRichText`) depends on field config (HTML string without sets, array
   of blocks with sets); the IR doesn't carry that distinction yet.
 
@@ -193,6 +202,27 @@ Nav tree items are `{ page, depth, children }` (depth 1 = top level). Pages link
 contain all of the entry's fields plus `entry_id`; their `id` is the nav item id, not the entry id.
 Plain link pages only have `id title url uri permalink` and `entry_id: null`. Nav blueprint
 fields are on every page (`null` when empty). Modelled as `HqNavLink`/`HqNavEntry`.
+Filters: all collection-tag conditions work in the API (`queryCondition()`), incl. `matches`,
+`is_after`/`is_before` (string = date, `true`/numeric = now), `overlaps` (`|` values) and the boolean
+`is_*` checks (`true`/`false`). Taxonomy filters `filter[taxonomy:{t}:{any|not|all}]=a,b` use commas,
+need `taxonomy:{t}` in `allowed_filters` (exported as `systemFilters`) and only apply to entry lists.
+Users (`/users`) always return exactly `id email name is_super api_url` (`StatamicUser`, no blueprint
+fields); `fields=` narrows lists only, single users ignore it. Filters come from
+`resources.users.allowed_filters` (no handles), may target fields that aren't returned, and
+`password`/`password_hash` are always forbidden; so `where()` is open (`WhereField`) for users.
+On Stache, `roles` only matches with `contains`. `/users/{id}` is id only.
+Forms are `{ handle, title, fields, api_url }` (no honeypot on API routes); `fields` is keyed by handle
+in blueprint order, each field has `handle type width` plus only the config keys that are set.
+Unknown or unexposed forms 404. `/sites` is `{ data: [{ handle name locale short_locale url }] }`.
+Collection trees (`/collections/{c}/tree`) have the same `{ page, depth, children }` items; pages are
+the entries plus `entry_id`, and `id === entry_id` (no separate branch id). Unpublished entries are
+left out. Filters (from `allowed_filters`, 422 otherwise) apply per level, so a non-matching parent
+drops its subtree. Unstructured collections 404. Nav trees ignore `filter[...]`. Structured
+collections carry `structure: { maxDepth?, expectsRoot? }` in the IR; codegen emits `{Name}TreePage`.
+Assets from `/assets/...` carry all `AugmentedAsset` keys (`HqAssetBase`) plus blueprint fields;
+`width height ratio` are `null` for non-images but `orientation` is `"square"`; `folder` is `/` at
+the root. Asset *fields* on entries are shallow (`id url permalink api_url alt`, `HqAsset`).
+The asset path route accepts literal slashes and `%2F`.
 `status` is a reserved field handle in Statamic (it's the entry's publish status) — don't use
 it for blueprint fields in fixtures or the seed.
 
@@ -233,8 +263,8 @@ it for blueprint fields in fixtures or the seed.
    against real Statamic; verify the unverified assumptions above; add Testbench-based
    tests for exporter, command and route.
 2. Contract/e2e tests: JS client against the running playground in CI.
-3. Remaining Statamic resources: assets, users; multi-site helpers. (Navigation trees and
-   the globals list are done.)
+3. Statamic: multi-site helpers. Every REST endpoint is covered (metadata endpoints and `/ping` via `cms.send()`).
+   (Navigation and collection trees, the globals list and assets are done.)
 4. Codegen: `--check` in docs/CI recipes, ETag-aware fetch. (Config file `headquery.config.ts`
    is done: `packages/js/codegen/src/config.ts`.)
 5. Framework adapters: `@headquery/vue` (composables), `@headquery/react` (hooks),

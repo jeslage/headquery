@@ -1,15 +1,25 @@
 export type { ClientOptions, RunOptions } from "@headquery/core";
 export { HeadqueryError, HeadqueryHttpError, HeadqueryNetworkError } from "@headquery/core";
-export { createStatamicClient, type StatamicClient } from "./client";
-export { IndexQuery, LIST_SEPARATOR, ListQuery, SingleQuery, TreeQuery } from "./query";
+export {
+  type CollectionQuery,
+  createStatamicClient,
+  type FlatResourceQuery,
+  type StatamicClient,
+  type UsersQuery,
+} from "./client";
+export { IndexQuery, LIST_SEPARATOR, ListQuery, ResourceQuery, SingleQuery, TreeQuery } from "./query";
 export type {
+  AssetContainersOf,
+  BooleanCondition,
   Condition,
   DataList,
   KeysOfUnion,
   ListCondition,
+  LooseAsset,
   LooseItem,
   LooseNavPage,
   LooseSchema,
+  LooseTreePage,
   NavInfo,
   NavigationShape,
   NavTree,
@@ -27,5 +37,10 @@ export type {
   ScalarCondition,
   Single,
   SortField,
+  StatamicForm,
+  StatamicFormField,
   StatamicSchemaShape,
+  StatamicSite,
+  StatamicUser,
+  TaxonomyFilter,
 } from "./types";

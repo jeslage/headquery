@@ -1,0 +1,4 @@
+editor:
+  title: Editor
+  permissions:
+    - 'access cp'

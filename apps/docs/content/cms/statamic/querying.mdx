@@ -5,8 +5,24 @@ Every builder compiles to a plain `GET` request. The filter, sort and field name
 same ones the API itself uses.
 
 The examples on this page are type-checked against types generated from a sample schema:
-a `blog` collection, a `tags` taxonomy and a `settings` global set. Hover over the code
+a `blog` collection, a `tags` taxonomy, a `settings` global set and an `assets` container. Hover over the code
 to see the inferred types.
+
+Every method is named after the first segment of the REST path, as in Statamic's API. It
+takes a handle and starts a query, like `Entry::query()->where('collection', 'blog')`.
+
+| Method | Returns | One item via `.find(key)` |
+| --- | --- | --- |
+| `collections(handle)` | entries: `GET /collections/{handle}/entries` | id or slug |
+| `taxonomies(handle)` | terms: `GET /taxonomies/{handle}/terms` | slug |
+| `assets(container)` | assets: `GET /assets/{container}` | path |
+| `globals()` / `globals(handle)` | all sets: `GET /globals` | – (`globals(handle)` is `GET /globals/{handle}`) |
+| `users()` | users: `GET /users` | id |
+| `navs()` | navigations: `GET /navs` | – |
+| `forms()` / `forms(handle)` | all forms: `GET /forms` | – (`forms(handle)` is `GET /forms/{handle}`) |
+| `sites()` | sites: `GET /sites` | – |
+
+Trees: `collections(handle).tree()` (structured collections) and `navs(handle).tree()`.
 
 ## Collections
 
@@ -18,8 +34,7 @@ import { createStatamicClient } from "@headquery/statamic";
 const cms = createStatamicClient({ baseUrl: "https://cms.example.com" });
 
 const posts = await cms
-  .collection("blog")
-  .entries()
+  .collections("blog")
   .where("featured", true)
   .sort("-date")
   .limit(10)
@@ -31,15 +46,25 @@ posts.data[0]?.title;
 
 `GET /api/collections/blog/entries?filter[featured:is]=true&limit=10&sort=-date`
 
-A single entry, by id or slug:
+`.find(idOrSlug)` fetches a single entry (`GET /api/collections/blog/entries/hello-world`).
+It resolves to `null` when the entry doesn't exist or isn't published:
 
 ```ts twoslash
 import "./generated/cms.generated";
 import { createStatamicClient } from "@headquery/statamic";
 const cms = createStatamicClient({ baseUrl: "https://cms.example.com" });
 // ---cut---
-const { data: post } = await cms.collection("blog").entry("hello-world").get();
+const post = await cms.collections("blog").find("hello-world").fields(["title", "content"]).get();
+if (post) {
+  post.data.title;
+  //        ^?
+}
 ```
+
+`.find()` uses Statamic's single-item endpoint, which ignores filters, sort and pagination,
+so it is only available directly after `collections(…)`. Its options (`.fields()`, `.site()`)
+come after it. To get the first match of a filter instead, use `.where(…).first()`: it needs
+the field in `allowed_filters` and also resolves to `null`.
 
 ## Filters
 
@@ -51,17 +76,47 @@ import "./generated/cms.generated";
 import { createStatamicClient } from "@headquery/statamic";
 const cms = createStatamicClient({ baseUrl: "https://cms.example.com" });
 // ---cut---
-cms.collection("blog").entries()
+cms.collections("blog")
   .where("title", "contains", "release")    // filter[title:contains]=release
   .where("slug", "in", ["a", "b"])          // filter[slug:in]=a|b
-  .where("featured", "exists");             // filter[featured:exists]=true
+  .where("featured", "exists")              // filter[featured:exists]=true
+  .where("date", "is_after", "2026-01-01")  // filter[date:is_after]=2026-01-01
+  .where("tags", "overlaps", ["php", "js"]) // filter[tags:overlaps]=php|js
+  .where("title", "matches", "^Release");   // filter[title:matches]=^Release
 ```
 
-| Kind | Conditions |
-| --- | --- |
-| Scalar | `is` `not` `contains` `doesnt_contain` `starts_with` `doesnt_start_with` `ends_with` `doesnt_end_with` `gt` `gte` `lt` `lte` |
-| List | `in` `not_in` (values joined with `\|`) |
-| Presence | `exists` `doesnt_exist` |
+| Kind | Conditions | Value |
+| --- | --- | --- |
+| Scalar | `is` `not` `contains` `doesnt_contain` `starts_with` `doesnt_start_with` `ends_with` `doesnt_end_with` `gt` `gte` `lt` `lte` | one value |
+| Regex | `matches` `doesnt_match` | pattern without delimiters |
+| Date | `is_after` `is_before` | date string or `Date` (sent as ISO) |
+| List | `in` `not_in`, `overlaps` `doesnt_overlap` (array fields) | array, joined with `\|` |
+| Boolean | `exists` `doesnt_exist`, `is_future` `is_past`, `is_alpha` `is_alpha_numeric` `is_numeric` `is_url` `is_embeddable` `is_email` | none (`true`) or `false` to negate |
+
+Boolean conditions need no value: `.where("date", "is_future")` sends `true`,
+`.where("website", "is_url", false)` negates. Because of that, `.where(field, "is_url")` always
+means the condition; to match the literal string, write `.where(field, "is", "is_url")`.
+Statamic reads a purely numeric date like `"2026"` as "now", so pass full dates.
+
+## Taxonomy filters
+
+Filter entries by taxonomy terms with the same methods as Statamic's query builder. Add
+`taxonomy:{handle}` to the collection's `allowed_filters` (e.g. `'taxonomy:tags'`); only those
+taxonomies type-check.
+
+```ts twoslash
+import "./generated/cms.generated";
+import { createStatamicClient } from "@headquery/statamic";
+const cms = createStatamicClient({ baseUrl: "https://cms.example.com" });
+// ---cut---
+cms.collections("blog").whereTaxonomyIn("tags", ["php", "statamic"]); // any:  filter[taxonomy:tags:any]=php,statamic
+cms.collections("blog").whereTaxonomy("tags", "php");                 // all:  filter[taxonomy:tags:all]=php
+cms.collections("blog").whereTaxonomyNotIn("tags", ["drafts"]);       // none: filter[taxonomy:tags:not]=drafts
+```
+
+- `whereTaxonomy()` called again for the same taxonomy adds terms: entries must have all of them.
+- Terms are slugs, joined with commas (not `|`).
+- Taxonomy filters only work on entry lists, not on collection trees, terms or assets.
 
 Statamic only accepts filters on fields listed in the collection's `allowed_filters`.
 With generated types, other fields are a type error:
@@ -72,7 +127,7 @@ import "./generated/cms.generated";
 import { createStatamicClient } from "@headquery/statamic";
 const cms = createStatamicClient({ baseUrl: "https://cms.example.com" });
 // ---cut---
-cms.collection("blog").entries().where("reading_time", 3);
+cms.collections("blog").where("reading_time", 3);
 ```
 
 ## Sort, pagination, sites
@@ -82,7 +137,7 @@ import "./generated/cms.generated";
 import { createStatamicClient } from "@headquery/statamic";
 const cms = createStatamicClient({ baseUrl: "https://cms.example.com" });
 // ---cut---
-const page2 = await cms.collection("blog").entries()
+const page2 = await cms.collections("blog")
   .sort("-date", "title")   // sort=-date,title (later calls replace earlier ones)
   .limit(20)
   .page(2)
@@ -104,7 +159,7 @@ import "./generated/cms.generated";
 import { createStatamicClient } from "@headquery/statamic";
 const cms = createStatamicClient({ baseUrl: "https://cms.example.com" });
 // ---cut---
-const { data } = await cms.collection("blog").entries().fields(["title", "hero"]).get();
+const { data } = await cms.collections("blog").fields(["title", "hero"]).get();
 //      ^?
 ```
 
@@ -115,13 +170,13 @@ import "./generated/cms.generated";
 import { createStatamicClient } from "@headquery/statamic";
 const cms = createStatamicClient({ baseUrl: "https://cms.example.com" });
 // ---cut---
-const tags = await cms.taxonomy("tags").terms().where("title", "starts_with", "j").get();
-const tag = await cms.taxonomy("tags").term("javascript").get();
+const tags = await cms.taxonomies("tags").where("title", "starts_with", "j").get();
+const tag = await cms.taxonomies("tags").find("javascript").get(); // null if missing
 ```
 
 ## Globals
 
-`global(handle)` fetches one global set (`GET /globals/{handle}`), `globals()` all of them
+`globals(handle)` fetches one global set (`GET /globals/{handle}`), `globals()` all of them
 (`GET /globals`). In the list, `handle` tells the sets apart:
 
 ```ts twoslash
@@ -129,7 +184,7 @@ import "./generated/cms.generated";
 import { createStatamicClient } from "@headquery/statamic";
 const cms = createStatamicClient({ baseUrl: "https://cms.example.com" });
 // ---cut---
-const settings = await cms.global("settings").get();
+const settings = await cms.globals("settings").get();
 settings.data.site_name;
 //            ^?
 
@@ -139,9 +194,34 @@ for (const set of all.data) {
 }
 ```
 
+## Collection trees
+
+`collections(handle).tree()` fetches the page tree of a structured collection
+(`GET /collections/{handle}/tree`), e.g. a pages collection. Every page is an entry of the
+collection plus `entry_id` (equal to `id`); unpublished entries are left out.
+
+```ts twoslash
+import "./generated/cms.generated";
+import { createStatamicClient } from "@headquery/statamic";
+const cms = createStatamicClient({ baseUrl: "https://cms.example.com" });
+// ---cut---
+const { data } = await cms.collections("pages").tree().maxDepth(2).fields(["title", "url"]).get();
+
+for (const { page, depth, children } of data) {
+  page.title;
+  //   ^?
+}
+```
+
+- `.maxDepth(n)`, `.site(handle)` and `.fields([...])` work like for navigation trees.
+- `.where(...)` filters with the collection's `allowed_filters`, per level: a page that
+  doesn't match is dropped together with its children.
+- `tree()` only exists for structured collections (the schema marks them), and only directly
+  after `collections(…)`. On other collections Statamic answers 404.
+
 ## Navigation
 
-`nav(handle).tree()` fetches a navigation tree (`GET /navs/{handle}/tree`). Enable it in
+`navs(handle).tree()` fetches a navigation tree (`GET /navs/{handle}/tree`). Enable it in
 `config/statamic/api.php` under `resources.navs`.
 
 Each page is either a plain link (`entry_id: null`) or a linked entry: Statamic then returns
@@ -153,7 +233,7 @@ import "./generated/cms.generated";
 import { createStatamicClient } from "@headquery/statamic";
 const cms = createStatamicClient({ baseUrl: "https://cms.example.com" });
 // ---cut---
-const { data } = await cms.nav("main").tree().maxDepth(2).get();
+const { data } = await cms.navs("main").tree().maxDepth(2).get();
 
 for (const { page, depth, children } of data) {
   if (page.entry_id !== null) {
@@ -178,10 +258,154 @@ import { createStatamicClient } from "@headquery/statamic";
 const cms = createStatamicClient({ baseUrl: "https://cms.example.com" });
 // ---cut---
 const [navigation, settings] = await Promise.all([
-  cms.nav("main").tree().fields(["title", "url", "entry_id"]).get(),
-  cms.global("settings").get(),
+  cms.navs("main").tree().fields(["title", "url", "entry_id"]).get(),
+  cms.globals("settings").get(),
 ]);
 ```
+
+## Assets
+
+`assets(container)` lists the assets of a container (`GET /assets/{container}`). It's the
+REST equivalent of `Asset::query()->where('container', …)`: filters, sort, pagination and
+`fields` work like for entries. Enable it in `config/statamic/api.php` under
+`resources.assets`.
+
+```ts twoslash
+import "./generated/cms.generated";
+import { createStatamicClient } from "@headquery/statamic";
+const cms = createStatamicClient({ baseUrl: "https://cms.example.com" });
+// ---cut---
+// Asset::query()->where('container', 'assets')->where('basename', 'hero.jpg')->first()
+const hero = await cms.assets("assets").where("basename", "hero.jpg").first();
+
+const icons = await cms
+  .assets("assets")
+  .where("folder", "icons")
+  .sort("basename")
+  .fields(["url", "alt", "width", "height"])
+  .get();
+icons.data[0]?.width;
+//             ^?
+```
+
+`.find(path)` fetches one asset by its path relative to the container root
+(`GET /assets/{container}/{path}`), or `null` if it doesn't exist. Folder slashes stay in
+the URL:
+
+```ts twoslash
+import "./generated/cms.generated";
+import { createStatamicClient } from "@headquery/statamic";
+const cms = createStatamicClient({ baseUrl: "https://cms.example.com" });
+// ---cut---
+const logo = await cms.assets("assets").find("icons/logo.svg").get();
+// GET /api/assets/assets/icons/logo.svg
+logo?.data.is_image;
+//         ^?
+```
+
+Assets include Statamic's system fields (`HqAssetBase`: `path`, `basename`, `folder`, `url`,
+`size_bytes`, `width`, `height`, `mime_type`, …) plus the container blueprint's fields.
+`width`, `height` and `ratio` are `null` for files that aren't images or videos. Asset
+*fields* on entries are smaller (`HqAsset`: `id`, `url`, `permalink`, `api_url`, `alt`).
+
+## Users
+
+`users()` lists users (`GET /users`), `.find(id)` fetches one (`GET /users/{id}`) or `null`.
+Statamic always returns the same fields for a user, whatever the user blueprint contains:
+`id`, `email`, `name`, `is_super` and `api_url` (`StatamicUser`).
+
+```ts twoslash
+import "./generated/cms.generated";
+import { createStatamicClient } from "@headquery/statamic";
+const cms = createStatamicClient({ baseUrl: "https://cms.example.com" });
+// ---cut---
+const editors = await cms
+  .users()
+  .where("email", "ends_with", "@example.com")
+  .where("roles", "contains", "editor")
+  .sort("name")
+  .fields(["name", "email"])
+  .get();
+
+const user = await cms.users().find("5f0c2c1e-7a4b-4d8e-9a51-2b7e6c0d1a01").get();
+user?.data.is_super;
+//         ^?
+```
+
+- Enable users and their filters directly on the resource, it has no handles:
+  `'users' => ['allowed_filters' => ['name', 'email', 'roles']]`. Statamic never allows
+  filtering on `password`.
+- Filters may use fields the API doesn't return (`roles`, `groups`, blueprint fields), so
+  `where()` accepts any field name for users. Statamic answers 422 for fields that aren't allowed.
+- On flat-file users, roles only match with `contains`.
+- `.find()` takes the id only. To look a user up by email, use
+  `.where("email", "is", email).first()`. Single users ignore `fields`, so `.find()` has no
+  `.fields()`.
+
+## Forms
+
+`forms(handle)` fetches a form with its fields (`GET /forms/{handle}`), `forms()` all forms
+enabled in `config/statamic/api.php` (`'forms' => ['contact' => true]`). Use it to render a
+form in your frontend; submissions go through Statamic's form routes, not the REST API.
+
+```ts twoslash
+import "./generated/cms.generated";
+import { createStatamicClient } from "@headquery/statamic";
+const cms = createStatamicClient({ baseUrl: "https://cms.example.com" });
+// ---cut---
+const { data: form } = await cms.forms("contact").get();
+
+for (const field of Object.values(form.fields)) {
+  field.type;     // fieldtype, e.g. "text", "select"
+  field.validate; // e.g. ["required", "email"]
+  //    ^?
+}
+```
+
+`fields` is keyed by field handle, in blueprint order. Every field has `handle`, `type` and
+`width`; `display`, `instructions`, `validate` and fieldtype config (`options`, `input_type`, …)
+are only present when set. Like `globals(handle)`, a missing form throws (404).
+
+## Sites
+
+`sites()` lists the sites (`GET /sites`): `handle`, `name`, `locale`, `short_locale` and `url`.
+The handles are what `.site(handle)` takes. Statamic only serves it with
+`'sites' => true` in `config/statamic/api.php`.
+
+```ts twoslash
+import "./generated/cms.generated";
+import { createStatamicClient } from "@headquery/statamic";
+const cms = createStatamicClient({ baseUrl: "https://cms.example.com" });
+// ---cut---
+const { data: sites } = await cms.sites().get();
+const german = sites.find((site) => site.short_locale === "de");
+if (german) await cms.collections("blog").site(german.handle).get();
+```
+
+## Other endpoints
+
+The metadata endpoints (`/collections`, `/collections/{c}`, `/taxonomies`, `/asset-containers`,
+`/navs/{nav}`, …) and `/ping` have no builder methods. `cms.send()` reaches them with the same
+base URL, API prefix, token, headers and errors as every query; pass the response type yourself:
+
+```ts twoslash
+import "./generated/cms.generated";
+import { createStatamicClient } from "@headquery/statamic";
+const cms = createStatamicClient({ baseUrl: "https://cms.example.com" });
+// ---cut---
+const { data: collections } = await cms.send<{ data: Array<{ handle: string; title: string }> }>({
+  method: "GET",
+  path: "/collections",
+});
+
+const { ping } = await cms.send<{ ping: string }>({ method: "GET", path: "/ping" });
+
+// The deterministic URL, e.g. as a cache key, without sending:
+cms.core.url({ method: "GET", path: "/collections/blog" });
+```
+
+To use such a request with `cms.run()` or a framework adapter, wrap it as a query:
+`{ toRequest: () => ({ method: "GET", path: "/collections" }) }`.
 
 ## Immutability
 
@@ -192,7 +416,7 @@ import "./generated/cms.generated";
 import { createStatamicClient } from "@headquery/statamic";
 const cms = createStatamicClient({ baseUrl: "https://cms.example.com" });
 // ---cut---
-const blog = cms.collection("blog").entries().sort("-date");
+const blog = cms.collections("blog").sort("-date");
 
 const featured = blog.where("featured", true).limit(3);
 const latest = blog.limit(10); // not affected by `featured`

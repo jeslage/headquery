@@ -10,7 +10,7 @@ const cms = createStatamicClient({ baseUrl: "https://cms.example.com" });
 // ---cut---
 import { useQuery } from "@tanstack/react-query";
 
-const latest = cms.collection("blog").entries().sort("-date").limit(10).fields(["title", "slug", "date"]);
+const latest = cms.collections("blog").sort("-date").limit(10).fields(["title", "slug", "date"]);
 
 export function useLatestPosts() {
   return useQuery({
@@ -50,7 +50,7 @@ export function hq<T>(query: Query<T>) {
   });
 }
 
-const settings = cms.global("settings");
+const settings = cms.globals("settings");
 
 useQuery(hq(settings));
 await queryClient.prefetchQuery(hq(settings));
@@ -68,7 +68,7 @@ const cms = createStatamicClient({ baseUrl: "https://cms.example.com" });
 // ---cut---
 import { useInfiniteQuery } from "@tanstack/react-query";
 
-const posts = cms.collection("blog").entries().sort("-date").limit(10);
+const posts = cms.collections("blog").sort("-date").limit(10);
 
 useInfiniteQuery({
   queryKey: ["headquery", posts.url()],

@@ -18,11 +18,14 @@ How the addon maps Statamic fieldtypes to the types that
 
 ## System fields
 
-System fields Statamic adds to every entry, term and global set (`id`, `url`, `status`,
-`permalink`, …) come from `HqEntryBase`, `HqTermBase` and `HqGlobalBase`. Blueprint fields
-with the same handle take precedence.
+System fields Statamic adds to every entry, term, global set and asset (`id`, `url`, `status`,
+`permalink`, …) come from `HqEntryBase`, `HqTermBase`, `HqGlobalBase` and `HqAssetBase`.
+Blueprint fields with the same handle take precedence.
 
 ## Filterable fields
 
 Fields listed in `allowed_filters` (see [Getting started](/cms/statamic/getting-started#rest-api))
 are marked filterable in the schema. Only those are accepted by `.where()`.
+
+Allowed filters that aren't blueprint fields, such as an entry's `date` or an asset's
+`basename` and `folder`, are exported as `systemFilters` and accepted by `.where()` too.

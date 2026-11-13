@@ -1,4 +1,3 @@
-import { HeadqueryHttpError } from "@headquery/statamic";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -6,21 +5,16 @@ import { absolute, cms } from "@/lib/statamic";
 
 type Props = { params: Promise<{ slug: string }> };
 
-const blog = cms.collection("blog");
-
 /** Pre-render every published post at build time. */
 export async function generateStaticParams() {
-  const { data } = await blog.entries().fields(["slug"]).get();
+  const { data } = await cms.collections("blog").fields(["slug"]).get();
   return data.map((post) => ({ slug: post.slug }));
 }
 
 async function getPost(slug: string) {
-  try {
-    return (await blog.entry(slug).get()).data;
-  } catch (err) {
-    if (err instanceof HeadqueryHttpError && err.status === 404) notFound();
-    throw err;
-  }
+  const post = await cms.collections("blog").find(slug).get();
+  if (!post) notFound();
+  return post.data;
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {

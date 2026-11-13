@@ -49,11 +49,14 @@ mirrors a Statamic site root and contains a content model that follows
 | Resource        | Handle               | Notes                                                                                                          |
 | --------------- | -------------------- | -------------------------------------------------------------------------------------------------------------- |
 | Collection      | `blog`               | 4 entries (one unpublished); text, slug, date, toggle, integer, select, terms, users, assets, bard, replicator |
+| Collection      | `pages`              | structured (max depth 3): Home, About › Team, Contact › unpublished draft                                    |
 | Taxonomy        | `tags`               | `javascript`, `php`, `statamic`                                                                                |
 | Globals         | `settings`           | `site_name`, `social` (grid)                                                                                   |
 | Navigation      | `main`               | entry links, a nested child, an external URL                                                                   |
-| Asset container | `assets`             | three SVGs in `public/assets`                                                                                  |
+| Asset container | `assets`             | SVGs in `public/assets` (one in `icons/`, with a space), `files/notes.txt`; blueprint field `alt`              |
 | User            | `author@example.com` | relation target for `author`, has no password                                                                  |
+| User            | `editor@example.com` | role `editor` (`resources/users/roles.yaml`), for user filters                                               |
+| Form            | `contact`            | name, email (validation), topic (select), message; plus `'sites' => true` for `/sites`                    |
 
 `seed/config/statamic/api.php` replaces the skeleton's API config: it exposes all of the
 above, sets `allowed_filters` to the fixture's filterable fields and turns off API caching.
