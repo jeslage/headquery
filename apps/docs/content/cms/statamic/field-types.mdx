@@ -1,0 +1,28 @@
+# Field types
+
+How the addon maps Statamic fieldtypes to the types that
+[`headquery generate`](/codegen/generate) writes:
+
+| Statamic | TypeScript |
+| --- | --- |
+| `text`, `textarea`, `markdown`, `slug` | `string` (`\| null` unless required) |
+| `integer`, `float`, `range` | `number` |
+| `toggle` | `boolean` (never null) |
+| `date` | ISO `string` |
+| `select`, `button_group`, `radio`, `checkboxes` | `HqOption<"a" \| "b">` (`{ key, value, label }`; all `null` when empty) |
+| `assets` | `HqAsset` or `HqAsset[]` (`max_files`) |
+| `entries`, `terms`, `users` | `HqRelatedEntry`, `HqRelatedTerm`, `HqUser` |
+| `grid`, `replicator` | arrays of typed rows/sets (`[]` when empty) |
+| `bard` | `HqRichText` (HTML string without sets, blocks with sets) |
+| unknown fieldtypes | `unknown` — see [custom fieldtypes](/cms/statamic/custom-fieldtypes) |
+
+## System fields
+
+System fields Statamic adds to every entry, term and global set (`id`, `url`, `status`,
+`permalink`, …) come from `HqEntryBase`, `HqTermBase` and `HqGlobalBase`. Blueprint fields
+with the same handle take precedence.
+
+## Filterable fields
+
+Fields listed in `allowed_filters` (see [Setup](/cms/statamic/setup#rest-api)) are marked
+filterable in the schema. Only those are accepted by `.where()`.

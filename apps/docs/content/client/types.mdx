@@ -1,0 +1,54 @@
+# Types
+
+headquery works untyped and gets better typed: without generated types every handle and
+field is accepted, and with them TypeScript checks handles, filterable fields and result
+shapes.
+
+## The explicit generic
+
+Pass the generated `Schema` to the client, as the client file from
+[`headquery init`](/codegen/init) does:
+
+```ts twoslash
+// @filename: cms.generated.ts
+export type { Schema } from "./generated/cms.generated";
+// @filename: cms.ts
+// ---cut---
+import { createStatamicClient } from "@headquery/statamic";
+import type { Schema } from "./cms.generated";
+
+export const cms = createStatamicClient<Schema>({ baseUrl: "https://cms.example.com" });
+```
+
+Collection handles autocomplete, `.where()` only accepts filterable fields, and `.fields()`
+narrows results.
+
+The explicit generic also lets you talk to two CMS instances: generate one file per instance
+(one config file each, passed with `--config`) and pass each `Schema` to its own client.
+
+## Registration
+
+The generated file also registers its `Schema` through module augmentation:
+
+```ts
+declare module "@headquery/statamic" {
+  interface Register {
+    schema: Schema;
+  }
+}
+```
+
+So importing the file once (`import "./cms.generated"`) types `createStatamicClient()` without
+the generic. That relies on TypeScript seeing the generated file and resolving the same
+`@headquery/statamic` copy, so the explicit generic is the more robust default.
+
+## Without generated types
+
+Without a registered or passed schema, the client falls back to loose types: any handle, any
+field, items typed as `{ id: string } & Record<string, unknown>`.
+
+## Generated names
+
+The generated file declares one interface per resource (`BlogEntry`, `TagsTerm`,
+`SettingsGlobal`, …), which you can import for props and helpers. How CMS fields map to
+TypeScript is listed per CMS, e.g. [Statamic field types](/cms/statamic/field-types).

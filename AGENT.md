@@ -142,6 +142,16 @@ does not understand.
   errors), so `pnpm docs:test` (`scripts/check-snippets.mjs`) is the guard. Expected
   errors need `// @errors: <code>`.
 - Public API changes should update the docs in the same PR.
+- Structure: `getting-started/` (overview + one linear quickstart per CMS), `codegen/` and
+  `client/` (CMS-agnostic: CLI, config, client options, types, caching, errors),
+  `cms/<name>/` (CMS-specific), `frameworks/` and `data-fetching/`. Keep CMS-agnostic content
+  out of `cms/`. Client snippets mirror the file `headquery init` writes (`createX<Schema>`).
+- A new CMS adapter needs `getting-started/<name>.mdx` (same step order as the Statamic one
+  and as `nextSteps()` in `packages/js/codegen/src/cli/init/next-steps.ts`) and
+  `cms/<name>/{index,setup,querying,field-types,custom-fieldtypes,troubleshooting}.mdx`.
+- The CLI links to `/cms/<name>/troubleshooting#<cause>` (`DOCS_URL` in
+  `packages/js/codegen/src/cli/docs.ts`): never rename those pages or anchors. Moved pages get a
+  redirect in `apps/docs/vercel.json` (Next's `redirects` don't work with `output: "export"`).
 - `pnpm-workspace.yaml` pins zod 4.3.6 for Nextra only: Nextra 4.6.1 breaks with zod 4.6.x (4.3.6 verified).
 
 ## Statamic specifics

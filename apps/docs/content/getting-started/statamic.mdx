@@ -1,0 +1,169 @@
+import { Callout, Cards, Steps, Tabs } from "nextra/components";
+
+# Getting started with Statamic
+
+This guide takes you from a Statamic site to a typed query in your frontend. It needs
+Statamic 5 or 6 with a [Pro license](https://statamic.com/pricing): the REST API is a Pro
+feature.
+
+<Steps>
+
+### Turn on Statamic's REST API
+
+In the CMS's `.env`:
+
+```dotenv
+STATAMIC_PRO_ENABLED=true
+STATAMIC_API_ENABLED=true
+```
+
+Then enable the collections, taxonomies, globals and navigations you want to query in
+`config/statamic/api.php`, and add the fields you want to filter on to `allowed_filters`.
+headquery only generates types for enabled resources, and `.where()` only accepts
+`allowed_filters` fields. Details: [Setup](/cms/statamic/setup#rest-api).
+
+### Install the addon
+
+```bash
+composer require headquery/statamic
+```
+
+### Decide how the frontend gets the schema
+
+<Tabs items={["Same repo (file)", "Separate frontend (endpoint)"]} storageKey="schema-source">
+  <Tabs.Tab>
+    The frontend lives next to the CMS, so it can read an exported file. Export the schema
+    from the CMS project:
+
+    ```bash
+    php please headquery:schema --out=schema.json
+    ```
+
+    Run it again whenever you change a blueprint or `config/statamic/api.php`.
+  </Tabs.Tab>
+  <Tabs.Tab>
+    The frontend fetches the schema from the CMS. Turn on the schema endpoint in the CMS's `.env`:
+
+    ```dotenv
+    HEADQUERY_SCHEMA_ROUTE=true
+    HEADQUERY_SCHEMA_TOKEN=a-long-random-token
+    ```
+
+    The endpoint stays off (404) until both are set. See [Schema endpoint](/cms/statamic/setup#schema-endpoint).
+  </Tabs.Tab>
+</Tabs>
+
+If you changed the config, clear the cache on the CMS: `php artisan config:clear`.
+
+### Install the client and the CLI
+
+In your frontend project:
+
+<Tabs items={["npm", "pnpm", "yarn", "bun"]} storageKey="package-manager">
+  <Tabs.Tab>
+    ```bash
+    npm install @headquery/statamic
+    npm install -D @headquery/codegen
+    ```
+  </Tabs.Tab>
+  <Tabs.Tab>
+    ```bash
+    pnpm add @headquery/statamic
+    pnpm add -D @headquery/codegen
+    ```
+  </Tabs.Tab>
+  <Tabs.Tab>
+    ```bash
+    yarn add @headquery/statamic
+    yarn add -D @headquery/codegen
+    ```
+  </Tabs.Tab>
+  <Tabs.Tab>
+    ```bash
+    bun add @headquery/statamic
+    bun add -d @headquery/codegen
+    ```
+  </Tabs.Tab>
+</Tabs>
+
+### Run `init`
+
+<Tabs items={["Same repo (file)", "Separate frontend (endpoint)"]} storageKey="schema-source">
+  <Tabs.Tab>
+    ```bash
+    npx headquery init --from ../cms/schema.json
+    ```
+  </Tabs.Tab>
+  <Tabs.Tab>
+    ```bash
+    npx headquery init --base-url https://cms.example.com
+    ```
+  </Tabs.Tab>
+</Tabs>
+
+`init` asks a few yes/no questions and then writes:
+
+| File | What |
+| --- | --- |
+| `headquery.config.ts` | Where the schema comes from and where the types go |
+| `src/cms.ts` | A typed client that reads the CMS URL from env, the way your framework expects |
+| `package.json` | `cms:types` and `cms:types:check` scripts |
+| `.env.local` / `.env` | `HEADQUERY_BASE_URL`, `HEADQUERY_SCHEMA_TOKEN` and the client's URL variable (endpoint only) |
+
+Existing files and keys are never overwritten without asking. All options:
+[`headquery init`](/codegen/init).
+
+<Callout type="info">
+  Haven't installed `@headquery/codegen` yet? Run `npx @headquery/codegen init` instead.
+  `npx headquery` looks for an npm package called `headquery`.
+</Callout>
+
+### Generate the types
+
+With the endpoint, first set `HEADQUERY_SCHEMA_TOKEN` in the env file to the token from the
+CMS. Then:
+
+```bash
+npm run cms:types
+```
+
+This writes `src/cms.generated.ts`. Run it again whenever the content model changes, and run
+`npm run cms:types:check` in CI to catch outdated types. If it fails, the CLI prints the
+likely cause; all errors are listed under [Troubleshooting](/cms/statamic/troubleshooting).
+
+### Query
+
+Import the client from `src/cms.ts`. Collection handles, filterable fields and result types
+now come from your content model:
+
+```ts twoslash
+import "./generated/cms.generated";
+import { createStatamicClient } from "@headquery/statamic";
+const cms = createStatamicClient({ baseUrl: "https://cms.example.com" });
+// ---cut---
+// import { cms } from "./cms";
+
+const { data: posts } = await cms
+  .collection("blog")
+  .entries()
+  .where("featured", true)
+  .sort("-date")
+  .fields(["title", "slug", "date"])
+  .get();
+
+posts[0]?.title;
+//        ^?
+```
+
+</Steps>
+
+## Next steps
+
+<Cards>
+  <Cards.Card title="Querying" href="/cms/statamic/querying" arrow />
+  <Cards.Card title="Next.js" href="/frameworks/nextjs" arrow />
+  <Cards.Card title="Nuxt" href="/frameworks/nuxt" arrow />
+  <Cards.Card title="Data fetching libraries" href="/data-fetching" arrow />
+  <Cards.Card title="Client options" href="/client" arrow />
+  <Cards.Card title="Field types" href="/cms/statamic/field-types" arrow />
+</Cards>

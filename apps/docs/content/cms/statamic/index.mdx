@@ -1,0 +1,25 @@
+import { Cards } from "nextra/components";
+
+# Statamic
+
+headquery wraps Statamic's [REST Content API](https://statamic.dev/rest-api) with typed query
+builders, and a small addon exports your content model so codegen can generate the types.
+
+| Package | Registry | Purpose |
+| --- | --- | --- |
+| `@headquery/statamic` | npm | Typed client for the REST Content API |
+| `headquery/statamic` | Packagist | Addon: exports the content model via `php please headquery:schema` or an endpoint |
+
+**Requirements:** Statamic 5 or 6 with Pro (the REST API is a Pro feature), PHP ≥ 8.2.
+
+**Supported resources:** collection entries, taxonomy terms, globals, navigation trees.
+Assets and users are [planned](/roadmap).
+
+<Cards>
+  <Cards.Card title="Getting started" href="/getting-started/statamic" arrow />
+  <Cards.Card title="Setup" href="/cms/statamic/setup" arrow />
+  <Cards.Card title="Querying" href="/cms/statamic/querying" arrow />
+  <Cards.Card title="Field types" href="/cms/statamic/field-types" arrow />
+  <Cards.Card title="Custom fieldtypes" href="/cms/statamic/custom-fieldtypes" arrow />
+  <Cards.Card title="Troubleshooting" href="/cms/statamic/troubleshooting" arrow />
+</Cards>

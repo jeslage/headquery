@@ -1,0 +1,13 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "redirects": [
+    { "source": "/cms/statamic/typed-schema", "destination": "/codegen", "permanent": true },
+    {
+      "source": "/cms/statamic/schema-endpoint",
+      "destination": "/cms/statamic/setup#schema-endpoint",
+      "permanent": true
+    },
+    { "source": "/caching", "destination": "/client/caching", "permanent": true },
+    { "source": "/errors", "destination": "/client/errors", "permanent": true }
+  ]
+}
