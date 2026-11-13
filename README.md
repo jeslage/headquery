@@ -4,7 +4,6 @@ Typed, cacheable JavaScript clients for the REST APIs of headless PHP CMSs — k
 CMS's own query vocabulary, get TypeScript types generated from your content model.
 
 > **Early development.** headquery is still under development and should not be used in production yet. APIs, generated types and the schema format may change in any 0.x release.
-> Statamic is supported first; Kirby and Craft are planned.
 
 ```ts
 import { createStatamicClient } from "@headquery/statamic";
@@ -13,25 +12,25 @@ import "./cms.generated"; // registers your schema's types
 const cms = createStatamicClient({ baseUrl: "https://cms.example.com" });
 
 const posts = await cms
-  .collection("blog")                       // collection handles autocomplete
+  .collection("blog") // collection handles autocomplete
   .entries()
-  .where("title", "contains", "monorepo")   // only allowed_filters fields are accepted
+  .where("title", "contains", "monorepo") // only allowed_filters fields are accepted
   .sort("-date")
   .limit(10)
-  .fields(["title", "date", "hero"])        // narrows the result type
+  .fields(["title", "date", "hero"]) // narrows the result type
   .get();
 // GET /api/collections/blog/entries?fields=title,date,hero&filter[title:contains]=monorepo&limit=10&sort=-date
 ```
 
 ## Packages
 
-| Package | Registry | Purpose |
-| --- | --- | --- |
-| `@headquery/core` | npm | CMS-agnostic fetch transport with deterministic (cache-friendly) URLs |
-| `@headquery/statamic` | npm | Typed query builders for the Statamic REST Content API |
-| `@headquery/codegen` | npm | Generates TS types from a CMS schema (file or URL) |
-| `@headquery/schema` | npm | Types for the intermediate schema (IR) |
-| `headquery/statamic` | Packagist | Statamic addon: exports the content model via CLI or endpoint |
+| Package               | Registry  | Purpose                                                               |
+| --------------------- | --------- | --------------------------------------------------------------------- |
+| `@headquery/core`     | npm       | CMS-agnostic fetch transport with deterministic (cache-friendly) URLs |
+| `@headquery/statamic` | npm       | Typed query builders for the Statamic REST Content API                |
+| `@headquery/codegen`  | npm       | Generates TS types from a CMS schema (file or URL)                    |
+| `@headquery/schema`   | npm       | Types for the intermediate schema (IR)                                |
+| `headquery/statamic`  | Packagist | Statamic addon: exports the content model via CLI or endpoint         |
 
 ## Generate types
 
