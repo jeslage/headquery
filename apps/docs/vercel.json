@@ -4,7 +4,7 @@
     { "source": "/cms/statamic/typed-schema", "destination": "/codegen", "permanent": true },
     {
       "source": "/cms/statamic/schema-endpoint",
-      "destination": "/cms/statamic/setup#schema-endpoint",
+      "destination": "/cms/statamic/getting-started#schema-endpoint",
       "permanent": true
     },
     { "source": "/caching", "destination": "/client/caching", "permanent": true },

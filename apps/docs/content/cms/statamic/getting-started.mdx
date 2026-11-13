@@ -3,32 +3,55 @@ import { Callout, Cards, Steps, Tabs } from "nextra/components";
 # Getting started with Statamic
 
 This guide takes you from a Statamic site to a typed query in your frontend. It needs
-Statamic 5 or 6 with a [Pro license](https://statamic.com/pricing): the REST API is a Pro
-feature.
+Statamic 5 or 6 with a [Pro license](https://statamic.com/pricing) (the REST API is a Pro
+feature) and PHP ≥ 8.2.
 
 <Steps>
 
-### Turn on Statamic's REST API
+### Turn on Statamic's REST API [#rest-api]
 
-In the CMS's `.env`:
+headquery wraps Statamic's [REST Content API](https://statamic.dev/rest-api). It is off by
+default. In the CMS's `.env`:
 
 ```dotenv
 STATAMIC_PRO_ENABLED=true
 STATAMIC_API_ENABLED=true
 ```
 
-Then enable the collections, taxonomies, globals and navigations you want to query in
-`config/statamic/api.php`, and add the fields you want to filter on to `allowed_filters`.
-headquery only generates types for enabled resources, and `.where()` only accepts
-`allowed_filters` fields. Details: [Setup](/cms/statamic/setup#rest-api).
+Then enable the resources you want to query in `config/statamic/api.php`:
 
-### Install the addon
+```php
+'resources' => [
+    'collections' => [
+        'blog' => [
+            'allowed_filters' => ['title', 'slug', 'featured'],
+        ],
+    ],
+    'taxonomies' => true,
+    'globals' => true,
+    'navs' => true,
+],
+```
+
+- Only enabled resources end up in the generated types, and only they can be queried.
+- Only `allowed_filters` fields can be used in `.where()`. Statamic answers other filters
+  with `422`, and the generated types reject them at compile time.
+
+The API route defaults to `/api` (`statamic.api.route`). If you change it, set `apiPrefix` in
+the client and `from.apiPrefix` in the [codegen config](/codegen/config).
+
+### Install the addon [#addon]
 
 ```bash
 composer require headquery/statamic
+php artisan vendor:publish --tag=headquery-config   # optional: config/headquery.php
 ```
 
-### Decide how the frontend gets the schema
+The addon only exports your content model; it doesn't change how the REST API answers.
+`config/headquery.php` holds the schema endpoint settings and mappings for
+[custom fieldtypes](/cms/statamic/custom-fieldtypes).
+
+### Make the schema available [#schema]
 
 <Tabs items={["Same repo (file)", "Separate frontend (endpoint)"]} storageKey="schema-source">
   <Tabs.Tab>
@@ -49,11 +72,13 @@ composer require headquery/statamic
     HEADQUERY_SCHEMA_TOKEN=a-long-random-token
     ```
 
-    The endpoint stays off (404) until both are set. See [Schema endpoint](/cms/statamic/setup#schema-endpoint).
+    The endpoint stays off (404) until both are set. See [Schema endpoint](#schema-endpoint)
+    for the route and its security.
   </Tabs.Tab>
 </Tabs>
 
-If you changed the config, clear the cache on the CMS: `php artisan config:clear`.
+Not sure which one? See [schema sources](/codegen#schema-sources). If the CMS caches its
+config, clear it after changing `.env`: `php artisan config:clear`.
 
 ### Install the client and the CLI
 
@@ -156,6 +181,25 @@ posts[0]?.title;
 ```
 
 </Steps>
+
+## Schema endpoint [#schema-endpoint]
+
+With `HEADQUERY_SCHEMA_ROUTE` and `HEADQUERY_SCHEMA_TOKEN` set, the addon answers at
+`GET /api/headquery/schema` (below `statamic.api.route`; the path is `headquery.schema.path`).
+In the frontend, `from: { baseUrl }` in the [codegen config](/codegen/config) points there,
+and `HEADQUERY_SCHEMA_TOKEN` must hold the same token.
+
+<Callout type="info">
+  The endpoint is **off by default**. It only answers when both variables are set.
+</Callout>
+
+- `404` unless `HEADQUERY_SCHEMA_ROUTE=true` **and** `HEADQUERY_SCHEMA_TOKEN` is set.
+- `401` without the correct `Authorization: Bearer <token>`. The token is compared in
+  constant time.
+- Responses carry an `ETag`. Unchanged schemas answer `304 Not Modified`.
+
+The schema describes your content model (handles, field names and types), not your content.
+Treat the token like any other deploy secret anyway.
 
 ## Next steps
 

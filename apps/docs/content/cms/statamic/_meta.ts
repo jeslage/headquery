@@ -2,7 +2,7 @@ import type { MetaRecord } from "nextra";
 
 export default {
   index: "Overview",
-  setup: "Setup",
+  "getting-started": "Getting started",
   querying: "Querying",
   "field-types": "Field types",
   "custom-fieldtypes": "Custom fieldtypes",

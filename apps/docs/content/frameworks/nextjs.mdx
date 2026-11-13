@@ -202,23 +202,43 @@ import "./generated/cms.generated";
 import { createStatamicClient } from "@headquery/statamic";
 const publicCms = createStatamicClient({ baseUrl: "https://cms.example.com" });
 // ---cut---
-// app/blog/search.tsx
+// app/blog/blog-filter.tsx
 "use client";
 
 import { useState } from "react";
 import useSWR from "swr";
 
-export function PostSearch() {
+type Sort = "-date" | "title";
+
+export function BlogFilter() {
   const [term, setTerm] = useState("");
-  const query = term ? publicCms.collection("blog").entries().where("title", "contains", term).limit(10) : null;
-  const { data } = useSWR(query?.url() ?? null, () => query!.get());
+  const [featured, setFeatured] = useState(false);
+  const [sort, setSort] = useState<Sort>("-date");
+
+  // Builders are immutable: add a filter only when it's set.
+  let query = publicCms.collection("blog").entries().sort(sort).limit(10);
+  if (term) query = query.where("title", "contains", term);
+  if (featured) query = query.where("featured", true);
+
+  // Same filters → same URL → same cache entry, whatever order they were set in.
+  const { data, isLoading } = useSWR(query.url(), () => query.get(), { keepPreviousData: true });
 
   return (
     <>
       <input value={term} onChange={(event) => setTerm(event.target.value)} placeholder="Search posts" />
-      <ul>
+      <label>
+        <input type="checkbox" checked={featured} onChange={(event) => setFeatured(event.target.checked)} />
+        Featured only
+      </label>
+      <select value={sort} onChange={(event) => setSort(event.target.value as Sort)}>
+        <option value="-date">Newest first</option>
+        <option value="title">Title A–Z</option>
+      </select>
+      <ul aria-busy={isLoading}>
         {data?.data.map((post) => (
-          <li key={post.id}>{post.title}</li>
+          <li key={post.id}>
+            {post.title} {post.featured && "★"}
+          </li>
         ))}
       </ul>
     </>
