@@ -52,3 +52,38 @@ field, items typed as `{ id: string } & Record<string, unknown>`.
 The generated file declares one interface per resource (`BlogEntry`, `TagsTerm`,
 `SettingsGlobal`, …), which you can import for props and helpers. How CMS fields map to
 TypeScript is listed per CMS, e.g. [Statamic field types](/cms/statamic/field-types).
+
+## Using the types in your own code
+
+For props, helpers and components, import the named types from the generated file. They are the
+most precise, and a missing or moved file is a compile error:
+
+```ts twoslash
+// @filename: cms.generated.ts
+export type { BlogEntry } from "./generated/cms.generated";
+// @filename: teaser.ts
+// ---cut---
+import type { BlogEntry } from "./cms.generated";
+
+export function teaser(post: Pick<BlogEntry, "title" | "url">) {
+  return `${post.title} → ${post.url ?? "#"}`;
+}
+```
+
+Code that shouldn't depend on the generated file's path, like shared components or a package in
+a monorepo, can use the [registered](#registration) schema from the adapter instead:
+`RegisteredSchema` is the registered `Schema`, `SiteHandle` its site handles.
+
+```ts twoslash
+import "./generated/cms.generated";
+// ---cut---
+import type { RegisteredSchema, SiteHandle } from "@headquery/statamic";
+
+type BlogEntry = RegisteredSchema["collections"]["blog"]["item"];
+
+const labels = { default: "English", de: "Deutsch" } satisfies Record<SiteHandle, string>;
+```
+
+Both come from the registration, so they fall back to loose types (`LooseSchema`, `string`)
+wherever it doesn't apply: when the generated file isn't part of the TypeScript program, or a
+second copy of `@headquery/statamic` is resolved.
