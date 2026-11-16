@@ -148,6 +148,31 @@ describe.skipIf(!baseUrl)(`Statamic playground (${baseUrl})`, () => {
       expect(data.related).toEqual([]);
     });
 
+    it("returns Bard as HTML without sets, and as text items and sets with sets", async () => {
+      const { data } = (await entries.find("hello-headquery").fields(["content", "body"]).get())!;
+      expect(data.content).toEqual(expect.stringContaining("<h2>Typed queries for Statamic</h2>"));
+      expectTypeOf(data.content).toEqualTypeOf<string | null>();
+
+      // The disabled set (b2hidden) is left out.
+      expect(data.body.map((item) => item.type)).toEqual(["text", "callout", "text", "image"]);
+      expect(data.body[0]).toEqual({ type: "text", text: "<p>Before the callout.</p>" });
+      expect(data.body[1]).toEqual({
+        id: "b1callout",
+        type: "callout",
+        text: "Generated types keep queries honest.",
+        tone: { key: "warning", value: "warning", label: "Warning" },
+      });
+      const image = data.body.find((item) => item.type === "image");
+      expect(image).toMatchObject({ id: "b3image", image: { url: "/assets/hero.svg" } });
+      if (image?.type === "image") expectTypeOf(image.image).toEqualTypeOf<HqAsset | null>();
+    });
+
+    it("returns an empty Bard field as null without sets and [] with sets", async () => {
+      const { data } = (await entries.find("statamic-addon").fields(["content", "body"]).get())!;
+      expect(data.content).toBeNull();
+      expect(data.body).toEqual([]);
+    });
+
     it("hides unpublished entries: find() resolves to null on 404", async () => {
       expect(await entries.find("unpublished-draft").get()).toBeNull();
     });

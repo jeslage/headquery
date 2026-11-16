@@ -5,6 +5,7 @@ import type {
   AssetsAsset,
   BlogEntry,
   HqAsset,
+  HqBardText,
   HqEmptyOption,
   HqOption,
   MainNavFields,
@@ -30,6 +31,30 @@ describe("generated types work with @headquery/statamic", () => {
     cms.collections("blog").where("reading_time", 3);
     // @ts-expect-error unknown collection
     cms.collections("products");
+  });
+
+  it("types Bard as HTML without sets and as text items and sets with sets", () => {
+    expectTypeOf<BlogEntry["content"]>().toEqualTypeOf<string | null>();
+
+    type Item = BlogEntry["body"][number];
+    expectTypeOf<Item["type"]>().toEqualTypeOf<"text" | "callout" | "image">();
+    expectTypeOf<Extract<Item, { type: "text" }>>().toEqualTypeOf<HqBardText>();
+    expectTypeOf<Extract<Item, { type: "callout" }>["text"]>().toEqualTypeOf<string | null>();
+    expectTypeOf<Extract<Item, { type: "image" }>["image"]>().toEqualTypeOf<HqAsset | null>();
+    expectTypeOf<Extract<Item, { type: "image" }>["id"]>().toEqualTypeOf<string | null>();
+
+    const render = (item: Item): string => {
+      switch (item.type) {
+        case "text":
+          return item.text;
+        case "callout":
+          return item.text ?? "";
+        case "image":
+          // @ts-expect-error image sets have no text
+          return item.text;
+      }
+    };
+    expectTypeOf(render).returns.toEqualTypeOf<string>();
   });
 
   it("includes Statamic's system fields, with blueprint fields taking precedence", () => {

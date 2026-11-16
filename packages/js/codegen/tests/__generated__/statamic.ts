@@ -4,8 +4,11 @@
 
 import type {} from "@headquery/statamic";
 
-/** Bard: an HTML string without sets, an array of text/set blocks with sets. */
-export type HqRichText = string | Array<Record<string, unknown>>;
+/** Text between the sets of a Bard field with sets: the HTML of its paragraphs, headings, lists, … */
+export interface HqBardText {
+  type: "text";
+  text: string;
+}
 
 /** Select-like fields (select, button_group, radio, checkboxes) return labelled values. */
 export interface HqOption<T extends string = string> {
@@ -198,7 +201,9 @@ export interface BlogEntry extends Omit<HqEntryBase, "date" | "slug" | "title"> 
   /** CMS field type: `users` */
   author: HqUser | null;
   /** CMS field type: `bard` */
-  content: HqRichText | null;
+  body: Array<HqBardText | { id: string | null; type: "callout"; text: string | null; tone: HqOption<"info" | "warning"> | HqEmptyOption } | { id: string | null; type: "image"; image: HqAsset | null }>;
+  /** CMS field type: `bard` */
+  content: string | null;
   /** CMS field type: `date` */
   date: string | null;
   /** CMS field type: `toggle` */

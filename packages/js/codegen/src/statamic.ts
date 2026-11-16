@@ -7,8 +7,11 @@ export interface StatamicGenerateOptions {
 
 // Shapes below were checked against Statamic 6 REST API responses (playgrounds/statamic).
 const HELPERS = `
-/** Bard: an HTML string without sets, an array of text/set blocks with sets. */
-export type HqRichText = string | Array<Record<string, unknown>>;
+/** Text between the sets of a Bard field with sets: the HTML of its paragraphs, headings, lists, … */
+export interface HqBardText {
+  type: "text";
+  text: string;
+}
 
 /** Select-like fields (select, button_group, radio, checkboxes) return labelled values. */
 export interface HqOption<T extends string = string> {
@@ -456,6 +459,8 @@ function neverNull(field: IrField): boolean {
     case "blocks": // replicator: []
     case "enum": // multiple: [], single: HqEmptyOption (part of the base type)
       return true;
+    case "richtext": // Bard with sets: [], without sets: null
+      return field.sets !== undefined;
     case "relation":
     case "asset":
       return field.multiple === true; // [] when multiple, null when single
@@ -497,22 +502,29 @@ function baseType(field: IrField, depth: number): string {
     case "asset":
       return field.multiple ? "Array<HqAsset>" : "HqAsset";
     case "richtext":
-      return "HqRichText";
+      // Bard: HTML without sets; with sets, text items between the sets (disabled sets are left out).
+      if (!field.sets) return "string";
+      return `Array<${["HqBardText", ...setVariants(field.sets, depth, "id: string | null")].join(" | ")}>`;
     case "blocks": {
-      const sets = Object.keys(field.sets).sort();
-      if (!sets.length) return "Array<{ id?: string; type: string; [key: string]: unknown }>";
-      const variants = sets.map((set) => {
-        const fields = field.sets[set]!;
-        const inner = Object.keys(fields)
-          .sort()
-          .map((h) => `${key(h)}: ${fieldType(fields[h]!, depth + 1)}`);
-        return `{ id?: string; type: ${JSON.stringify(set)}${inner.length ? `; ${inner.join("; ")}` : ""} }`;
-      });
-      return `Array<${variants.join(" | ")}>`;
+      const variants = setVariants(field.sets, depth, "id?: string");
+      return `Array<${variants.length ? variants.join(" | ") : "{ id?: string; type: string; [key: string]: unknown }"}>`;
     }
     case "unknown":
       return "unknown";
   }
+}
+
+/** One `{ id; type: "<set>"; …fields }` object type per set (replicator and Bard sets). */
+function setVariants(sets: Record<string, Record<string, IrField>>, depth: number, id: string): string[] {
+  return Object.keys(sets)
+    .sort()
+    .map((set) => {
+      const fields = sets[set]!;
+      const inner = Object.keys(fields)
+        .sort()
+        .map((h) => `${key(h)}: ${fieldType(fields[h]!, depth + 1)}`);
+      return `{ ${id}; type: ${JSON.stringify(set)}${inner.length ? `; ${inner.join("; ")}` : ""} }`;
+    });
 }
 
 function objectType(fields: Record<string, IrField>, depth: number, prefix?: string): string {

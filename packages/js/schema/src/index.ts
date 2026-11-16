@@ -96,7 +96,8 @@ export type IrField =
   | (IrFieldBase & { type: "object"; fields: Record<string, IrField> })
   | (IrFieldBase & { type: "relation"; to: IrRelationTarget; resources?: string[]; multiple?: boolean })
   | (IrFieldBase & { type: "asset"; multiple?: boolean })
-  | (IrFieldBase & { type: "richtext" })
+  /** Rich text: an HTML string, or with `sets` an array of text items and sets (Statamic: Bard). */
+  | (IrFieldBase & { type: "richtext"; sets?: Record<string, Record<string, IrField>> })
   | (IrFieldBase & { type: "blocks"; sets: Record<string, Record<string, IrField>> })
   | (IrFieldBase & { type: "unknown" });
 

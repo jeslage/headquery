@@ -29,6 +29,19 @@
           "author": { "type": "relation", "to": "user", "multiple": false, "cmsType": "users" },
           "hero": { "type": "asset", "multiple": false, "cmsType": "assets" },
           "content": { "type": "richtext", "cmsType": "bard" },
+          "body": {
+            "type": "richtext",
+            "cmsType": "bard",
+            "sets": {
+              "callout": {
+                "text": { "type": "string", "cmsType": "textarea" },
+                "tone": { "type": "enum", "values": ["info", "warning"], "cmsType": "select" }
+              },
+              "image": {
+                "image": { "type": "asset", "multiple": false, "cmsType": "assets" }
+              }
+            }
+          },
           "sections": {
             "type": "blocks",
             "cmsType": "replicator",

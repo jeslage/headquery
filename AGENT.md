@@ -114,6 +114,7 @@ Notes:
   each a map handle → resource, because Statamic handles are only unique per kind.
   Navigations also carry `collections` (linkable collections) and `maxDepth`.
 - Field types: `string number boolean date enum array object relation asset richtext blocks unknown`.
+  `richtext` carries `sets` when the rich text contains sets (Bard with sets), same shape as `blocks.sets`.
 - `filterable: true` mirrors Statamic's `allowed_filters` — codegen turns it into the
   `filterable` union that restricts `.where()`. Allowed filters that are not blueprint fields
   (system fields like `basename`, `folder`, `date`) go into the resource's `systemFilters`
@@ -192,8 +193,6 @@ The playground targets Statamic 6 (the addon supports `^5.0 || ^6.0`) and is mul
 - `SchemaExporter` has been run manually against Statamic 6.40 in the seeded playground
   (output validates against `schema-v1.json`), but has no automated tests yet — only
   `FieldMapper` is unit-tested. Asset containers are read from `resources.assets`.
-- Bard output type (`HqRichText`) depends on field config (HTML string without sets, array
-  of blocks with sets); the IR doesn't carry that distinction yet.
 
 Verified against Statamic 6 responses (keep in sync with `packages/js/codegen/src/statamic.ts`;
 guarded by `playgrounds/statamic-client/tests/e2e.test.ts`):
@@ -228,6 +227,14 @@ Assets from `/assets/...` carry all `AugmentedAsset` keys (`HqAssetBase`) plus b
 `width height ratio` are `null` for non-images but `orientation` is `"square"`; `folder` is `/` at
 the root. Asset _fields_ on entries are shallow (`id url permalink api_url alt`, `HqAsset`).
 The asset path route accepts literal slashes and `%2F`.
+Bard without sets returns an HTML string (`null` when empty). With sets (IR `richtext.sets`; not with
+`save_html`) it returns an array of `{ type: "text", text: "<p>…</p>" }` items and sets
+(`{ id, type: <set handle>, …augmented fields }`), `[]` when empty; disabled sets are left out
+(`Fieldtypes/Bard/Augmentor.php`). Codegen: `string` / `Array<HqBardText | set>`.
+Live Preview: Statamic appends `?live-preview=…&token=…` to the preview target URL; API requests with
+`token=` (or header `X-Statamic-Token`) get the unsaved item substituted (verified for single entries by
+id and slug, and in lists), unpublished previewed entries aren't 404, and the API cache is skipped.
+The client has no preview/extra-query option yet (planned: `get({ query })` in core `RunOptions`).
 `status` is a reserved field handle in Statamic (it's the entry's publish status) — don't use
 it for blueprint fields in fixtures or the seed.
 Multi-site (`site=<handle>`): entry and term lists **without `site` return every site's items**

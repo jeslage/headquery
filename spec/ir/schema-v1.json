@@ -129,6 +129,7 @@
         "to": { "enum": ["entry", "term", "user", "asset"] },
         "resources": { "type": "array", "items": { "type": "string" } },
         "sets": {
+          "description": "Sets keyed by handle: required for `blocks`; on `richtext` when the rich text contains sets (Statamic: Bard with sets).",
           "type": "object",
           "additionalProperties": { "$ref": "#/$defs/fieldMap" }
         }
