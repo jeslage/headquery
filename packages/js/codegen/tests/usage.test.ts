@@ -4,6 +4,8 @@ import { describe, expectTypeOf, it } from "vitest";
 import type {
   AssetsAsset,
   BlogEntry,
+  CalloutSet,
+  GallerySet,
   HqAsset,
   HqBardText,
   HqEmptyOption,
@@ -12,12 +14,14 @@ import type {
   HqLinkUrl,
   HqNavEntry,
   HqOption,
+  ImageSet,
   MainNavFields,
   MainNavPage,
   PagesEntry,
   PagesLandingEntry,
   PagesPageEntry,
   PagesTreePage,
+  QuoteSet,
   SettingsGlobal,
   TagsTerm,
 } from "./__generated__/statamic";
@@ -44,7 +48,7 @@ describe("generated types work with @headquery/statamic", () => {
     expectTypeOf<BlogEntry["content"]>().toEqualTypeOf<string | null>();
 
     type Item = BlogEntry["body"][number];
-    expectTypeOf<Item["type"]>().toEqualTypeOf<"text" | "callout" | "image">();
+    expectTypeOf<Item["type"]>().toEqualTypeOf<"text" | "callout" | "image" | "quote">();
     expectTypeOf<Extract<Item, { type: "text" }>>().toEqualTypeOf<HqBardText>();
     expectTypeOf<Extract<Item, { type: "callout" }>["text"]>().toEqualTypeOf<string | null>();
     expectTypeOf<Extract<Item, { type: "image" }>["image"]>().toEqualTypeOf<HqAsset | null>();
@@ -59,9 +63,27 @@ describe("generated types work with @headquery/statamic", () => {
         case "image":
           // @ts-expect-error image sets have no text
           return item.text;
+        case "quote":
+          return item.cite ?? "";
       }
     };
     expectTypeOf(render).returns.toEqualTypeOf<string>();
+  });
+
+  it("exports Bard and replicator sets as named types, shared between fields", () => {
+    expectTypeOf<BlogEntry["body"][number]>().toEqualTypeOf<HqBardText | CalloutSet | ImageSet | QuoteSet>();
+    expectTypeOf<BlogEntry["sections"][number]>().toEqualTypeOf<GallerySet | QuoteSet>();
+    expectTypeOf<CalloutSet["tone"]>().toEqualTypeOf<HqOption<"info" | "warning"> | HqEmptyOption>();
+    expectTypeOf<QuoteSet["id"]>().toEqualTypeOf<string | null>();
+
+    // One component per set, fed from either field.
+    const Quote = (set: QuoteSet) => `${set.text} — ${set.cite}`;
+    const Callout = ({ text, tone }: CalloutSet) => `${tone.value}: ${text}`;
+    const fromBody = (item: BlogEntry["body"][number]) =>
+      item.type === "quote" ? Quote(item) : item.type === "callout" ? Callout(item) : "";
+    const fromSections = (item: BlogEntry["sections"][number]) => (item.type === "quote" ? Quote(item) : "");
+    expectTypeOf(fromBody).returns.toEqualTypeOf<string>();
+    expectTypeOf(fromSections).returns.toEqualTypeOf<string>();
   });
 
   it("types link fields as a URL, an entry or an asset, never null", () => {

@@ -12,7 +12,7 @@ How the addon maps Statamic fieldtypes to the types that
 | `select`, `button_group`, `radio`, `checkboxes` | `HqOption<"a" \| "b">` (`{ key, value, label }`; all `null` when empty) |
 | `assets` | `HqAsset` or `HqAsset[]` (`max_files`) |
 | `entries`, `terms`, `users` | `HqRelatedEntry`, `HqRelatedTerm`, `HqUser` |
-| `grid`, `replicator` | arrays of typed rows/sets (`[]` when empty) |
+| `grid`, `replicator` | arrays of typed rows/sets (`[]` when empty), sets as [named types](#sets) |
 | `link` | `HqLinkUrl \| HqLinkEntry \| HqLinkAsset` (never null), see [Link](#link) |
 | `bard` | HTML `string` without sets; with sets an array of text items and typed sets (`[]` when empty), see [Bard](#bard) |
 | unknown fieldtypes | `unknown` — see [custom fieldtypes](/cms/statamic/custom-fieldtypes) |
@@ -22,21 +22,31 @@ How the addon maps Statamic fieldtypes to the types that
 A Bard field without sets returns its content as an HTML string (`null` when empty). With
 sets, Statamic returns an array instead: the text between the sets as `HqBardText` items
 (`{ type: "text", text }` with the HTML of the paragraphs) and one object per set, with the
-set's fields, its `id` and the set handle as `type`. Disabled sets are left out. Narrow on
-`type` to render each item:
+set's fields, its `id` and the set handle as `type` ([named types](#sets)). Disabled sets are
+left out. Narrow on `type` to render each item:
 
 ```tsx twoslash
 // @jsx: react-jsx
 import "./generated/cms.generated";
-import type { BlogEntry } from "./generated/cms.generated";
+import type { BlogEntry, CalloutSet, QuoteSet } from "./generated/cms.generated";
 // ---cut---
+function Callout({ text, tone }: CalloutSet) {
+  return <aside data-tone={tone.value}>{text}</aside>;
+}
+
+function Quote({ text, cite }: QuoteSet) {
+  return <blockquote cite={cite ?? undefined}>{text}</blockquote>;
+}
+
 function Body({ items }: { items: BlogEntry["body"] }) {
   return items.map((item, index) => {
     switch (item.type) {
       case "text":
         return <div key={index} dangerouslySetInnerHTML={{ __html: item.text }} />;
       case "callout":
-        return <aside key={item.id ?? index}>{item.text}</aside>;
+        return <Callout key={item.id ?? index} {...item} />;
+      case "quote":
+        return <Quote key={item.id ?? index} {...item} />;
       case "image":
         return item.image && <img key={item.id ?? index} src={item.image.url} alt={item.image.alt ?? ""} />;
     }
@@ -45,6 +55,30 @@ function Body({ items }: { items: BlogEntry["body"] }) {
 ```
 
 With `save_html: true`, Bard stores HTML, so the field is typed as a `string` even if it has sets.
+
+## Sets [#sets]
+
+Every Bard and Replicator set is exported as an interface named after its handle: `callout` →
+`CalloutSet`, `text_image` → `TextImageSet`. It has the set's fields plus `id` (`null` for sets
+saved without one) and `type`, the set handle. A set used in several fields (copied, or imported
+from a fieldset) is one type, so one component renders it wherever it appears:
+
+```ts twoslash
+import "./generated/cms.generated";
+import type { BlogEntry, QuoteSet } from "./generated/cms.generated";
+// ---cut---
+const quote = (set: QuoteSet) => `${set.text} — ${set.cite}`;
+
+declare const entry: BlogEntry;
+entry.body.map((item) => (item.type === "quote" ? quote(item) : null)); // Bard
+entry.sections.map((item) => (item.type === "quote" ? quote(item) : null)); // Replicator
+```
+
+If sets with the same handle have different fields in different places, no `ImageSet` is
+generated. Each variant is named after where it's used instead: `{Collection}{Blueprint}{Field}{Set}Set`,
+e.g. `BlogBodyImageSet` and `PagesLandingBlocksImageSet`. The blueprint is only part of the
+name for collections with several blueprints. Adding such a conflicting set renames the existing
+type, which shows up as a type error.
 
 ## Link [#link]
 

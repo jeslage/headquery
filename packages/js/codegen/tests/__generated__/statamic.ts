@@ -223,12 +223,52 @@ export type HqNavEntry<E, F> = E extends unknown
   ? Omit<E, keyof HqNavPageBase | keyof F | "entry_id"> & HqNavPageBase & F & { entry_id: string }
   : never;
 
+/** Set `callout` (Bard `blog.body`). */
+export interface CalloutSet {
+  /** `null` for sets saved without an id. */
+  id: string | null;
+  type: "callout";
+  /** CMS field type: `textarea` */
+  text: string | null;
+  /** CMS field type: `select` */
+  tone: HqOption<"info" | "warning"> | HqEmptyOption;
+}
+
+/** Set `gallery` (Replicator `blog.sections`). */
+export interface GallerySet {
+  /** `null` for sets saved without an id. */
+  id: string | null;
+  type: "gallery";
+  /** CMS field type: `assets` */
+  images: Array<HqAsset>;
+}
+
+/** Set `image` (Bard `blog.body`). */
+export interface ImageSet {
+  /** `null` for sets saved without an id. */
+  id: string | null;
+  type: "image";
+  /** CMS field type: `assets` */
+  image: HqAsset | null;
+}
+
+/** Set `quote` (Bard `blog.body`, Replicator `blog.sections`). */
+export interface QuoteSet {
+  /** `null` for sets saved without an id. */
+  id: string | null;
+  type: "quote";
+  /** CMS field type: `text` */
+  cite: string | null;
+  /** CMS field type: `textarea` */
+  text: string | null;
+}
+
 export interface BlogEntry extends Omit<HqEntryBase, "blueprint" | "date" | "slug" | "title"> {
   blueprint: { handle: "blog"; title: string };
   /** CMS field type: `users` */
   author: HqUser | null;
   /** CMS field type: `bard` */
-  body: Array<HqBardText | { id: string | null; type: "callout"; text: string | null; tone: HqOption<"info" | "warning"> | HqEmptyOption } | { id: string | null; type: "image"; image: HqAsset | null }>;
+  body: Array<HqBardText | CalloutSet | ImageSet | QuoteSet>;
   /** CMS field type: `bard` */
   content: string | null;
   /** CMS field type: `date` */
@@ -240,7 +280,7 @@ export interface BlogEntry extends Omit<HqEntryBase, "blueprint" | "date" | "slu
   /** CMS field type: `integer` */
   reading_time: number | null;
   /** CMS field type: `replicator` */
-  sections: Array<{ id?: string; type: "gallery"; images: Array<HqAsset> } | { id?: string; type: "quote"; cite: string | null; text: string | null }>;
+  sections: Array<GallerySet | QuoteSet>;
   /** CMS field type: `seo_pro` */
   seo: unknown;
   /** CMS field type: `slug` */

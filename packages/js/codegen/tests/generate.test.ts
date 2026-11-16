@@ -60,6 +60,79 @@ describe("generate (statamic)", () => {
   });
 });
 
+describe("set types", () => {
+  const text = { type: "string", cmsType: "text" } as const;
+  const asset = { type: "asset", multiple: false } as const;
+  const collection = (fields: Record<string, unknown>) => ({ blueprints: { [Object.keys(fields)[0]!]: { fields } } });
+  const gen = (resources: Record<string, unknown>) =>
+    generate({ schemaVersion: 1, cms: { name: "statamic" }, resources });
+
+  it("names sets after their handle and shares one interface between fields with the same set", () => {
+    const sets = { text_image: { text, image: asset }, cta: { label: text } };
+    const out = gen({
+      collection: {
+        pages: { blueprints: { page: { fields: { body: { type: "richtext", sets } } } } },
+        blog: { blueprints: { blog: { fields: { sections: { type: "blocks", sets } } } } },
+      },
+    });
+    expect(out.match(/export interface TextImageSet \{/g)).toHaveLength(1);
+    expect(out).toContain(
+      "/** Set `cta` (Replicator `blog.sections`, Bard `pages.body`). */\nexport interface CtaSet {",
+    );
+    expect(out).toContain("  body: Array<HqBardText | CtaSet | TextImageSet>;");
+    expect(out).toContain("  sections: Array<CtaSet | TextImageSet>;");
+  });
+
+  it("names sets with the same handle but different fields after their location", () => {
+    const out = gen({
+      collection: {
+        blog: collection({ body: { type: "richtext", sets: { image: { image: asset } } } }),
+        pages: {
+          blueprints: {
+            page: { fields: { title: text } },
+            landing: { fields: { blocks: { type: "blocks", sets: { image: { image: asset, caption: text } } } } },
+          },
+        },
+      },
+    });
+    expect(out).not.toContain("interface ImageSet ");
+    expect(out).toContain("export interface BlogBodyImageSet {");
+    expect(out).toContain("export interface PagesLandingBlocksImageSet {");
+    expect(out).toContain("  blocks: Array<PagesLandingBlocksImageSet>;");
+  });
+
+  it("names nested sets and references them from the outer set", () => {
+    const out = gen({
+      global: {
+        settings: {
+          fields: {
+            footer: {
+              type: "blocks",
+              sets: { columns: { items: { type: "blocks", sets: { link: { label: text } } } } },
+            },
+          },
+        },
+      },
+    });
+    expect(out).toContain("export interface LinkSet {");
+    expect(out).toContain("  items: Array<LinkSet>;");
+    expect(out).toContain("  footer: Array<ColumnsSet>;");
+  });
+
+  it("rejects a set name that is also another set's location name", () => {
+    expect(() =>
+      gen({
+        collection: {
+          blog: collection({ body: { type: "richtext", sets: { image: { image: asset } } } }),
+          pages: collection({
+            blocks: { type: "blocks", sets: { image: { image: asset, caption: text }, blog_body_image: { text } } },
+          }),
+        },
+      }),
+    ).toThrow(/BlogBodyImageSet, which is already taken/);
+  });
+});
+
 describe("fieldType", () => {
   it("adds null for optional single values but not for lists", () => {
     expect(fieldType({ type: "string" })).toBe("string | null");

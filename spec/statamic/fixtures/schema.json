@@ -43,6 +43,10 @@
                   },
                   "image": {
                     "image": { "type": "asset", "multiple": false, "cmsType": "assets" }
+                  },
+                  "quote": {
+                    "text": { "type": "string", "cmsType": "textarea" },
+                    "cite": { "type": "string", "cmsType": "text" }
                   }
                 }
               },

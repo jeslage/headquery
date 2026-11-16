@@ -242,6 +242,9 @@ Bard without sets returns an HTML string (`null` when empty). With sets (IR `ric
 `save_html`) it returns an array of `{ type: "text", text: "<p>…</p>" }` items and sets
 (`{ id, type: <set handle>, …augmented fields }`), `[]` when empty; disabled sets are left out
 (`Fieldtypes/Bard/Augmentor.php`). Codegen: `string` / `Array<HqBardText | set>`.
+Replicator and Bard set items both carry `id` (`$set['id'] ?? null`) and `type` (set handle). Codegen exports
+every set as `{Handle}Set` (one interface per name and shape; a handle with different shapes gets
+location names like `BlogBodyImageSet` for every variant).
 Link fields are never null or a string (`Fieldtypes/Link/ArrayableLink::jsonSerialize`): `{ url }` for URLs,
 `{ url: null }` when empty, the linked entry is gone or `@child` has no children; the shallow entry
 (`id title url permalink api_url`) for entries and `@child`; the shallow asset (`id url permalink api_url alt`)
