@@ -48,9 +48,13 @@ const english = await cms.collections("blog").site("default").get(); // ?site=de
 
 The default site becomes part of each query, so `query.url()` (and with it any cache key built
 from it) is the same as with `.site("de")`. Unlike `.site()`, the client option accepts any string
-(your handles are still suggested), so a runtime value fits as it is. In a framework with one
-locale per request, create the client per request from the route's locale, e.g. in Next.js with
-`next/root-params`:
+(your handles are still suggested), so a runtime value fits as it is.
+
+### Per-request site (lazy)
+
+In a framework with one locale per request, pass a **function** instead. It's called for every
+request, so the client stays a plain module-level value and your queries don't need an extra
+`await`. In Next.js with `next/root-params`:
 
 ```ts twoslash
 import "./generated/cms.generated";
@@ -59,12 +63,16 @@ declare function locale(): Promise<string>;
 import { createStatamicClient } from "@headquery/statamic";
 // import { locale } from "next/root-params";
 
-export async function cms() {
-  return createStatamicClient({ baseUrl: process.env.HEADQUERY_BASE_URL!, site: await locale() });
-}
+export const cms = createStatamicClient({ baseUrl: process.env.HEADQUERY_BASE_URL!, site: () => locale() });
 
-// app/[locale]/blog/[slug]/page.tsx: await (await cms()).collections("blog").where("slug", slug).first();
+const home = await cms.collections("pages").find("home").get(); // ?site=<locale>
 ```
+
+The function's site is added when the request is sent (also through `cms.run()` and `cms.core`,
+so framework adapters get it), on the same endpoints as a fixed default site and only when the
+query has no `.site()`. The URL that goes to `fetch` is the same as with `.site()`. It is **not**
+part of `query.url()` or `toRequest()`, which are synchronous: if you build cache keys from
+`query.url()`, use a fixed `site` or `.site()` instead.
 
 An unknown handle is a 404 from Statamic. If your locales aren't the site handles, map them:
 
