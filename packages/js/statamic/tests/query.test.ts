@@ -332,6 +332,81 @@ describe("default site", () => {
   });
 });
 
+describe("lazy default site", () => {
+  const ok = () => Promise.resolve(new Response('{"data":[]}', { status: 200 }));
+  const setup = () => {
+    const fetch = vi.fn<typeof globalThis.fetch>(ok);
+    const locale = vi.fn(async () => "de");
+    const client = createStatamicClient<TestSchema & { sites: "default" | "de" }>({
+      baseUrl: "https://cms.test",
+      site: locale,
+      fetch,
+    });
+    const urls = () => fetch.mock.calls.map(([url]) => String(url));
+    return { client, fetch, locale, urls };
+  };
+
+  it("resolves the site per request and keeps the URL deterministic", async () => {
+    const { client, locale, urls } = setup();
+    await client.collections("blog").where("title", "x").get();
+    await client.collections("blog").find("hello").get();
+    await client.collections("pages").tree().get();
+    await client.taxonomies("tags").get();
+    await client.globals("settings").get();
+    await client.globals().get();
+    await client.navs("main").tree().get();
+    expect(urls()).toEqual([
+      "https://cms.test/api/collections/blog/entries?filter[title:is]=x&site=de",
+      "https://cms.test/api/collections/blog/entries/hello?site=de",
+      "https://cms.test/api/collections/pages/tree?site=de",
+      "https://cms.test/api/taxonomies/tags/terms?site=de",
+      "https://cms.test/api/globals/settings?site=de",
+      "https://cms.test/api/globals?site=de",
+      "https://cms.test/api/navs/main/tree?site=de",
+    ]);
+    expect(urls()[0]).toBe(cms.collections("blog").site("de").where("title", "x").url());
+    expect(locale).toHaveBeenCalledTimes(7);
+  });
+
+  it("is overridden by site() and skips endpoints that ignore site", async () => {
+    const { client, urls } = setup();
+    await client.collections("blog").site("default").get();
+    await client.assets("images").get();
+    await client.users().get();
+    await client.forms().get();
+    await client.navs().get();
+    await client.sites().get();
+    expect(urls()).toEqual([
+      "https://cms.test/api/collections/blog/entries?site=default",
+      "https://cms.test/api/assets/images",
+      "https://cms.test/api/users",
+      "https://cms.test/api/forms",
+      "https://cms.test/api/navs",
+      "https://cms.test/api/sites",
+    ]);
+  });
+
+  it("applies to client.run/send and is not part of url()", async () => {
+    const { client, urls } = setup();
+    const query = client.collections("blog");
+    expect(query.url()).toBe("https://cms.test/api/collections/blog/entries");
+    await client.run(query);
+    await client.core.run(query);
+    expect(urls()).toEqual([
+      "https://cms.test/api/collections/blog/entries?site=de",
+      "https://cms.test/api/collections/blog/entries?site=de",
+    ]);
+  });
+
+  it("accepts sync and async functions", () => {
+    createStatamicClient<TestSchema & { sites: "default" | "de" }>({ baseUrl: "https://cms.test", site: () => "de" });
+    createStatamicClient<TestSchema & { sites: "default" | "de" }>({
+      baseUrl: "https://cms.test",
+      site: async (): Promise<string> => "de",
+    });
+  });
+});
+
 describe("forms and sites", () => {
   it("builds the list and single-form requests", () => {
     expect(cms.forms().toRequest()).toEqual({ method: "GET", path: "/forms", query: {} });

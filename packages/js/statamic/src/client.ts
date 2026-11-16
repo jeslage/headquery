@@ -22,8 +22,29 @@ export interface StatamicClientOptions<S extends StatamicSchemaShape = Registere
    *
    * Suggests the schema's site handles but accepts any string, so runtime values (a route param,
    * Next's `await locale()`) fit without narrowing. An unknown handle is a 404 from Statamic.
+   *
+   * A function (`site: () => locale()`) is called for every request instead, so the client can be
+   * created once, synchronously. Its site is added when the request is sent, so it is not part of
+   * `query.url()` / `toRequest()`.
    */
-  site?: SiteHandleOf<S> | (string & {});
+  site?: SiteOption<S> | (() => SiteOption<S> | Promise<SiteOption<S>>);
+}
+
+type SiteOption<S extends StatamicSchemaShape> = SiteHandleOf<S> | (string & {});
+
+/** API paths that honor `site=`: entries, terms, globals, collection and nav trees. */
+const SITE_PATH = /^\/(collections|taxonomies|globals|navs\/[^/]+\/tree)(\/|$)/;
+
+/** Adds the lazily resolved site to every request that honors it and doesn't set one. */
+function withLazySite(core: CoreClient, site: () => string | Promise<string>): CoreClient {
+  const send: CoreClient["send"] = async (spec, run) =>
+    core.send(
+      SITE_PATH.test(spec.path) && spec.query?.site == null
+        ? { ...spec, query: { ...spec.query, site: await site() } }
+        : spec,
+      run,
+    );
+  return { ...core, send, run: (query, run) => send(query.toRequest(), run) };
 }
 
 /** `ResourceQuery` without `tree()`: taxonomies, asset containers and unstructured collections. */
@@ -106,8 +127,9 @@ export interface StatamicClient<S extends StatamicSchemaShape> {
 export function createStatamicClient<S extends StatamicSchemaShape = RegisteredSchema>(
   options: StatamicClientOptions<S>,
 ): StatamicClient<S> {
-  const core = createCoreClient(options);
-  const site = options.site;
+  const lazy = typeof options.site === "function" ? options.site : undefined;
+  const site = lazy ? undefined : (options.site as string | undefined);
+  const core = lazy ? withLazySite(createCoreClient(options), lazy) : createCoreClient(options);
   const seg = encodeURIComponent;
   // Asset paths keep their folder slashes, like Statamic's own `api_url`.
   const assetPath = (path: string) => path.replace(/^\/+/, "").split("/").map(seg).join("/");
