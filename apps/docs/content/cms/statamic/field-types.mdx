@@ -66,6 +66,9 @@ if (page && isBlueprint(page.data, "landing")) {
 }
 ```
 
+To fetch only entries of one blueprint, use [`.whereBlueprint()`](/cms/statamic/querying#blueprint-filter),
+which narrows the result without `isBlueprint()`.
+
 The same field can have different types in different blueprints (`summary` is a textarea in
 `page` and an integer in `landing`); before narrowing, it's the union of both. Collections with
 one blueprint get a single type, e.g. `BlogEntry`.

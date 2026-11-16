@@ -153,6 +153,17 @@ describe("generated types work with @headquery/statamic", () => {
     >();
     cms.collections("pages").sort("-show_hero", "title").where("title", "contains", "a");
 
+    // whereBlueprint() filters by blueprint and narrows the result
+    const landing = cms.collections("pages").whereBlueprint("landing");
+    expectTypeOf(landing.get).returns.resolves.toHaveProperty("data").toEqualTypeOf<PagesLandingEntry[]>();
+    const both = cms.collections("pages").whereBlueprint(["landing", "page"]).fields(["title"]);
+    type Both = Awaited<ReturnType<typeof both.get>>["data"][number];
+    expectTypeOf<Both>().toEqualTypeOf<Pick<PagesLandingEntry, "title"> | Pick<PagesPageEntry, "title">>();
+    // @ts-expect-error unknown blueprint
+    cms.collections("pages").whereBlueprint("article");
+    // @ts-expect-error blueprint is not in the blog's allowed_filters
+    cms.collections("blog").whereBlueprint("blog");
+
     // Navigations that link such a collection keep the union.
     (page: HqNavEntry<PagesEntry, MainNavFields>) => {
       if (isBlueprint(page, "landing")) expectTypeOf(page.show_hero).toEqualTypeOf<boolean>();

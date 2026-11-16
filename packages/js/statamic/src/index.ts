@@ -11,6 +11,7 @@ export {
 export { IndexQuery, LIST_SEPARATOR, ListQuery, ResourceQuery, SingleQuery, TreeQuery } from "./query";
 export type {
   AssetContainersOf,
+  BlueprintHandle,
   BooleanCondition,
   Condition,
   DataList,
@@ -45,4 +46,5 @@ export type {
   StatamicSite,
   StatamicUser,
   TaxonomyFilter,
+  WithBlueprint,
 } from "./types";

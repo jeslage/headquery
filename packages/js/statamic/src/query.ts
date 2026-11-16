@@ -7,6 +7,7 @@ import {
   type RunOptions,
 } from "@headquery/core";
 import type {
+  BlueprintHandle,
   BooleanCondition,
   DataList,
   KeysOfUnion,
@@ -20,6 +21,7 @@ import type {
   SiteHandle,
   SortField,
   TaxonomyFilter,
+  WithBlueprint,
 } from "./types";
 
 /**
@@ -120,6 +122,19 @@ export class ListQuery<Item, Filterable extends string, Picked extends KeysOfUni
     terms: string[],
   ): ListQuery<Item, Filterable, Picked> {
     return this.taxonomy(taxonomy, "not", terms);
+  }
+
+  /**
+   * Entries of these blueprints (`filter[blueprint:is]=landing`, `filter[blueprint:in]=a|b`), with
+   * the result narrowed to their types. Needs `blueprint` in the collection's `allowed_filters`.
+   */
+  whereBlueprint<const H extends BlueprintHandle<Item>>(
+    handles: "blueprint" extends Filterable ? H | H[] : never,
+  ): ListQuery<WithBlueprint<Item, H>, Filterable, Extract<Picked, KeysOfUnion<WithBlueprint<Item, H>>>> {
+    const filters = Array.isArray(handles)
+      ? addFilter(this.state.filters, "blueprint", "in", handles)
+      : addFilter(this.state.filters, "blueprint", "is", handles);
+    return new ListQuery(this.client, this.path, { ...this.state, filters });
   }
 
   /** `sort=a,-b`. Later calls replace earlier ones. */

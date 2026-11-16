@@ -257,6 +257,15 @@ describe.skipIf(!baseUrl)(`Statamic playground (${baseUrl})`, () => {
       expect(team).not.toHaveProperty("features");
     });
 
+    it("filters by blueprint with whereBlueprint() and narrows the result", async () => {
+      const landing = await pages.site("en").whereBlueprint("landing").get();
+      expect(landing.data.map((e) => e.slug)).toEqual(["contact"]);
+      expectTypeOf(landing.data[0]!.show_hero).toEqualTypeOf<boolean>();
+
+      const both = await pages.site("en").whereBlueprint(["landing", "page"]).fields(["slug"]).get();
+      expect(both.data.map((e) => e.slug).sort()).toEqual(["about", "contact", "home", "team"]);
+    });
+
     it("returns requested fields that an entry's blueprint lacks as null", async () => {
       const { data } = await pages.site("en").fields(["slug", "show_hero"]).get();
       const bySlug = Object.fromEntries(data.map((e) => [e.slug, e.show_hero]));

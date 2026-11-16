@@ -210,7 +210,8 @@ list/taggable/table return `null` when empty; assets use `max_files` (not `max_i
 System fields of entries/terms/globals are modelled as `HqEntryBase`/`HqTermBase`/`HqGlobalBase`.
 Fields of another blueprint are absent from an entry (single, list, collection tree); with `fields=`,
 a requested field the item doesn't have is `null` (lists, single items, collection and nav trees).
-Terms have no `blueprint` key.
+Terms have no `blueprint` key. `filter[blueprint]` (any condition, `in` with `|`) works with `blueprint`
+in `allowed_filters` (exported as `systemFilters`); `whereBlueprint()` uses it and narrows the item type.
 Nav tree items are `{ page, depth, children }` (depth 1 = top level). Pages linked to an entry
 contain all of the entry's fields plus `entry_id`; their `id` is the nav item id, not the entry id.
 Plain link pages only have `id title url uri permalink` and `entry_id: null`. Nav blueprint

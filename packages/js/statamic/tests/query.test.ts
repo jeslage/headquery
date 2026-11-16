@@ -135,6 +135,18 @@ describe("isBlueprint", () => {
   });
 });
 
+describe("whereBlueprint", () => {
+  it("filters with is for one blueprint and in for several", () => {
+    const loose = createStatamicClient({ baseUrl: "https://cms.test", fetch });
+    expect(loose.collections("pages").whereBlueprint("landing").url()).toBe(
+      "https://cms.test/api/collections/pages/entries?filter[blueprint:is]=landing",
+    );
+    expect(loose.collections("pages").whereBlueprint(["landing", "page"]).toRequest().query).toEqual({
+      "filter[blueprint:in]": "landing|page",
+    });
+  });
+});
+
 describe("single resources", () => {
   it("builds entry, term and global paths", () => {
     expect(cms.collections("blog").find("hello world").toRequest().path).toBe(

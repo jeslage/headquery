@@ -132,6 +132,22 @@ export type TaxonomyFilter<Filterable extends string> = string extends Filterabl
     ? T
     : never;
 
+/**
+ * Blueprint handles of an item type: the literal `blueprint.handle` of generated entry types,
+ * `string` for items without literal handles (loose types, assets).
+ */
+export type BlueprintHandle<Item> = [BlueprintOf<Item>] extends [never]
+  ? string
+  : string extends BlueprintOf<Item>
+    ? string
+    : BlueprintOf<Item>;
+
+type BlueprintOf<Item> = Item extends { blueprint: { handle: infer H extends string } } ? H : never;
+
+/** The item types of these blueprints; unchanged without literal blueprint handles. */
+export type WithBlueprint<Item, H extends string> =
+  string extends BlueprintHandle<Item> ? Item : Extract<Item, { blueprint: { handle: H } }>;
+
 /** `"title"` sorts ascending, `"-title"` descending. Nested fields use `->` in Statamic. */
 export type SortField<F extends string> = F | `-${F}`;
 
