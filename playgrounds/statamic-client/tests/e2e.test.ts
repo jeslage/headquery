@@ -3,7 +3,7 @@
 import { HeadqueryHttpError, isBlueprint, type SiteHandle } from "@headquery/statamic";
 import { describe, expect, expectTypeOf, it } from "vitest";
 import { cms } from "../src/client";
-import type { AssetsAsset, BlogEntry, HqAsset, HqAssetBase } from "../src/cms";
+import type { AssetsAsset, BlogEntry, CalloutSet, GallerySet, HqAsset, HqAssetBase, QuoteSet } from "../src/cms";
 import { baseUrl } from "../src/env";
 
 const entries = cms.collections("blog");
@@ -165,6 +165,28 @@ describe.skipIf(!baseUrl)(`Statamic playground (${baseUrl})`, () => {
       const image = data.body.find((item) => item.type === "image");
       expect(image).toMatchObject({ id: "b3image", image: { url: "/assets/hero.svg" } });
       if (image?.type === "image") expectTypeOf(image.image).toEqualTypeOf<HqAsset | null>();
+    });
+
+    it("returns sets as the named set types, with id and type, in Bard and replicator fields", async () => {
+      const { data } = (await entries.find("hello-headquery").fields(["body", "sections"]).get())!;
+      const quote = data.sections.find((item): item is QuoteSet => item.type === "quote");
+      expect(quote).toEqual({
+        id: "q1a2b3c4",
+        type: "quote",
+        text: "Keep the CMS vocabulary, gain type safety.",
+        cite: "The README",
+      });
+      const gallery = data.sections.find((item): item is GallerySet => item.type === "gallery");
+      expect(gallery).toMatchObject({
+        id: "g1a2b3c4",
+        type: "gallery",
+        images: [{ url: "/assets/gallery-1.svg" }, {}],
+      });
+      const callout = data.body.find((item): item is CalloutSet => item.type === "callout");
+      expect(callout?.id).toBe("b1callout");
+      // `quote` is a set of both fields: one type renders it in either.
+      expectTypeOf<Extract<BlogEntry["body"][number], { type: "quote" }>>().toEqualTypeOf<QuoteSet>();
+      expectTypeOf<Extract<BlogEntry["sections"][number], { type: "quote" }>>().toEqualTypeOf<QuoteSet>();
     });
 
     it("returns an empty Bard field as null without sets and [] with sets", async () => {

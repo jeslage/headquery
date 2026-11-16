@@ -341,9 +341,12 @@ export function generateStatamic(schema: IrSchema, options: StatamicGenerateOpti
     return name;
   };
 
+  const { names: setNames, code: sets } = setTypes(setOwners(schema), unique);
+  out.push(...sets);
+
   for (const [handle, resource] of sorted(schema.resources.collection)) {
     const name = unique(`${pascal(handle)}Entry`, `collection "${handle}"`);
-    out.push(...entryTypes(name, handle, resource, unique));
+    out.push(...entryTypes(name, handle, resource, unique, setNames));
     let tree = "";
     if (resource.structure) {
       // Structured collection: `cms.collections(handle).tree()` returns its page tree.
@@ -358,22 +361,24 @@ export function generateStatamic(schema: IrSchema, options: StatamicGenerateOpti
   }
   for (const [handle, resource] of sorted(schema.resources.taxonomy)) {
     const name = unique(`${pascal(handle)}Term`, `taxonomy "${handle}"`);
-    out.push(itemInterface(name, termFields(resource), "HqTermBase"));
+    out.push(itemInterface(name, termFields(resource, setNames), "HqTermBase", { names: setNames }));
     taxonomies.push(`    ${key(handle)}: { item: ${name}; filterable: ${filterable(resource)} };`);
   }
   for (const [handle, resource] of sorted(schema.resources.global)) {
     const name = `${pascal(handle)}Global`;
-    out.push(itemInterface(name, resource.fields, "HqGlobalBase", { baseArg: JSON.stringify(handle) }));
+    out.push(
+      itemInterface(name, resource.fields, "HqGlobalBase", { baseArg: JSON.stringify(handle), names: setNames }),
+    );
     globals.push(`    ${key(handle)}: ${name};`);
   }
   for (const [handle, nav] of sorted(schema.resources.navigation)) {
     const name = `${pascal(handle)}NavPage`;
-    out.push(...navigationTypes(name, nav, schema));
+    out.push(...navigationTypes(name, nav, schema, setNames));
     navigations.push(`    ${key(handle)}: { page: ${name} };`);
   }
   for (const [handle, resource] of sorted(schema.resources.assetContainer)) {
     const name = `${pascal(handle)}Asset`;
-    out.push(itemInterface(name, resource.fields, "HqAssetBase"));
+    out.push(itemInterface(name, resource.fields, "HqAssetBase", { names: setNames }));
     assetContainers.push(`    ${key(handle)}: { item: ${name}; filterable: ${filterable(resource)} };`);
   }
 
@@ -432,6 +437,8 @@ interface ItemOptions {
   blueprint?: string;
   /** Doc comment above the interface. */
   comment?: string;
+  /** Exported set interfaces to reference instead of inline set types. */
+  names?: SetNames;
 }
 
 /** A field of the item interface; `optional` for taxonomy fields that only some blueprints have. */
@@ -460,7 +467,9 @@ function itemInterface(
     const entry = fields[handle]!;
     const item: ItemField = "field" in entry ? entry : { field: entry };
     const optional = item.optional ? "?" : "";
-    lines.push(`${doc(item.field, "  ")}  ${key(handle)}${optional}: ${item.type ?? fieldType(item.field, 1)};`);
+    lines.push(
+      `${doc(item.field, "  ")}  ${key(handle)}${optional}: ${item.type ?? fieldType(item.field, 1, options.names)};`,
+    );
   }
   const comment = options.comment ? `/** ${options.comment} */\n` : "";
   return `${comment}export interface ${name} extends ${parent} {\n${lines.join("\n")}\n}`;
@@ -476,17 +485,21 @@ function entryTypes(
   collection: string,
   resource: IrBlueprintResource,
   unique: (name: string, what: string) => string,
+  names: SetNames,
 ): string[] {
   const blueprints = Object.entries(resource.blueprints).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
   const title = resource.title ?? collection;
   if (blueprints.length === 1) {
     const [handle, blueprint] = blueprints[0]!;
-    return [itemInterface(name, blueprint.fields, "HqEntryBase", { blueprint: handle })];
+    return [itemInterface(name, blueprint.fields, "HqEntryBase", { blueprint: handle, names })];
   }
   const members = blueprints.map(([handle, blueprint]) => {
     const member = unique(`${name.replace(/Entry$/, "")}${pascal(handle)}Entry`, `blueprint "${collection}.${handle}"`);
     const comment = `Entry of the \`${title}\` collection with the \`${blueprint.title ?? handle}\` blueprint.`;
-    return { member, code: itemInterface(member, blueprint.fields, "HqEntryBase", { blueprint: handle, comment }) };
+    return {
+      member,
+      code: itemInterface(member, blueprint.fields, "HqEntryBase", { blueprint: handle, comment, names }),
+    };
   });
   return [
     ...members.map((m) => m.code),
@@ -500,13 +513,13 @@ function entryTypes(
  * Term fields across all blueprints of a taxonomy. Terms don't say which blueprint they use,
  * so fields that only some blueprints have are optional and differing types are combined.
  */
-function termFields(resource: IrBlueprintResource): Record<string, ItemField> {
+function termFields(resource: IrBlueprintResource, names: SetNames): Record<string, ItemField> {
   const blueprints = Object.values(resource.blueprints);
   const handles = [...new Set(blueprints.flatMap((b) => Object.keys(b.fields)))];
   const fields: Record<string, ItemField> = {};
   for (const handle of handles) {
     const defs = blueprints.flatMap((b) => (b.fields[handle] ? [b.fields[handle]] : []));
-    const types = [...new Set(defs.map((f) => baseType(f, 1)))];
+    const types = [...new Set(defs.map((f) => baseType(f, 1, names)))];
     const nullable = defs.some((f) => !f.required && !neverNull(f));
     fields[handle] = {
       field: defs[0]!,
@@ -521,11 +534,11 @@ function termFields(resource: IrBlueprintResource): Record<string, ItemField> {
  * A navigation page is either a plain link or an entry of one of the linked collections
  * (the API returns the entry's fields). Nav blueprint fields are on every page.
  */
-function navigationTypes(name: string, nav: IrNavigation, schema: IrSchema): string[] {
+function navigationTypes(name: string, nav: IrNavigation, schema: IrSchema, names: SetNames): string[] {
   const fieldsName = `${name.replace(/Page$/, "")}Fields`;
   const fieldLines = Object.keys(nav.fields)
     .sort()
-    .map((h) => `${doc(nav.fields[h]!, "  ")}  ${key(h)}: ${fieldType(nav.fields[h]!, 1)};`);
+    .map((h) => `${doc(nav.fields[h]!, "  ")}  ${key(h)}: ${fieldType(nav.fields[h]!, 1, names)};`);
   const fieldsType = fieldLines.length
     ? `export interface ${fieldsName} {\n${fieldLines.join("\n")}\n}`
     : `export interface ${fieldsName} {}`;
@@ -542,6 +555,37 @@ function navigationTypes(name: string, nav: IrNavigation, schema: IrSchema): str
   return [fieldsType, `${comment}\nexport type ${name} =\n  | ${variants.join("\n  | ")};`];
 }
 
+/**
+ * Every field map with its owner for set names: `Blog`/`blog` for a collection with one blueprint,
+ * `PagesLanding`/`pages.landing` with several (same for taxonomies), then globals, navs and assets.
+ */
+function setOwners(schema: IrSchema): Array<{ owner: string; where: string; fields: Record<string, IrField> }> {
+  const sorted = <T>(map: Record<string, T> | undefined): Array<[string, T]> =>
+    Object.entries(map ?? {}).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
+  const owners: Array<{ owner: string; where: string; fields: Record<string, IrField> }> = [];
+  for (const map of [schema.resources.collection, schema.resources.taxonomy]) {
+    for (const [handle, resource] of sorted(map)) {
+      const blueprints = sorted(resource.blueprints);
+      for (const [bp, blueprint] of blueprints) {
+        const several = blueprints.length > 1;
+        owners.push({
+          owner: several ? `${pascal(handle)}${pascal(bp)}` : pascal(handle),
+          where: several ? `${handle}.${bp}` : handle,
+          fields: blueprint.fields,
+        });
+      }
+    }
+  }
+  for (const [handle, r] of sorted(schema.resources.global))
+    owners.push({ owner: pascal(handle), where: handle, fields: r.fields });
+  for (const [handle, r] of sorted(schema.resources.navigation)) {
+    owners.push({ owner: `${pascal(handle)}Nav`, where: handle, fields: r.fields });
+  }
+  for (const [handle, r] of sorted(schema.resources.assetContainer))
+    owners.push({ owner: pascal(handle), where: handle, fields: r.fields });
+  return owners;
+}
+
 /** Blueprint fields marked filterable plus allowed system filters (e.g. `date`, `basename`). */
 function filterable(resource: IrResource | IrBlueprintResource): string {
   const handles = new Set(resource.systemFilters ?? []);
@@ -556,8 +600,8 @@ function filterable(resource: IrResource | IrBlueprintResource): string {
  * TypeScript type for a field as the Statamic REST API returns it, including `| null`
  * where an empty value comes back as null.
  */
-export function fieldType(field: IrField, depth = 0): string {
-  const base = baseType(field, depth);
+export function fieldType(field: IrField, depth = 0, names?: SetNames): string {
+  const base = baseType(field, depth, names);
   return field.required || neverNull(field) ? base : `${base} | null`;
 }
 
@@ -583,7 +627,7 @@ function neverNull(field: IrField): boolean {
   }
 }
 
-function baseType(field: IrField, depth: number): string {
+function baseType(field: IrField, depth: number, names?: SetNames): string {
   switch (field.type) {
     case "string":
     case "date":
@@ -601,11 +645,11 @@ function baseType(field: IrField, depth: number): string {
     case "array":
       // Grid rows carry a row id next to their fields.
       if (field.cmsType === "grid" && field.items.type === "object") {
-        return `Array<${objectType({ ...field.items.fields }, depth, "id: string")}>`;
+        return `Array<${objectType({ ...field.items.fields }, depth, "id: string", names)}>`;
       }
-      return `Array<${baseType(field.items, depth)}>`;
+      return `Array<${baseType(field.items, depth, names)}>`;
     case "object":
-      return objectType(field.fields, depth);
+      return objectType(field.fields, depth, undefined, names);
     case "relation": {
       const t = { entry: "HqRelatedEntry", term: "HqRelatedTerm", user: "HqUser", asset: "HqAsset" }[field.to];
       return field.multiple ? `Array<${t}>` : t;
@@ -623,33 +667,125 @@ function baseType(field: IrField, depth: number): string {
     case "richtext":
       // Bard: HTML without sets; with sets, text items between the sets (disabled sets are left out).
       if (!field.sets) return "string";
-      return `Array<${["HqBardText", ...setVariants(field.sets, depth, "id: string | null")].join(" | ")}>`;
+      return `Array<${["HqBardText", ...setVariants(field.sets, depth, names)].join(" | ")}>`;
     case "blocks": {
-      const variants = setVariants(field.sets, depth, "id?: string");
-      return `Array<${variants.length ? variants.join(" | ") : "{ id?: string; type: string; [key: string]: unknown }"}>`;
+      const variants = setVariants(field.sets, depth, names);
+      return `Array<${variants.length ? variants.join(" | ") : "{ id: string | null; type: string; [key: string]: unknown }"}>`;
     }
     case "unknown":
       return "unknown";
   }
 }
 
-/** One `{ id; type: "<set>"; …fields }` object type per set (replicator and Bard sets). */
-function setVariants(sets: Record<string, Record<string, IrField>>, depth: number, id: string): string[] {
+/**
+ * One type per set (replicator and Bard sets): the set's interface name when `names` has it,
+ * otherwise the inline `{ id; type: "<set>"; …fields }`. Both fieldtypes add `id` (`null` for
+ * sets saved without one) and `type`.
+ */
+function setVariants(sets: Record<string, Record<string, IrField>>, depth: number, names?: SetNames): string[] {
   return Object.keys(sets)
     .sort()
     .map((set) => {
-      const fields = sets[set]!;
-      const inner = Object.keys(fields)
-        .sort()
-        .map((h) => `${key(h)}: ${fieldType(fields[h]!, depth + 1)}`);
-      return `{ ${id}; type: ${JSON.stringify(set)}${inner.length ? `; ${inner.join("; ")}` : ""} }`;
+      const inline = inlineSet(set, sets[set]!, depth);
+      return names?.get(inline) ?? inline;
     });
 }
 
-function objectType(fields: Record<string, IrField>, depth: number, prefix?: string): string {
+/** The inline type of a set, also the identity of its shape (equal shapes share an interface). */
+function inlineSet(handle: string, fields: Record<string, IrField>, depth: number): string {
   const inner = Object.keys(fields)
     .sort()
     .map((h) => `${key(h)}: ${fieldType(fields[h]!, depth + 1)}`);
+  return `{ id: string | null; type: ${JSON.stringify(handle)}${inner.length ? `; ${inner.join("; ")}` : ""} }`;
+}
+
+/** Inline set type → name of its exported interface. */
+type SetNames = Map<string, string>;
+
+interface SetUse {
+  handle: string;
+  fields: Record<string, IrField>;
+  shape: string;
+  /** Owner type and field handles leading to the set, for qualified names. */
+  path: string[];
+  /** Where it's used, e.g. `Bard blog.body`. */
+  where: string;
+}
+
+/**
+ * Bard and replicator sets as exported interfaces, named `{Handle}Set`. Sets with the same name
+ * and shape (a set copied into several fields or imported from a fieldset) share one interface;
+ * when the same name has different shapes, every variant gets a name from its location instead
+ * (`BlogBodyImageSet`), so the result doesn't depend on which field comes first.
+ */
+function setTypes(
+  owners: Array<{ owner: string; where: string; fields: Record<string, IrField> }>,
+  unique: (name: string, what: string) => string,
+): { names: SetNames; code: string[] } {
+  const uses: SetUse[] = [];
+  const visit = (field: IrField, path: string[], where: string) => {
+    switch (field.type) {
+      case "richtext":
+      case "blocks":
+        for (const handle of Object.keys(field.sets ?? {}).sort()) {
+          const fields = field.sets![handle]!;
+          const kind = field.type === "richtext" ? "Bard" : "Replicator";
+          uses.push({ handle, fields, shape: inlineSet(handle, fields, 1), path, where: `${kind} \`${where}\`` });
+          walk(fields, [...path, handle], `${where}.${handle}`);
+        }
+        break;
+      case "object":
+        walk(field.fields, path, where);
+        break;
+      case "array":
+        visit(field.items, path, where);
+        break;
+    }
+  };
+  const walk = (fields: Record<string, IrField>, path: string[], where: string) => {
+    for (const handle of Object.keys(fields).sort()) visit(fields[handle]!, [...path, handle], `${where}.${handle}`);
+  };
+  for (const o of owners) walk(o.fields, [o.owner], o.where);
+
+  const shapesByName = new Map<string, Map<string, SetUse[]>>();
+  for (const use of uses) {
+    const name = `${pascal(use.handle)}Set`;
+    const shapes = shapesByName.get(name) ?? new Map<string, SetUse[]>();
+    shapes.set(use.shape, [...(shapes.get(use.shape) ?? []), use]);
+    shapesByName.set(name, shapes);
+  }
+  const names: SetNames = new Map();
+  const sets: Array<{ name: string; uses: SetUse[] }> = [];
+  for (const [plain, shapes] of shapesByName) {
+    for (const [shape, list] of shapes) {
+      const first = list[0]!;
+      const name = shapes.size === 1 ? plain : `${first.path.map(pascal).join("")}${pascal(first.handle)}Set`;
+      names.set(shape, unique(name, `set "${first.handle}" (${first.where})`));
+      sets.push({ name, uses: list });
+    }
+  }
+  const code = sets
+    .sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0))
+    .map(({ name, uses }) => {
+      const { handle, fields } = uses[0]!;
+      const lines = [
+        "  /** `null` for sets saved without an id. */",
+        "  id: string | null;",
+        `  type: ${JSON.stringify(handle)};`,
+        ...Object.keys(fields)
+          .sort()
+          .map((h) => `${doc(fields[h]!, "  ")}  ${key(h)}: ${fieldType(fields[h]!, 1, names)};`),
+      ];
+      const where = [...new Set(uses.map((u) => u.where))].join(", ");
+      return `/** Set \`${handle}\` (${where}). */\nexport interface ${name} {\n${lines.join("\n")}\n}`;
+    });
+  return { names, code };
+}
+
+function objectType(fields: Record<string, IrField>, depth: number, prefix?: string, names?: SetNames): string {
+  const inner = Object.keys(fields)
+    .sort()
+    .map((h) => `${key(h)}: ${fieldType(fields[h]!, depth + 1, names)}`);
   if (prefix) inner.unshift(prefix);
   return inner.length ? `{ ${inner.join("; ")} }` : "Record<string, unknown>";
 }

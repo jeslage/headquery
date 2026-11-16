@@ -60,6 +60,17 @@ tabs:
                             type: assets
                             container: assets
                             max_files: 1
+                    quote:
+                      display: Quote
+                      fields:
+                        -
+                          handle: text
+                          field:
+                            type: textarea
+                        -
+                          handle: cite
+                          field:
+                            type: text
           -
             handle: sections
             field:
