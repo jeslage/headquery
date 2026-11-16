@@ -212,8 +212,10 @@ export class ResourceQuery<Item, Filterable extends string, TreePage = never> ex
     private readonly base: string,
     private readonly encodeKey: (key: string) => string = encodeURIComponent,
     private readonly treePath?: string,
+    /** Default site from the client options; `site()` overrides it. */
+    private readonly defaultSite?: string,
   ) {
-    super(core, base);
+    super(core, base, { filters: {}, site: defaultSite });
   }
 
   /**
@@ -221,7 +223,7 @@ export class ResourceQuery<Item, Filterable extends string, TreePage = never> ex
    * with the collection's `allowed_filters`.
    */
   tree(): TreeQuery<TreePage, KeysOfUnion<TreePage>, Filterable> {
-    return new TreeQuery(this.core, this.treePath!);
+    return new TreeQuery(this.core, this.treePath!, { filters: {}, site: this.defaultSite });
   }
 
   /**
@@ -229,7 +231,7 @@ export class ResourceQuery<Item, Filterable extends string, TreePage = never> ex
    * (`GET {list path}/{key}`). Resolves to `null` instead of throwing when it doesn't exist.
    */
   find(key: string): SingleQuery<Item, KeysOfUnion<Item>, true> {
-    return new SingleQuery(this.core, `${this.base}/${this.encodeKey(key)}`, { orNull: true });
+    return new SingleQuery(this.core, `${this.base}/${this.encodeKey(key)}`, { orNull: true, site: this.defaultSite });
   }
 }
 

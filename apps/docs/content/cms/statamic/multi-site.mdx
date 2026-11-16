@@ -27,6 +27,44 @@ cms.collections("blog").site("dee");
 `.site()` takes the site's **handle** from `resources/sites.yaml` (`default`, `de`), not its
 language or locale.
 
+## Default site
+
+Pass `site` to the client to send it with every query that supports it: entry and term lists,
+`find()`, globals, and collection and nav trees. `.site()` still overrides it per query.
+`navs()`, `forms()`, `sites()`, `users()` and `assets()` ignore `site` in Statamic, so they
+don't get it.
+
+```ts twoslash
+import "./generated/cms.generated";
+// ---cut---
+import { createStatamicClient } from "@headquery/statamic";
+
+const cms = createStatamicClient({ baseUrl: "https://cms.example.com", site: "de" });
+
+const posts = await cms.collections("blog").sort("-date").get(); // ?site=de&sort=-date
+const post = await cms.collections("blog").find("hallo-headquery").get(); // ?site=de
+const english = await cms.collections("blog").site("default").get(); // ?site=default
+```
+
+The default site becomes part of each query, so `query.url()` (and with it any cache key built
+from it) is the same as with `.site("de")`. In a framework with one locale per request, create
+the client per request from the route's locale, e.g. in Next.js:
+
+```ts twoslash
+import "./generated/cms.generated";
+// ---cut---
+import { createStatamicClient, type SiteHandle } from "@headquery/statamic";
+
+const sites = { en: "default", de: "de" } satisfies Record<string, SiteHandle>;
+
+export function cms(locale: string) {
+  const site = sites[locale as keyof typeof sites] ?? "default";
+  return createStatamicClient({ baseUrl: process.env.HEADQUERY_BASE_URL!, site });
+}
+
+// app/[locale]/blog/[slug]/page.tsx: await cms(locale).collections("blog").where("slug", slug).first();
+```
+
 ## Typed site handles
 
 The schema export (`php please headquery:schema` and the schema endpoint) always includes the

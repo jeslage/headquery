@@ -308,7 +308,7 @@ have `content/globals/default/` — the seed was converted by hand.
    against real Statamic; verify the unverified assumptions above; add Testbench-based
    tests for exporter, command and route.
 2. Contract/e2e tests: JS client against the running playground in CI.
-3. Statamic: multi-site helpers. Every REST endpoint is covered (metadata endpoints and `/ping` via `cms.send()`).
+3. Statamic: multi-site helpers (default `site` client option is done). Every REST endpoint is covered (metadata endpoints and `/ping` via `cms.send()`).
    (Navigation and collection trees, the globals list and assets are done.)
 4. Codegen: ETag-aware fetch. (Config file `headquery.config.ts` is done:
    `packages/js/codegen/src/config.ts`; CI recipes for `--check` are in `apps/docs/content/codegen/ci.mdx`.)
