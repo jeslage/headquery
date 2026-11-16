@@ -6,6 +6,7 @@ export {
   createStatamicClient,
   type FlatResourceQuery,
   type StatamicClient,
+  type StatamicClientOptions,
   type UsersQuery,
 } from "./client";
 export { IndexQuery, LIST_SEPARATOR, ListQuery, ResourceQuery, SingleQuery, TreeQuery } from "./query";
@@ -39,6 +40,7 @@ export type {
   ScalarCondition,
   Single,
   SiteHandle,
+  SiteHandleOf,
   SortField,
   StatamicForm,
   StatamicFormField,

@@ -285,6 +285,53 @@ describe("site handles", () => {
   });
 });
 
+describe("default site", () => {
+  const de = createStatamicClient<TestSchema & { sites: "default" | "de" }>({
+    baseUrl: "https://cms.test",
+    site: "de",
+  });
+
+  it("adds site= to every query that supports it", () => {
+    expect(de.collections("blog").url()).toBe("https://cms.test/api/collections/blog/entries?site=de");
+    expect(de.collections("blog").find("hello").url()).toBe(
+      "https://cms.test/api/collections/blog/entries/hello?site=de",
+    );
+    expect(de.collections("pages").tree().url()).toBe("https://cms.test/api/collections/pages/tree?site=de");
+    expect(de.taxonomies("tags").url()).toBe("https://cms.test/api/taxonomies/tags/terms?site=de");
+    expect(de.taxonomies("tags").find("php").url()).toBe("https://cms.test/api/taxonomies/tags/terms/php?site=de");
+    expect(de.globals("settings").url()).toBe("https://cms.test/api/globals/settings?site=de");
+    expect(de.globals().url()).toBe("https://cms.test/api/globals?site=de");
+    expect(de.navs("main").tree().url()).toBe("https://cms.test/api/navs/main/tree?site=de");
+  });
+
+  it("is overridden by site() and keeps the URL deterministic", () => {
+    expect(de.collections("blog").site("default").url()).toBe(
+      "https://cms.test/api/collections/blog/entries?site=default",
+    );
+    expect(de.collections("blog").where("title", "x").url()).toBe(
+      cms.collections("blog").site("de").where("title", "x").url(),
+    );
+  });
+
+  it("leaves out endpoints that ignore site", () => {
+    expect(de.assets("images").url()).toBe("https://cms.test/api/assets/images");
+    expect(de.users().url()).toBe("https://cms.test/api/users");
+    expect(de.forms().url()).toBe("https://cms.test/api/forms");
+    expect(de.forms("contact").url()).toBe("https://cms.test/api/forms/contact");
+    expect(de.navs().url()).toBe("https://cms.test/api/navs");
+    expect(de.sites().url()).toBe("https://cms.test/api/sites");
+  });
+
+  it("accepts runtime strings as the default site", async () => {
+    const locale = async (): Promise<string> => "de";
+    const client = createStatamicClient<TestSchema & { sites: "default" | "de" }>({
+      baseUrl: "https://cms.test",
+      site: await locale(),
+    });
+    expect(client.collections("blog").url()).toBe("https://cms.test/api/collections/blog/entries?site=de");
+  });
+});
+
 describe("forms and sites", () => {
   it("builds the list and single-form requests", () => {
     expect(cms.forms().toRequest()).toEqual({ method: "GET", path: "/forms", query: {} });

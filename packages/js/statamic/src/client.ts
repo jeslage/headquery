@@ -5,6 +5,7 @@ import type {
   NavInfo,
   RegisteredSchema,
   ResourceShape,
+  SiteHandleOf,
   StatamicForm,
   StatamicSchemaShape,
   StatamicSite,
@@ -12,6 +13,18 @@ import type {
 } from "./types";
 
 type Handle<T> = Extract<keyof T, string>;
+
+export interface StatamicClientOptions<S extends StatamicSchemaShape = RegisteredSchema> extends ClientOptions {
+  /**
+   * Default site (`site=<handle>`) for every query that supports it: entries, terms, globals,
+   * collection and nav trees. `.site()` overrides it per query. Navs, forms, users, assets and
+   * `/sites` ignore `site` in Statamic, so they don't get it.
+   *
+   * Suggests the schema's site handles but accepts any string, so runtime values (a route param,
+   * Next's `await locale()`) fit without narrowing. An unknown handle is a 404 from Statamic.
+   */
+  site?: SiteHandleOf<S> | (string & {});
+}
 
 /** `ResourceQuery` without `tree()`: taxonomies, asset containers and unstructured collections. */
 export type FlatResourceQuery<Item, Filterable extends string> = Omit<ResourceQuery<Item, Filterable>, "tree">;
@@ -91,15 +104,16 @@ export interface StatamicClient<S extends StatamicSchemaShape> {
  * `createStatamicClient<Schema>({ ... })`.
  */
 export function createStatamicClient<S extends StatamicSchemaShape = RegisteredSchema>(
-  options: ClientOptions,
+  options: StatamicClientOptions<S>,
 ): StatamicClient<S> {
   const core = createCoreClient(options);
+  const site = options.site;
   const seg = encodeURIComponent;
   // Asset paths keep their folder slashes, like Statamic's own `api_url`.
   const assetPath = (path: string) => path.replace(/^\/+/, "").split("/").map(seg).join("/");
   // `globals()` / `forms()`: the list without a handle, one item with it.
-  const listOrOne = (path: string) => (handle?: string) =>
-    handle === undefined ? new IndexQuery(core, path) : new SingleQuery(core, `${path}/${seg(handle)}`);
+  const listOrOne = (path: string, state?: { site?: string }) => (handle?: string) =>
+    handle === undefined ? new IndexQuery(core, path, state) : new SingleQuery(core, `${path}/${seg(handle)}`, state);
 
   return {
     core,
@@ -107,17 +121,17 @@ export function createStatamicClient<S extends StatamicSchemaShape = RegisteredS
     send: core.send,
     collections: ((collection: string) => {
       const base = `/collections/${seg(collection)}`;
-      return new ResourceQuery(core, `${base}/entries`, seg, `${base}/tree`);
+      return new ResourceQuery(core, `${base}/entries`, seg, `${base}/tree`, site);
     }) as never,
-    taxonomies: (taxonomy) => new ResourceQuery(core, `/taxonomies/${seg(taxonomy)}/terms`),
+    taxonomies: (taxonomy) => new ResourceQuery(core, `/taxonomies/${seg(taxonomy)}/terms`, seg, undefined, site),
     assets: (container) => new ResourceQuery(core, `/assets/${seg(container)}`, assetPath),
-    globals: listOrOne("/globals") as never,
+    globals: listOrOne("/globals", { site }) as never,
     users: () => new ResourceQuery(core, "/users"),
     forms: listOrOne("/forms") as never,
     sites: () => new IndexQuery(core, "/sites"),
     navs: ((handle?: string) =>
       handle === undefined
         ? new IndexQuery(core, "/navs")
-        : { tree: () => new TreeQuery(core, `/navs/${seg(handle)}/tree`) }) as never,
+        : { tree: () => new TreeQuery(core, `/navs/${seg(handle)}/tree`, { filters: {}, site }) }) as never,
   };
 }

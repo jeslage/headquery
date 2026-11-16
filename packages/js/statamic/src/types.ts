@@ -74,7 +74,10 @@ export type RegisteredSchema = Register extends { schema: infer S extends Statam
  * (or with types generated before site support). Taken from `Register` rather than a client
  * generic, so it is `string` for `createStatamicClient<Schema>()` without registration.
  */
-export type SiteHandle = RegisteredSchema extends { sites: infer H extends string } ? H : string;
+export type SiteHandle = SiteHandleOf<RegisteredSchema>;
+
+/** Site handles of a schema (`string` for schemas without sites). */
+export type SiteHandleOf<S> = S extends { sites: infer H extends string } ? H : string;
 
 /** Conditions with one value (Statamic's API filters, same as the collection tag). */
 export type ScalarCondition =
