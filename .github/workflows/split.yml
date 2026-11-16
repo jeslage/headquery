@@ -1,8 +1,9 @@
 # Mirrors each Composer package into its own read-only repo, which Packagist reads.
 #
 # - Every push to main updates the split repo's main branch.
-# - Releases: tag the monorepo with "<prefix>/X.Y.Z" (e.g. php-statamic/0.1.0);
-#   the split repo receives the plain tag "X.Y.Z".
+# - Releases: php-release.yml tags the monorepo "<prefix>/X.Y.Z" (e.g. php-statamic/0.4.0) when
+#   the "Version packages" PR bumps a PHP package, and calls this workflow with that tag; the
+#   split repo receives the plain tag "X.Y.Z". Pushing such a tag by hand works too.
 #
 # Setup: create github.com/jeslage/headquery-statamic (empty), register it on Packagist,
 # add a SPLIT_TOKEN secret (fine-grained PAT with contents:write on the split repos).
@@ -16,10 +17,22 @@ on:
     tags: ["php-*/[0-9]*"]
   # manual run: mirrors main without a tag
   workflow_dispatch:
+  # from php-release.yml: a tag pushed with GITHUB_TOKEN doesn't trigger the `push: tags` above
+  workflow_call:
+    inputs:
+      tag:
+        description: Monorepo tag to release, e.g. php-statamic/0.4.0
+        type: string
+        required: true
 
 jobs:
   split:
     runs-on: ubuntu-latest
+    # A release merge starts this twice (push to main, and the call from php-release.yml);
+    # queue them so both don't commit to the split repo at the same time.
+    concurrency:
+      group: split-${{ matrix.package.dir }}
+      cancel-in-progress: false
     strategy:
       fail-fast: false
       matrix:
@@ -35,10 +48,14 @@ jobs:
       - name: Resolve tag for this package
         id: tag
         shell: bash
+        env:
+          INPUT_TAG: ${{ inputs.tag }}
         run: |
-          ref="${GITHUB_REF_NAME}"
+          ref="${INPUT_TAG:-$GITHUB_REF_NAME}"
+          type="${INPUT_TAG:+tag}"
+          type="${type:-$GITHUB_REF_TYPE}"
           prefix="${{ matrix.package.tag_prefix }}"
-          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+          if [[ "$type" == "tag" ]]; then
             if [[ "$ref" == "$prefix"* ]]; then
               echo "tag=${ref#"$prefix"}" >> "$GITHUB_OUTPUT"
               echo "run=true" >> "$GITHUB_OUTPUT"

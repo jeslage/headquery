@@ -1,0 +1,45 @@
+# Releases the Composer packages: when the "Version packages" PR bumps a PHP package's version
+# (packages/php/<name>/package.json, versioned by changesets), tag the monorepo
+# "php-<name>/X.Y.Z" and run the split with that tag, so Packagist gets "X.Y.Z".
+
+name: Release (PHP)
+
+on:
+  push:
+    branches: [main]
+    paths: ["packages/php/*/package.json"]
+
+concurrency: php-release
+
+permissions:
+  contents: write
+
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Tag the new version
+        id: tag
+        shell: bash
+        run: |
+          version=$(jq -r .version packages/php/statamic/package.json)
+          tag="php-statamic/$version"
+          if git ls-remote --exit-code --tags origin "refs/tags/$tag" >/dev/null; then
+            echo "$tag already exists, nothing to release"
+            exit 0
+          fi
+          git tag "$tag"
+          git push origin "$tag"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+  split:
+    needs: tag
+    if: needs.tag.outputs.tag != ''
+    uses: ./.github/workflows/split.yml
+    with:
+      tag: ${{ needs.tag.outputs.tag }}
+    secrets: inherit
