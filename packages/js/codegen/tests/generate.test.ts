@@ -25,6 +25,39 @@ describe("generate (statamic)", () => {
     expect(generate(base)).not.toContain("sites:");
     expect(generate({ ...base, sites: {} })).not.toContain("sites:");
   });
+
+  it("merges the blueprints of a taxonomy: fields of some blueprints are optional, types combined", () => {
+    const out = generate({
+      schemaVersion: 1,
+      cms: { name: "statamic" },
+      resources: {
+        taxonomy: {
+          topics: {
+            blueprints: {
+              topic: { fields: { color: { type: "string" }, rank: { type: "number" } } },
+              special: { fields: { color: { type: "string" }, rank: { type: "string" }, badge: { type: "boolean" } } },
+            },
+          },
+        },
+      },
+    });
+    expect(out).toContain("  badge?: boolean;\n");
+    expect(out).toContain("  color: string | null;\n");
+    expect(out).toContain("  rank: number | string | null;\n");
+  });
+
+  it("rejects blueprint type names that clash with another collection", () => {
+    const blueprints = (...handles: string[]) => ({
+      blueprints: Object.fromEntries(handles.map((h) => [h, { fields: {} }])),
+    });
+    expect(() =>
+      generate({
+        schemaVersion: 1,
+        cms: { name: "statamic" },
+        resources: { collection: { pages: blueprints("page", "landing"), pages_landing: blueprints("x") } },
+      }),
+    ).toThrow(/PagesLandingEntry/);
+  });
 });
 
 describe("fieldType", () => {

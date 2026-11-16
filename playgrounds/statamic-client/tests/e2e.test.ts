@@ -1,6 +1,6 @@
 // End-to-end: @headquery/statamic against the running playground with the seed content
 // from playgrounds/statamic/seed. Skipped unless HEADQUERY_BASE_URL is set.
-import { HeadqueryHttpError, type SiteHandle } from "@headquery/statamic";
+import { HeadqueryHttpError, isBlueprint, type SiteHandle } from "@headquery/statamic";
 import { describe, expect, expectTypeOf, it } from "vitest";
 import { cms } from "../src/client";
 import type { AssetsAsset, BlogEntry, HqAsset, HqAssetBase } from "../src/cms";
@@ -235,6 +235,32 @@ describe.skipIf(!baseUrl)(`Statamic playground (${baseUrl})`, () => {
     it("lists navigations", async () => {
       const { data } = await cms.navs().get();
       expect(data).toEqual([expect.objectContaining({ handle: "main", title: "Main", max_depth: 2 })]);
+    });
+  });
+
+  describe("collections with several blueprints", () => {
+    const pages = cms.collections("pages");
+
+    it("returns only the fields of an entry's own blueprint", async () => {
+      const contact = (await pages.find("contact").get())!.data;
+      const team = (await pages.find("team").get())!.data;
+      expect(contact.blueprint.handle).toBe("landing");
+      expect(team.blueprint.handle).toBe("page");
+
+      if (!isBlueprint(contact, "landing") || !isBlueprint(team, "page")) throw new Error("unexpected blueprints");
+      expect(contact).toMatchObject({ summary: 42, show_hero: true, layout: { key: "wide" } });
+      expect(contact.features).toEqual([{ id: "f1", label: "Fast replies" }]);
+      expectTypeOf(contact.show_hero).toEqualTypeOf<boolean>();
+      expect(team.summary).toBe("Who builds it");
+      expectTypeOf(team.summary).toEqualTypeOf<string | null>();
+      expect(team).not.toHaveProperty("show_hero");
+      expect(team).not.toHaveProperty("features");
+    });
+
+    it("returns requested fields that an entry's blueprint lacks as null", async () => {
+      const { data } = await pages.site("en").fields(["slug", "show_hero"]).get();
+      const bySlug = Object.fromEntries(data.map((e) => [e.slug, e.show_hero]));
+      expect(bySlug).toEqual({ about: null, home: null, team: null, contact: true });
     });
   });
 

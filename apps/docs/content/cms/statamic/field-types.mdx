@@ -45,6 +45,37 @@ function Body({ items }: { items: BlogEntry["body"] }) {
 
 With `save_html: true`, Bard stores HTML, so the field is typed as a `string` even if it has sets.
 
+## Several blueprints [#blueprints]
+
+A collection can have several blueprints, and Statamic only returns the fields of an entry's own
+blueprint. Codegen therefore emits one type per blueprint and a union for the collection,
+e.g. `PagesEntry = PagesLandingEntry | PagesPageEntry`. Each type has its blueprint's handle in
+`blueprint.handle`. TypeScript doesn't narrow a union on a nested property, so narrow with
+`isBlueprint()`:
+
+```ts twoslash
+import "./generated/cms.generated";
+import { createStatamicClient, isBlueprint } from "@headquery/statamic";
+const cms = createStatamicClient({ baseUrl: "https://cms.example.com" });
+// ---cut---
+const page = await cms.collections("pages").find("contact").get();
+
+if (page && isBlueprint(page.data, "landing")) {
+  page.data.show_hero;
+  //        ^?
+}
+```
+
+The same field can have different types in different blueprints (`summary` is a textarea in
+`page` and an integer in `landing`); before narrowing, it's the union of both. Collections with
+one blueprint get a single type, e.g. `BlogEntry`.
+
+`.fields([...])` accepts the fields of every blueprint. Statamic returns a requested field that
+isn't in an entry's blueprint as `null`, and the result type says so.
+
+Terms don't include their blueprint, so a taxonomy with several blueprints gets one type: fields
+that only some blueprints have are optional, and differing types are combined.
+
 ## System fields
 
 System fields Statamic adds to every entry, term, global set and asset (`id`, `url`, `status`,

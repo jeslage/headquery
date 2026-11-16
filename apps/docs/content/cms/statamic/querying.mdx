@@ -160,7 +160,9 @@ page2.links.next;
 
 ## Selecting fields
 
-`.fields()` sends `fields=` and narrows the result type to the selected fields:
+`.fields()` sends `fields=` and narrows the result type to the selected fields. In collections
+with [several blueprints](/cms/statamic/field-types#blueprints), entries whose blueprint lacks a
+selected field get it as `null`:
 
 ```ts twoslash
 import "./generated/cms.generated";

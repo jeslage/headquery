@@ -1,5 +1,6 @@
 export type { ClientOptions, RunOptions } from "@headquery/core";
 export { HeadqueryError, HeadqueryHttpError, HeadqueryNetworkError } from "@headquery/core";
+export { isBlueprint } from "./blueprint";
 export {
   type CollectionQuery,
   createStatamicClient,

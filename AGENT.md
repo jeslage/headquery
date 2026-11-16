@@ -113,6 +113,12 @@ Notes:
 - `resources` is grouped by kind (`collection taxonomy global navigation assetContainer`),
   each a map handle → resource, because Statamic handles are only unique per kind.
   Navigations also carry `collections` (linkable collections) and `maxDepth`.
+- Collections and taxonomies have `blueprints` (handle → `{ title, fields }`, at least one) instead
+  of `fields`, because the API only returns the fields of an item's own blueprint. Globals, asset
+  containers and navigations have one blueprint and keep `fields`. Codegen: one entry type per
+  blueprint with a literal `blueprint.handle` and a union per collection (narrow with
+  `isBlueprint()`, TS can't narrow on nested properties); terms have no `blueprint` key, so a
+  taxonomy gets one type with optional fields for fields that only some blueprints have.
 - Field types: `string number boolean date enum array object relation asset richtext blocks unknown`.
   `richtext` carries `sets` when the rich text contains sets (Bard with sets), same shape as `blocks.sets`.
 - `filterable: true` mirrors Statamic's `allowed_filters` — codegen turns it into the
@@ -202,6 +208,9 @@ select-like fields return `{ key, value, label }` (all `null` when empty, `[]` w
 toggles are always boolean; grid/replicator/multi relations return `[]`, but
 list/taggable/table return `null` when empty; assets use `max_files` (not `max_items`).
 System fields of entries/terms/globals are modelled as `HqEntryBase`/`HqTermBase`/`HqGlobalBase`.
+Fields of another blueprint are absent from an entry (single, list, collection tree); with `fields=`,
+a requested field the item doesn't have is `null` (lists, single items, collection and nav trees).
+Terms have no `blueprint` key.
 Nav tree items are `{ page, depth, children }` (depth 1 = top level). Pages linked to an entry
 contain all of the entry's fields plus `entry_id`; their `id` is the nav item id, not the entry id.
 Plain link pages only have `id title url uri permalink` and `entry_id: null`. Nav blueprint

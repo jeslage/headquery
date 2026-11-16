@@ -193,11 +193,12 @@ export type HqNavLink<F> = HqNavPageBase & F & { entry_id: null };
 export type HqTreeEntry<E> = E & { entry_id: string };
 
 /** A navigation page linked to an entry: the entry's fields, the nav fields and `entry_id`. */
-export type HqNavEntry<E, F> = Omit<E, keyof HqNavPageBase | keyof F | "entry_id"> &
-  HqNavPageBase &
-  F & { entry_id: string };
+export type HqNavEntry<E, F> = E extends unknown
+  ? Omit<E, keyof HqNavPageBase | keyof F | "entry_id"> & HqNavPageBase & F & { entry_id: string }
+  : never;
 
-export interface BlogEntry extends Omit<HqEntryBase, "date" | "slug" | "title"> {
+export interface BlogEntry extends Omit<HqEntryBase, "blueprint" | "date" | "slug" | "title"> {
+  blueprint: { handle: "blog"; title: string };
   /** CMS field type: `users` */
   author: HqUser | null;
   /** CMS field type: `bard` */
@@ -226,7 +227,26 @@ export interface BlogEntry extends Omit<HqEntryBase, "date" | "slug" | "title"> 
   title: string;
 }
 
-export interface PagesEntry extends Omit<HqEntryBase, "slug" | "title"> {
+/** Entry of the `Pages` collection with the `Landing` blueprint. */
+export interface PagesLandingEntry extends Omit<HqEntryBase, "blueprint" | "slug" | "title"> {
+  blueprint: { handle: "landing"; title: string };
+  /** CMS field type: `grid` */
+  features: Array<{ id: string; label: string | null }>;
+  /** CMS field type: `select` */
+  layout: HqOption<"wide" | "narrow"> | HqEmptyOption;
+  /** CMS field type: `toggle` */
+  show_hero: boolean;
+  /** CMS field type: `slug` */
+  slug: string;
+  /** CMS field type: `integer` */
+  summary: number | null;
+  /** CMS field type: `text` */
+  title: string;
+}
+
+/** Entry of the `Pages` collection with the `Page` blueprint. */
+export interface PagesPageEntry extends Omit<HqEntryBase, "blueprint" | "slug" | "title"> {
+  blueprint: { handle: "page"; title: string };
   /** CMS field type: `slug` */
   slug: string;
   /** CMS field type: `textarea` */
@@ -234,6 +254,11 @@ export interface PagesEntry extends Omit<HqEntryBase, "slug" | "title"> {
   /** CMS field type: `text` */
   title: string;
 }
+
+/** Entry of the `Pages` collection; narrow on `blueprint.handle`. */
+export type PagesEntry =
+  | PagesLandingEntry
+  | PagesPageEntry;
 
 /** Page of the `Pages` tree (max depth 3). */
 export type PagesTreePage = HqTreeEntry<PagesEntry>;

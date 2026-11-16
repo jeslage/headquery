@@ -237,8 +237,16 @@ export interface DataList<T> {
 /** Keys of any member of a union (`keyof` of a union only has the shared keys). */
 export type KeysOfUnion<T> = T extends unknown ? keyof T : never;
 
+/**
+ * The picked keys of one item type: the keys it has, plus `null` for picked keys it doesn't have
+ * (with `fields=`, Statamic returns a requested field that isn't in an item's blueprint as `null`).
+ */
+type PickMember<T, K extends PropertyKey> = [Exclude<K, keyof T>] extends [never]
+  ? Pick<T, Extract<K, keyof T>>
+  : Pick<T, Extract<K, keyof T>> & { [P in Exclude<K, keyof T>]: null };
+
 /** `Pick` applied to each union member, so e.g. nav link and entry pages stay distinguishable. */
-export type PickFromUnion<T, K extends PropertyKey> = T extends unknown ? Pick<T, Extract<K, keyof T>> : never;
+export type PickFromUnion<T, K extends PropertyKey> = T extends unknown ? PickMember<T, K> : never;
 
 /** `T` itself while all keys are picked (readable hovers), otherwise `PickFromUnion`. */
 export type PickedUnion<T, K extends PropertyKey> = [KeysOfUnion<T>] extends [K] ? T : PickFromUnion<T, K>;
