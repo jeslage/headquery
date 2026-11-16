@@ -1,5 +1,11 @@
 # @headquery/statamic
 
+## 0.4.0
+
+### Minor Changes
+
+- c8b70e5: New `site` client option: `createStatamicClient({ baseUrl, site: "de" })` sends `site=de` with every query that supports it (entry and term lists, `find()`, globals, collection and nav trees). `.site()` overrides it per query. Suggests the schema's site handles but accepts any string, so runtime values like Next's `await locale()` fit; exported as `StatamicClientOptions` (and `SiteHandleOf<Schema>`).
+
 ## 0.3.0
 
 ### Minor Changes
