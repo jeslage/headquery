@@ -266,8 +266,8 @@ have `content/globals/default/` — the seed was converted by hand.
   PHP are not touched. 2 spaces, double quotes, semicolons, 120 columns. Generated files
   (codegen snapshot, `apps/docs/generated`, playground `cms.ts`) are excluded.
   `noNonNullAssertion` is off because `noUncheckedIndexedAccess` makes `!` idiomatic here.
-- Public API changes in JS packages need a changeset. Internal wrappers
-  (`@headquery-internal/*`) are ignored by changesets.
+- Public API changes in JS packages need a changeset. The docs and playgrounds
+  (`@headquery-internal/*`) are ignored by changesets; the PHP wrapper isn't (it versions the addon).
 - PHP ≥ 8.2, PSR-4 under `Headquery\Statamic\`, PSR-12 style, no new runtime dependencies
   beyond `statamic/cms`.
 - Keep `FieldMapper` free of Statamic classes so it stays unit-testable.
@@ -286,8 +286,12 @@ have `content/globals/default/` — the seed was converted by hand.
 - **npm:** changesets → `release.yml` opens a "Version packages" PR → merging publishes.
   Needs `NPM_TOKEN` secret and the `@headquery` npm org.
 - **Packagist:** `split.yml` mirrors `packages/php/statamic` to `github.com/jeslage/headquery-statamic`
-  on every push to main. Release by tagging the monorepo `php-statamic/X.Y.Z` (no "v"); the split
-  repo receives `X.Y.Z`. Needs `SPLIT_TOKEN` secret, the empty split repo and a Packagist entry.
+  on every push to main. The addon is versioned by changesets through its private wrapper
+  `@headquery-internal/php-statamic` (`packages/php/statamic/package.json`, `privatePackages`
+  in `.changeset/config.json`): add a changeset for it with PHP changes. When the "Version packages"
+  PR bumps it, `php-release.yml` tags the monorepo `php-statamic/X.Y.Z` (no "v") and calls
+  `split.yml`, so the split repo receives `X.Y.Z` (and the wrapper's `CHANGELOG.md`). A hand-pushed
+  `php-statamic/X.Y.Z` tag still works. Needs `SPLIT_TOKEN` secret, the split repo and a Packagist entry.
 
 ## Roadmap (suggested order)
 

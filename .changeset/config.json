@@ -7,5 +7,10 @@
   "access": "public",
   "baseBranch": "main",
   "updateInternalDependencies": "patch",
-  "ignore": ["@headquery-internal/*"]
+  "ignore": [
+    "@headquery-internal/docs",
+    "@headquery-internal/playground-statamic-client",
+    "@headquery-internal/playground-statamic-next"
+  ],
+  "privatePackages": { "version": true, "tag": false }
 }
