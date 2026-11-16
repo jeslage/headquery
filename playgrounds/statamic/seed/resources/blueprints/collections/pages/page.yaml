@@ -15,6 +15,12 @@ tabs:
             handle: summary
             field:
               type: textarea
+          -
+            handle: cta
+            field:
+              type: link
+              collections:
+                - blog
   sidebar:
     display: Sidebar
     sections:

@@ -115,9 +115,13 @@ export type IrField =
   /** Rich text: an HTML string, or with `sets` an array of text items and sets (Statamic: Bard). */
   | (IrFieldBase & { type: "richtext"; sets?: Record<string, Record<string, IrField>> })
   | (IrFieldBase & { type: "blocks"; sets: Record<string, Record<string, IrField>> })
+  /** A link: always `{ url }`, or an entry or asset when `targets` allows it (Statamic: `link`). */
+  | (IrFieldBase & { type: "link"; targets?: IrLinkTarget[] })
   | (IrFieldBase & { type: "unknown" });
 
 export type IrRelationTarget = "entry" | "term" | "user" | "asset";
+
+export type IrLinkTarget = "entry" | "asset";
 
 export type IrFieldType = IrField["type"];
 

@@ -22,6 +22,11 @@ tabs:
                 - unorderedlist
                 - anchor
           -
+            handle: source
+            field:
+              type: link
+              container: assets
+          -
             handle: body
             field:
               type: bard

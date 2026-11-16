@@ -36,6 +36,32 @@ export interface HqAsset {
   [key: string]: unknown;
 }
 
+/**
+ * Link field pointing to a URL (\`mailto:\` and relative paths too); \`{ url: null }\` when empty or
+ * when the linked entry doesn't exist. A link is never \`null\` itself, so \`link.url\` always works.
+ */
+export interface HqLinkUrl {
+  url: string | null;
+}
+
+/** Link field pointing to an entry (also \`@child\`): the entry's shallow fields. Narrow with \`"title" in link\`. */
+export interface HqLinkEntry {
+  id: string;
+  title: string;
+  url: string | null;
+  permalink: string | null;
+  api_url: string;
+}
+
+/** Link field pointing to an asset: the asset's shallow fields. Narrow with \`"alt" in link\`. */
+export interface HqLinkAsset {
+  id: string;
+  url: string;
+  permalink: string;
+  api_url: string;
+  alt: string | null;
+}
+
 export interface HqRelatedEntry {
   id: string;
   title: string;
@@ -541,6 +567,7 @@ function neverNull(field: IrField): boolean {
     case "unknown":
     case "boolean": // toggle casts to bool
     case "blocks": // replicator: []
+    case "link": // { url: null } when empty
     case "enum": // multiple: [], single: HqEmptyOption (part of the base type)
       return true;
     case "richtext": // Bard with sets: [], without sets: null
@@ -585,6 +612,14 @@ function baseType(field: IrField, depth: number): string {
     }
     case "asset":
       return field.multiple ? "Array<HqAsset>" : "HqAsset";
+    case "link": {
+      const targets = field.targets ?? ["entry", "asset"];
+      return [
+        "HqLinkUrl",
+        ...(targets.includes("entry") ? ["HqLinkEntry"] : []),
+        ...(targets.includes("asset") ? ["HqLinkAsset"] : []),
+      ].join(" | ");
+    }
     case "richtext":
       // Bard: HTML without sets; with sets, text items between the sets (disabled sets are left out).
       if (!field.sets) return "string";
