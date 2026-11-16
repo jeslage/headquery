@@ -47,8 +47,26 @@ const english = await cms.collections("blog").site("default").get(); // ?site=de
 ```
 
 The default site becomes part of each query, so `query.url()` (and with it any cache key built
-from it) is the same as with `.site("de")`. In a framework with one locale per request, create
-the client per request from the route's locale, e.g. in Next.js:
+from it) is the same as with `.site("de")`. Unlike `.site()`, the client option accepts any string
+(your handles are still suggested), so a runtime value fits as it is. In a framework with one
+locale per request, create the client per request from the route's locale, e.g. in Next.js with
+`next/root-params`:
+
+```ts twoslash
+import "./generated/cms.generated";
+declare function locale(): Promise<string>;
+// ---cut---
+import { createStatamicClient } from "@headquery/statamic";
+// import { locale } from "next/root-params";
+
+export async function cms() {
+  return createStatamicClient({ baseUrl: process.env.HEADQUERY_BASE_URL!, site: await locale() });
+}
+
+// app/[locale]/blog/[slug]/page.tsx: await (await cms()).collections("blog").where("slug", slug).first();
+```
+
+An unknown handle is a 404 from Statamic. If your locales aren't the site handles, map them:
 
 ```ts twoslash
 import "./generated/cms.generated";
@@ -61,8 +79,6 @@ export function cms(locale: string) {
   const site = sites[locale as keyof typeof sites] ?? "default";
   return createStatamicClient({ baseUrl: process.env.HEADQUERY_BASE_URL!, site });
 }
-
-// app/[locale]/blog/[slug]/page.tsx: await cms(locale).collections("blog").where("slug", slug).first();
 ```
 
 ## Typed site handles

@@ -322,10 +322,13 @@ describe("default site", () => {
     expect(de.sites().url()).toBe("https://cms.test/api/sites");
   });
 
-  it("only accepts the schema's site handles", () => {
-    // @ts-expect-error not a site of the schema
-    createStatamicClient<TestSchema & { sites: "default" | "de" }>({ baseUrl: "https://cms.test", site: "fr" });
-    createStatamicClient<TestSchema>({ baseUrl: "https://cms.test", site: "anything" });
+  it("accepts runtime strings as the default site", async () => {
+    const locale = async (): Promise<string> => "de";
+    const client = createStatamicClient<TestSchema & { sites: "default" | "de" }>({
+      baseUrl: "https://cms.test",
+      site: await locale(),
+    });
+    expect(client.collections("blog").url()).toBe("https://cms.test/api/collections/blog/entries?site=de");
   });
 });
 

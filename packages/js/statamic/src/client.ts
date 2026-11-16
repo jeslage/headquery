@@ -19,8 +19,11 @@ export interface StatamicClientOptions<S extends StatamicSchemaShape = Registere
    * Default site (`site=<handle>`) for every query that supports it: entries, terms, globals,
    * collection and nav trees. `.site()` overrides it per query. Navs, forms, users, assets and
    * `/sites` ignore `site` in Statamic, so they don't get it.
+   *
+   * Suggests the schema's site handles but accepts any string, so runtime values (a route param,
+   * Next's `await locale()`) fit without narrowing. An unknown handle is a 404 from Statamic.
    */
-  site?: SiteHandleOf<S>;
+  site?: SiteHandleOf<S> | (string & {});
 }
 
 /** `ResourceQuery` without `tree()`: taxonomies, asset containers and unstructured collections. */

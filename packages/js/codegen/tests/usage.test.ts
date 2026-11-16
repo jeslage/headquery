@@ -262,4 +262,10 @@ describe("generated types work with @headquery/statamic", () => {
     // @ts-expect-error unknown site on a tree
     cms.navs("main").tree().site("fr");
   });
+
+  it("accepts any string as the client's default site, unlike site()", async () => {
+    const locale = async (): Promise<string> => "de";
+    createStatamicClient({ baseUrl: "https://cms.test", site: await locale() });
+    createStatamicClient({ baseUrl: "https://cms.test", site: "default" });
+  });
 });
