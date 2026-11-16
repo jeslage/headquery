@@ -1,6 +1,6 @@
 {
   "name": "@headquery/codegen",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Generate TypeScript types for headquery clients from a CMS schema (file or URL).",
   "license": "MIT",
   "homepage": "https://github.com/jeslage/headquery#readme",
