@@ -32,6 +32,7 @@
               "author": { "type": "relation", "to": "user", "multiple": false, "cmsType": "users" },
               "hero": { "type": "asset", "multiple": false, "cmsType": "assets" },
               "content": { "type": "richtext", "cmsType": "bard" },
+              "source": { "type": "link", "targets": ["entry", "asset"], "cmsType": "link" },
               "body": {
                 "type": "richtext",
                 "cmsType": "bard",
@@ -88,6 +89,7 @@
             "fields": {
               "title": { "type": "string", "required": true, "filterable": true, "cmsType": "text" },
               "summary": { "type": "string", "cmsType": "textarea" },
+              "cta": { "type": "link", "targets": ["entry"], "cmsType": "link" },
               "slug": { "type": "string", "required": true, "cmsType": "slug" }
             }
           }

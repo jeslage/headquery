@@ -7,6 +7,9 @@ import type {
   HqAsset,
   HqBardText,
   HqEmptyOption,
+  HqLinkAsset,
+  HqLinkEntry,
+  HqLinkUrl,
   HqNavEntry,
   HqOption,
   MainNavFields,
@@ -59,6 +62,18 @@ describe("generated types work with @headquery/statamic", () => {
       }
     };
     expectTypeOf(render).returns.toEqualTypeOf<string>();
+  });
+
+  it("types link fields as a URL, an entry or an asset, never null", () => {
+    expectTypeOf<BlogEntry["source"]>().toEqualTypeOf<HqLinkUrl | HqLinkEntry | HqLinkAsset>();
+    expectTypeOf<PagesPageEntry["cta"]>().toEqualTypeOf<HqLinkUrl | HqLinkEntry>();
+    expectTypeOf<BlogEntry["source"]["url"]>().toEqualTypeOf<string | null>();
+
+    (link: BlogEntry["source"]) => {
+      if ("title" in link) expectTypeOf(link).toEqualTypeOf<HqLinkEntry>();
+      else if ("alt" in link) expectTypeOf(link).toEqualTypeOf<HqLinkAsset>();
+      else expectTypeOf(link).toEqualTypeOf<HqLinkUrl>();
+    };
   });
 
   it("includes Statamic's system fields, with blueprint fields taking precedence", () => {

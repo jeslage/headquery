@@ -143,6 +143,7 @@
             "asset",
             "richtext",
             "blocks",
+            "link",
             "unknown"
           ]
         },
@@ -158,6 +159,12 @@
         "fields": { "$ref": "#/$defs/fieldMap" },
         "to": { "enum": ["entry", "term", "user", "asset"] },
         "resources": { "type": "array", "items": { "type": "string" } },
+        "targets": {
+          "description": "`link`: what the link can point to besides a plain URL.",
+          "type": "array",
+          "items": { "enum": ["entry", "asset"] },
+          "uniqueItems": true
+        },
         "sets": {
           "description": "Sets keyed by handle: required for `blocks`; on `richtext` when the rich text contains sets (Statamic: Bard with sets).",
           "type": "object",

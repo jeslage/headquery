@@ -119,7 +119,8 @@ Notes:
   blueprint with a literal `blueprint.handle` and a union per collection (narrow with
   `isBlueprint()`, TS can't narrow on nested properties); terms have no `blueprint` key, so a
   taxonomy gets one type with optional fields for fields that only some blueprints have.
-- Field types: `string number boolean date enum array object relation asset richtext blocks unknown`.
+- Field types: `string number boolean date enum array object relation asset richtext blocks link unknown`.
+  `link` carries `targets` (`entry`, `asset`): what the link can point to besides a URL.
   `richtext` carries `sets` when the rich text contains sets (Bard with sets), same shape as `blocks.sets`.
 - `filterable: true` mirrors Statamic's `allowed_filters` — codegen turns it into the
   `filterable` union that restricts `.where()`. Allowed filters that are not blueprint fields
@@ -241,6 +242,11 @@ Bard without sets returns an HTML string (`null` when empty). With sets (IR `ric
 `save_html`) it returns an array of `{ type: "text", text: "<p>…</p>" }` items and sets
 (`{ id, type: <set handle>, …augmented fields }`), `[]` when empty; disabled sets are left out
 (`Fieldtypes/Bard/Augmentor.php`). Codegen: `string` / `Array<HqBardText | set>`.
+Link fields are never null or a string (`Fieldtypes/Link/ArrayableLink::jsonSerialize`): `{ url }` for URLs,
+`{ url: null }` when empty, the linked entry is gone or `@child` has no children; the shallow entry
+(`id title url permalink api_url`) for entries and `@child`; the shallow asset (`id url permalink api_url alt`)
+for assets (only with `container` in the field config). Links to unpublished entries still return the entry.
+Codegen: `HqLinkUrl | HqLinkEntry | HqLinkAsset`.
 Live Preview: Statamic appends `?live-preview=…&token=…` to the preview target URL; API requests with
 `token=` (or header `X-Statamic-Token`) get the unsaved item substituted (verified for single entries by
 id and slug, and in lists), unpublished previewed entries aren't 404, and the API cache is skipped.

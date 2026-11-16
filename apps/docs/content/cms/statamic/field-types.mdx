@@ -13,6 +13,7 @@ How the addon maps Statamic fieldtypes to the types that
 | `assets` | `HqAsset` or `HqAsset[]` (`max_files`) |
 | `entries`, `terms`, `users` | `HqRelatedEntry`, `HqRelatedTerm`, `HqUser` |
 | `grid`, `replicator` | arrays of typed rows/sets (`[]` when empty) |
+| `link` | `HqLinkUrl \| HqLinkEntry \| HqLinkAsset` (never null), see [Link](#link) |
 | `bard` | HTML `string` without sets; with sets an array of text items and typed sets (`[]` when empty), see [Bard](#bard) |
 | unknown fieldtypes | `unknown` — see [custom fieldtypes](/cms/statamic/custom-fieldtypes) |
 
@@ -44,6 +45,35 @@ function Body({ items }: { items: BlogEntry["body"] }) {
 ```
 
 With `save_html: true`, Bard stores HTML, so the field is typed as a `string` even if it has sets.
+
+## Link [#link]
+
+A link field always returns an object, never a plain string:
+
+| Value in the CMS | Type | Response |
+| --- | --- | --- |
+| URL, `mailto:`, relative path | `HqLinkUrl` | `{ url: "https://…" }` |
+| Entry, or `@child` (first child page) | `HqLinkEntry` | `{ id, title, url, permalink, api_url }` |
+| Asset (only with a `container` in the field config) | `HqLinkAsset` | `{ id, url, permalink, api_url, alt }` |
+| Empty, deleted entry, `@child` without children | `HqLinkUrl` | `{ url: null }` |
+
+All of them have `url`, so `link.url` is enough for an `href`. To tell them apart, check for
+`title` (entry) or `alt` (asset):
+
+```tsx twoslash
+// @jsx: react-jsx
+import "./generated/cms.generated";
+import type { BlogEntry } from "./generated/cms.generated";
+// ---cut---
+function Source({ link }: { link: BlogEntry["source"] }) {
+  if (!link.url) return null;
+  const label = "title" in link ? link.title : "alt" in link ? (link.alt ?? "Download") : link.url;
+  return <a href={link.url}>{label}</a>;
+}
+```
+
+A link to an unpublished entry still returns the entry: Statamic resolves links without checking
+the publish status.
 
 ## Several blueprints [#blueprints]
 

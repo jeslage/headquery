@@ -173,6 +173,29 @@ describe.skipIf(!baseUrl)(`Statamic playground (${baseUrl})`, () => {
       expect(data.body).toEqual([]);
     });
 
+    it("returns link fields as { url }, the linked entry or the linked asset", async () => {
+      const { data } = await blog.fields(["slug", "source"]).get();
+      const bySlug = Object.fromEntries(data.map((e) => [e.slug, e.source]));
+      expect(bySlug["cacheable-get-requests"]).toEqual({ url: "https://example.com/caching" });
+      expect(bySlug["statamic-addon"]).toEqual({ url: null });
+      expect(bySlug["hello-headquery"]).toMatchObject({ id: "assets::hero.svg", url: "/assets/hero.svg", alt: null });
+
+      const source = bySlug["hello-headquery"]!;
+      if ("alt" in source) expectTypeOf(source.url).toEqualTypeOf<string>();
+      expectTypeOf(source.url).toEqualTypeOf<string | null>();
+    });
+
+    it("resolves entry and @child links to the entry", async () => {
+      const pages = cms.collections("pages");
+      const cta = async (slug: string) => {
+        const page = (await pages.find(slug).get())!.data;
+        return isBlueprint(page, "page") ? page.cta : undefined;
+      };
+      expect(await cta("home")).toMatchObject({ title: "Hello headquery", url: "/blog/hello-headquery" });
+      expect(await cta("about")).toMatchObject({ title: "Team", url: "/about/team" });
+      expect(await cta("team")).toEqual({ url: null });
+    });
+
     it("hides unpublished entries: find() resolves to null on 404", async () => {
       expect(await entries.find("unpublished-draft").get()).toBeNull();
     });

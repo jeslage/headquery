@@ -33,6 +33,32 @@ export interface HqAsset {
   [key: string]: unknown;
 }
 
+/**
+ * Link field pointing to a URL (`mailto:` and relative paths too); `{ url: null }` when empty or
+ * when the linked entry doesn't exist. A link is never `null` itself, so `link.url` always works.
+ */
+export interface HqLinkUrl {
+  url: string | null;
+}
+
+/** Link field pointing to an entry (also `@child`): the entry's shallow fields. Narrow with `"title" in link`. */
+export interface HqLinkEntry {
+  id: string;
+  title: string;
+  url: string | null;
+  permalink: string | null;
+  api_url: string;
+}
+
+/** Link field pointing to an asset: the asset's shallow fields. Narrow with `"alt" in link`. */
+export interface HqLinkAsset {
+  id: string;
+  url: string;
+  permalink: string;
+  api_url: string;
+  alt: string | null;
+}
+
 export interface HqRelatedEntry {
   id: string;
   title: string;
@@ -219,6 +245,8 @@ export interface BlogEntry extends Omit<HqEntryBase, "blueprint" | "date" | "slu
   seo: unknown;
   /** CMS field type: `slug` */
   slug: string;
+  /** CMS field type: `link` */
+  source: HqLinkUrl | HqLinkEntry | HqLinkAsset;
   /** CMS field type: `select` */
   stage: HqOption<"draft" | "review" | "live"> | HqEmptyOption;
   /** CMS field type: `terms` */
@@ -247,6 +275,8 @@ export interface PagesLandingEntry extends Omit<HqEntryBase, "blueprint" | "slug
 /** Entry of the `Pages` collection with the `Page` blueprint. */
 export interface PagesPageEntry extends Omit<HqEntryBase, "blueprint" | "slug" | "title"> {
   blueprint: { handle: "page"; title: string };
+  /** CMS field type: `link` */
+  cta: HqLinkUrl | HqLinkEntry;
   /** CMS field type: `slug` */
   slug: string;
   /** CMS field type: `textarea` */
