@@ -1,5 +1,6 @@
 export type { ClientOptions, RunOptions } from "@headquery/core";
 export { HeadqueryError, HeadqueryHttpError, HeadqueryNetworkError } from "@headquery/core";
+export { isBlueprint } from "./blueprint";
 export {
   type CollectionQuery,
   createStatamicClient,
@@ -10,6 +11,7 @@ export {
 export { IndexQuery, LIST_SEPARATOR, ListQuery, ResourceQuery, SingleQuery, TreeQuery } from "./query";
 export type {
   AssetContainersOf,
+  BlueprintHandle,
   BooleanCondition,
   Condition,
   DataList,
@@ -44,4 +46,5 @@ export type {
   StatamicSite,
   StatamicUser,
   TaxonomyFilter,
+  WithBlueprint,
 } from "./types";

@@ -1,4 +1,4 @@
-import type { IrField, IrNavigation, IrResource, IrSchema } from "@headquery/schema";
+import type { IrBlueprintResource, IrField, IrNavigation, IrResource, IrSchema } from "@headquery/schema";
 
 export interface StatamicGenerateOptions {
   /** Module to augment. Defaults to `@headquery/statamic`. */
@@ -7,8 +7,11 @@ export interface StatamicGenerateOptions {
 
 // Shapes below were checked against Statamic 6 REST API responses (playgrounds/statamic).
 const HELPERS = `
-/** Bard: an HTML string without sets, an array of text/set blocks with sets. */
-export type HqRichText = string | Array<Record<string, unknown>>;
+/** Text between the sets of a Bard field with sets: the HTML of its paragraphs, headings, lists, … */
+export interface HqBardText {
+  type: "text";
+  text: string;
+}
 
 /** Select-like fields (select, button_group, radio, checkboxes) return labelled values. */
 export interface HqOption<T extends string = string> {
@@ -193,9 +196,9 @@ export type HqNavLink<F> = HqNavPageBase & F & { entry_id: null };
 export type HqTreeEntry<E> = E & { entry_id: string };
 
 /** A navigation page linked to an entry: the entry's fields, the nav fields and \`entry_id\`. */
-export type HqNavEntry<E, F> = Omit<E, keyof HqNavPageBase | keyof F | "entry_id"> &
-  HqNavPageBase &
-  F & { entry_id: string };
+export type HqNavEntry<E, F> = E extends unknown
+  ? Omit<E, keyof HqNavPageBase | keyof F | "entry_id"> & HqNavPageBase & F & { entry_id: string }
+  : never;
 `.trim();
 
 /** Keys of the base interfaces above; blueprint fields with the same handle take precedence. */
@@ -305,9 +308,16 @@ export function generateStatamic(schema: IrSchema, options: StatamicGenerateOpti
   const sorted = <T>(map: Record<string, T> | undefined): Array<[string, T]> =>
     Object.entries(map ?? {}).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
 
+  const names = new Set<string>();
+  const unique = (name: string, what: string) => {
+    if (names.has(name)) throw new Error(`headquery codegen: ${what} would be named ${name}, which is already taken`);
+    names.add(name);
+    return name;
+  };
+
   for (const [handle, resource] of sorted(schema.resources.collection)) {
-    const name = `${pascal(handle)}Entry`;
-    out.push(itemInterface(name, resource, "HqEntryBase"));
+    const name = unique(`${pascal(handle)}Entry`, `collection "${handle}"`);
+    out.push(...entryTypes(name, handle, resource, unique));
     let tree = "";
     if (resource.structure) {
       // Structured collection: `cms.collections(handle).tree()` returns its page tree.
@@ -321,13 +331,13 @@ export function generateStatamic(schema: IrSchema, options: StatamicGenerateOpti
     collections.push(`    ${key(handle)}: { item: ${name}; filterable: ${filterable(resource)}${tree} };`);
   }
   for (const [handle, resource] of sorted(schema.resources.taxonomy)) {
-    const name = `${pascal(handle)}Term`;
-    out.push(itemInterface(name, resource, "HqTermBase"));
+    const name = unique(`${pascal(handle)}Term`, `taxonomy "${handle}"`);
+    out.push(itemInterface(name, termFields(resource), "HqTermBase"));
     taxonomies.push(`    ${key(handle)}: { item: ${name}; filterable: ${filterable(resource)} };`);
   }
   for (const [handle, resource] of sorted(schema.resources.global)) {
     const name = `${pascal(handle)}Global`;
-    out.push(itemInterface(name, resource, "HqGlobalBase", JSON.stringify(handle)));
+    out.push(itemInterface(name, resource.fields, "HqGlobalBase", { baseArg: JSON.stringify(handle) }));
     globals.push(`    ${key(handle)}: ${name};`);
   }
   for (const [handle, nav] of sorted(schema.resources.navigation)) {
@@ -337,7 +347,7 @@ export function generateStatamic(schema: IrSchema, options: StatamicGenerateOpti
   }
   for (const [handle, resource] of sorted(schema.resources.assetContainer)) {
     const name = `${pascal(handle)}Asset`;
-    out.push(itemInterface(name, resource, "HqAssetBase"));
+    out.push(itemInterface(name, resource.fields, "HqAssetBase"));
     assetContainers.push(`    ${key(handle)}: { item: ${name}; filterable: ${filterable(resource)} };`);
   }
 
@@ -389,21 +399,96 @@ function block(lines: string[]): string {
   return lines.length ? `\n${lines.join("\n")}\n  ` : "";
 }
 
-function itemInterface(name: string, resource: IrResource, base: BaseName, baseArg?: string): string {
+interface ItemOptions {
+  /** Type argument of the base interface, e.g. the global set handle. */
+  baseArg?: string;
+  /** Literal blueprint of an entry type: `blueprint: { handle: "page"; title: string }`. */
+  blueprint?: string;
+  /** Doc comment above the interface. */
+  comment?: string;
+}
+
+/** A field of the item interface; `optional` for taxonomy fields that only some blueprints have. */
+type ItemField = { field: IrField; type?: string; optional?: boolean };
+
+function itemInterface(
+  name: string,
+  fields: Record<string, IrField | ItemField>,
+  base: BaseName,
+  options: ItemOptions = {},
+): string {
   const lines: string[] = [];
-  const overridden = BASE_KEYS[base].filter((k) => k in resource.fields);
-  const baseRef = baseArg ? `${base}<${baseArg}>` : base;
-  const parent = overridden.length
-    ? `Omit<${baseRef}, ${overridden
+  const omitted: string[] = BASE_KEYS[base].filter((k) => k in fields);
+  if (options.blueprint !== undefined) omitted.push("blueprint");
+  const baseRef = options.baseArg ? `${base}<${options.baseArg}>` : base;
+  const parent = omitted.length
+    ? `Omit<${baseRef}, ${omitted
         .map((k) => JSON.stringify(k))
         .sort()
         .join(" | ")}>`
     : baseRef;
-  for (const handle of Object.keys(resource.fields).sort()) {
-    const field = resource.fields[handle]!;
-    lines.push(`${doc(field, "  ")}  ${key(handle)}: ${fieldType(field, 1)};`);
+  if (options.blueprint !== undefined) {
+    lines.push(`  blueprint: { handle: ${JSON.stringify(options.blueprint)}; title: string };`);
   }
-  return `export interface ${name} extends ${parent} {\n${lines.join("\n")}\n}`;
+  for (const handle of Object.keys(fields).sort()) {
+    const entry = fields[handle]!;
+    const item: ItemField = "field" in entry ? entry : { field: entry };
+    const optional = item.optional ? "?" : "";
+    lines.push(`${doc(item.field, "  ")}  ${key(handle)}${optional}: ${item.type ?? fieldType(item.field, 1)};`);
+  }
+  const comment = options.comment ? `/** ${options.comment} */\n` : "";
+  return `${comment}export interface ${name} extends ${parent} {\n${lines.join("\n")}\n}`;
+}
+
+/**
+ * Entry types of a collection. The API returns only the fields of an entry's own blueprint,
+ * so each blueprint gets its own interface with a literal `blueprint.handle`; several
+ * blueprints form a union that narrows on it.
+ */
+function entryTypes(
+  name: string,
+  collection: string,
+  resource: IrBlueprintResource,
+  unique: (name: string, what: string) => string,
+): string[] {
+  const blueprints = Object.entries(resource.blueprints).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
+  const title = resource.title ?? collection;
+  if (blueprints.length === 1) {
+    const [handle, blueprint] = blueprints[0]!;
+    return [itemInterface(name, blueprint.fields, "HqEntryBase", { blueprint: handle })];
+  }
+  const members = blueprints.map(([handle, blueprint]) => {
+    const member = unique(`${name.replace(/Entry$/, "")}${pascal(handle)}Entry`, `blueprint "${collection}.${handle}"`);
+    const comment = `Entry of the \`${title}\` collection with the \`${blueprint.title ?? handle}\` blueprint.`;
+    return { member, code: itemInterface(member, blueprint.fields, "HqEntryBase", { blueprint: handle, comment }) };
+  });
+  return [
+    ...members.map((m) => m.code),
+    `/** Entry of the \`${title}\` collection; narrow on \`blueprint.handle\`. */\nexport type ${name} =\n  | ${members
+      .map((m) => m.member)
+      .join("\n  | ")};`,
+  ];
+}
+
+/**
+ * Term fields across all blueprints of a taxonomy. Terms don't say which blueprint they use,
+ * so fields that only some blueprints have are optional and differing types are combined.
+ */
+function termFields(resource: IrBlueprintResource): Record<string, ItemField> {
+  const blueprints = Object.values(resource.blueprints);
+  const handles = [...new Set(blueprints.flatMap((b) => Object.keys(b.fields)))];
+  const fields: Record<string, ItemField> = {};
+  for (const handle of handles) {
+    const defs = blueprints.flatMap((b) => (b.fields[handle] ? [b.fields[handle]] : []));
+    const types = [...new Set(defs.map((f) => baseType(f, 1)))];
+    const nullable = defs.some((f) => !f.required && !neverNull(f));
+    fields[handle] = {
+      field: defs[0]!,
+      type: `${types.join(" | ")}${nullable ? " | null" : ""}`,
+      optional: defs.length < blueprints.length,
+    };
+  }
+  return fields;
 }
 
 /**
@@ -432,9 +517,11 @@ function navigationTypes(name: string, nav: IrNavigation, schema: IrSchema): str
 }
 
 /** Blueprint fields marked filterable plus allowed system filters (e.g. `date`, `basename`). */
-function filterable(resource: IrResource): string {
+function filterable(resource: IrResource | IrBlueprintResource): string {
   const handles = new Set(resource.systemFilters ?? []);
-  for (const [h, f] of Object.entries(resource.fields)) if (f.filterable) handles.add(h);
+  const fieldMaps =
+    "blueprints" in resource ? Object.values(resource.blueprints).map((b) => b.fields) : [resource.fields];
+  for (const fields of fieldMaps) for (const [h, f] of Object.entries(fields)) if (f.filterable) handles.add(h);
   const sorted = [...handles].sort().map((h) => JSON.stringify(h));
   return sorted.length ? sorted.join(" | ") : "never";
 }
@@ -456,6 +543,8 @@ function neverNull(field: IrField): boolean {
     case "blocks": // replicator: []
     case "enum": // multiple: [], single: HqEmptyOption (part of the base type)
       return true;
+    case "richtext": // Bard with sets: [], without sets: null
+      return field.sets !== undefined;
     case "relation":
     case "asset":
       return field.multiple === true; // [] when multiple, null when single
@@ -497,22 +586,29 @@ function baseType(field: IrField, depth: number): string {
     case "asset":
       return field.multiple ? "Array<HqAsset>" : "HqAsset";
     case "richtext":
-      return "HqRichText";
+      // Bard: HTML without sets; with sets, text items between the sets (disabled sets are left out).
+      if (!field.sets) return "string";
+      return `Array<${["HqBardText", ...setVariants(field.sets, depth, "id: string | null")].join(" | ")}>`;
     case "blocks": {
-      const sets = Object.keys(field.sets).sort();
-      if (!sets.length) return "Array<{ id?: string; type: string; [key: string]: unknown }>";
-      const variants = sets.map((set) => {
-        const fields = field.sets[set]!;
-        const inner = Object.keys(fields)
-          .sort()
-          .map((h) => `${key(h)}: ${fieldType(fields[h]!, depth + 1)}`);
-        return `{ id?: string; type: ${JSON.stringify(set)}${inner.length ? `; ${inner.join("; ")}` : ""} }`;
-      });
-      return `Array<${variants.join(" | ")}>`;
+      const variants = setVariants(field.sets, depth, "id?: string");
+      return `Array<${variants.length ? variants.join(" | ") : "{ id?: string; type: string; [key: string]: unknown }"}>`;
     }
     case "unknown":
       return "unknown";
   }
+}
+
+/** One `{ id; type: "<set>"; …fields }` object type per set (replicator and Bard sets). */
+function setVariants(sets: Record<string, Record<string, IrField>>, depth: number, id: string): string[] {
+  return Object.keys(sets)
+    .sort()
+    .map((set) => {
+      const fields = sets[set]!;
+      const inner = Object.keys(fields)
+        .sort()
+        .map((h) => `${key(h)}: ${fieldType(fields[h]!, depth + 1)}`);
+      return `{ ${id}; type: ${JSON.stringify(set)}${inner.length ? `; ${inner.join("; ")}` : ""} }`;
+    });
 }
 
 function objectType(fields: Record<string, IrField>, depth: number, prefix?: string): string {

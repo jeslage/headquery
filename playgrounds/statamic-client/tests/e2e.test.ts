@@ -1,6 +1,6 @@
 // End-to-end: @headquery/statamic against the running playground with the seed content
 // from playgrounds/statamic/seed. Skipped unless HEADQUERY_BASE_URL is set.
-import { HeadqueryHttpError, type SiteHandle } from "@headquery/statamic";
+import { HeadqueryHttpError, isBlueprint, type SiteHandle } from "@headquery/statamic";
 import { describe, expect, expectTypeOf, it } from "vitest";
 import { cms } from "../src/client";
 import type { AssetsAsset, BlogEntry, HqAsset, HqAssetBase } from "../src/cms";
@@ -148,6 +148,31 @@ describe.skipIf(!baseUrl)(`Statamic playground (${baseUrl})`, () => {
       expect(data.related).toEqual([]);
     });
 
+    it("returns Bard as HTML without sets, and as text items and sets with sets", async () => {
+      const { data } = (await entries.find("hello-headquery").fields(["content", "body"]).get())!;
+      expect(data.content).toEqual(expect.stringContaining("<h2>Typed queries for Statamic</h2>"));
+      expectTypeOf(data.content).toEqualTypeOf<string | null>();
+
+      // The disabled set (b2hidden) is left out.
+      expect(data.body.map((item) => item.type)).toEqual(["text", "callout", "text", "image"]);
+      expect(data.body[0]).toEqual({ type: "text", text: "<p>Before the callout.</p>" });
+      expect(data.body[1]).toEqual({
+        id: "b1callout",
+        type: "callout",
+        text: "Generated types keep queries honest.",
+        tone: { key: "warning", value: "warning", label: "Warning" },
+      });
+      const image = data.body.find((item) => item.type === "image");
+      expect(image).toMatchObject({ id: "b3image", image: { url: "/assets/hero.svg" } });
+      if (image?.type === "image") expectTypeOf(image.image).toEqualTypeOf<HqAsset | null>();
+    });
+
+    it("returns an empty Bard field as null without sets and [] with sets", async () => {
+      const { data } = (await entries.find("statamic-addon").fields(["content", "body"]).get())!;
+      expect(data.content).toBeNull();
+      expect(data.body).toEqual([]);
+    });
+
     it("hides unpublished entries: find() resolves to null on 404", async () => {
       expect(await entries.find("unpublished-draft").get()).toBeNull();
     });
@@ -210,6 +235,41 @@ describe.skipIf(!baseUrl)(`Statamic playground (${baseUrl})`, () => {
     it("lists navigations", async () => {
       const { data } = await cms.navs().get();
       expect(data).toEqual([expect.objectContaining({ handle: "main", title: "Main", max_depth: 2 })]);
+    });
+  });
+
+  describe("collections with several blueprints", () => {
+    const pages = cms.collections("pages");
+
+    it("returns only the fields of an entry's own blueprint", async () => {
+      const contact = (await pages.find("contact").get())!.data;
+      const team = (await pages.find("team").get())!.data;
+      expect(contact.blueprint.handle).toBe("landing");
+      expect(team.blueprint.handle).toBe("page");
+
+      if (!isBlueprint(contact, "landing") || !isBlueprint(team, "page")) throw new Error("unexpected blueprints");
+      expect(contact).toMatchObject({ summary: 42, show_hero: true, layout: { key: "wide" } });
+      expect(contact.features).toEqual([{ id: "f1", label: "Fast replies" }]);
+      expectTypeOf(contact.show_hero).toEqualTypeOf<boolean>();
+      expect(team.summary).toBe("Who builds it");
+      expectTypeOf(team.summary).toEqualTypeOf<string | null>();
+      expect(team).not.toHaveProperty("show_hero");
+      expect(team).not.toHaveProperty("features");
+    });
+
+    it("filters by blueprint with whereBlueprint() and narrows the result", async () => {
+      const landing = await pages.site("en").whereBlueprint("landing").get();
+      expect(landing.data.map((e) => e.slug)).toEqual(["contact"]);
+      expectTypeOf(landing.data[0]!.show_hero).toEqualTypeOf<boolean>();
+
+      const both = await pages.site("en").whereBlueprint(["landing", "page"]).fields(["slug"]).get();
+      expect(both.data.map((e) => e.slug).sort()).toEqual(["about", "contact", "home", "team"]);
+    });
+
+    it("returns requested fields that an entry's blueprint lacks as null", async () => {
+      const { data } = await pages.site("en").fields(["slug", "show_hero"]).get();
+      const bySlug = Object.fromEntries(data.map((e) => [e.slug, e.show_hero]));
+      expect(bySlug).toEqual({ about: null, home: null, team: null, contact: true });
     });
   });
 

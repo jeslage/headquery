@@ -4,8 +4,11 @@
 
 import type {} from "@headquery/statamic";
 
-/** Bard: an HTML string without sets, an array of text/set blocks with sets. */
-export type HqRichText = string | Array<Record<string, unknown>>;
+/** Text between the sets of a Bard field with sets: the HTML of its paragraphs, headings, lists, … */
+export interface HqBardText {
+  type: "text";
+  text: string;
+}
 
 /** Select-like fields (select, button_group, radio, checkboxes) return labelled values. */
 export interface HqOption<T extends string = string> {
@@ -190,15 +193,18 @@ export type HqNavLink<F> = HqNavPageBase & F & { entry_id: null };
 export type HqTreeEntry<E> = E & { entry_id: string };
 
 /** A navigation page linked to an entry: the entry's fields, the nav fields and `entry_id`. */
-export type HqNavEntry<E, F> = Omit<E, keyof HqNavPageBase | keyof F | "entry_id"> &
-  HqNavPageBase &
-  F & { entry_id: string };
+export type HqNavEntry<E, F> = E extends unknown
+  ? Omit<E, keyof HqNavPageBase | keyof F | "entry_id"> & HqNavPageBase & F & { entry_id: string }
+  : never;
 
-export interface BlogEntry extends Omit<HqEntryBase, "date" | "slug" | "title"> {
+export interface BlogEntry extends Omit<HqEntryBase, "blueprint" | "date" | "slug" | "title"> {
+  blueprint: { handle: "blog"; title: string };
   /** CMS field type: `users` */
   author: HqUser | null;
   /** CMS field type: `bard` */
-  content: HqRichText | null;
+  body: Array<HqBardText | { id: string | null; type: "callout"; text: string | null; tone: HqOption<"info" | "warning"> | HqEmptyOption } | { id: string | null; type: "image"; image: HqAsset | null }>;
+  /** CMS field type: `bard` */
+  content: string | null;
   /** CMS field type: `date` */
   date: string | null;
   /** CMS field type: `toggle` */
@@ -221,7 +227,26 @@ export interface BlogEntry extends Omit<HqEntryBase, "date" | "slug" | "title"> 
   title: string;
 }
 
-export interface PagesEntry extends Omit<HqEntryBase, "slug" | "title"> {
+/** Entry of the `Pages` collection with the `Landing` blueprint. */
+export interface PagesLandingEntry extends Omit<HqEntryBase, "blueprint" | "slug" | "title"> {
+  blueprint: { handle: "landing"; title: string };
+  /** CMS field type: `grid` */
+  features: Array<{ id: string; label: string | null }>;
+  /** CMS field type: `select` */
+  layout: HqOption<"wide" | "narrow"> | HqEmptyOption;
+  /** CMS field type: `toggle` */
+  show_hero: boolean;
+  /** CMS field type: `slug` */
+  slug: string;
+  /** CMS field type: `integer` */
+  summary: number | null;
+  /** CMS field type: `text` */
+  title: string;
+}
+
+/** Entry of the `Pages` collection with the `Page` blueprint. */
+export interface PagesPageEntry extends Omit<HqEntryBase, "blueprint" | "slug" | "title"> {
+  blueprint: { handle: "page"; title: string };
   /** CMS field type: `slug` */
   slug: string;
   /** CMS field type: `textarea` */
@@ -229,6 +254,11 @@ export interface PagesEntry extends Omit<HqEntryBase, "slug" | "title"> {
   /** CMS field type: `text` */
   title: string;
 }
+
+/** Entry of the `Pages` collection; narrow on `blueprint.handle`. */
+export type PagesEntry =
+  | PagesLandingEntry
+  | PagesPageEntry;
 
 /** Page of the `Pages` tree (max depth 3). */
 export type PagesTreePage = HqTreeEntry<PagesEntry>;
@@ -265,7 +295,7 @@ export interface AssetsAsset extends HqAssetBase {
 export interface Schema {
   collections: {
     blog: { item: BlogEntry; filterable: "date" | "featured" | "slug" | "tags" | "taxonomy:tags" | "title" };
-    pages: { item: PagesEntry; filterable: "title"; tree: PagesTreePage };
+    pages: { item: PagesEntry; filterable: "blueprint" | "title"; tree: PagesTreePage };
   };
   taxonomies: {
     tags: { item: TagsTerm; filterable: "title" };

@@ -13,8 +13,71 @@ How the addon maps Statamic fieldtypes to the types that
 | `assets` | `HqAsset` or `HqAsset[]` (`max_files`) |
 | `entries`, `terms`, `users` | `HqRelatedEntry`, `HqRelatedTerm`, `HqUser` |
 | `grid`, `replicator` | arrays of typed rows/sets (`[]` when empty) |
-| `bard` | `HqRichText` (HTML string without sets, blocks with sets) |
+| `bard` | HTML `string` without sets; with sets an array of text items and typed sets (`[]` when empty), see [Bard](#bard) |
 | unknown fieldtypes | `unknown` — see [custom fieldtypes](/cms/statamic/custom-fieldtypes) |
+
+## Bard [#bard]
+
+A Bard field without sets returns its content as an HTML string (`null` when empty). With
+sets, Statamic returns an array instead: the text between the sets as `HqBardText` items
+(`{ type: "text", text }` with the HTML of the paragraphs) and one object per set, with the
+set's fields, its `id` and the set handle as `type`. Disabled sets are left out. Narrow on
+`type` to render each item:
+
+```tsx twoslash
+// @jsx: react-jsx
+import "./generated/cms.generated";
+import type { BlogEntry } from "./generated/cms.generated";
+// ---cut---
+function Body({ items }: { items: BlogEntry["body"] }) {
+  return items.map((item, index) => {
+    switch (item.type) {
+      case "text":
+        return <div key={index} dangerouslySetInnerHTML={{ __html: item.text }} />;
+      case "callout":
+        return <aside key={item.id ?? index}>{item.text}</aside>;
+      case "image":
+        return item.image && <img key={item.id ?? index} src={item.image.url} alt={item.image.alt ?? ""} />;
+    }
+  });
+}
+```
+
+With `save_html: true`, Bard stores HTML, so the field is typed as a `string` even if it has sets.
+
+## Several blueprints [#blueprints]
+
+A collection can have several blueprints, and Statamic only returns the fields of an entry's own
+blueprint. Codegen therefore emits one type per blueprint and a union for the collection,
+e.g. `PagesEntry = PagesLandingEntry | PagesPageEntry`. Each type has its blueprint's handle in
+`blueprint.handle`. TypeScript doesn't narrow a union on a nested property, so narrow with
+`isBlueprint()`:
+
+```ts twoslash
+import "./generated/cms.generated";
+import { createStatamicClient, isBlueprint } from "@headquery/statamic";
+const cms = createStatamicClient({ baseUrl: "https://cms.example.com" });
+// ---cut---
+const page = await cms.collections("pages").find("contact").get();
+
+if (page && isBlueprint(page.data, "landing")) {
+  page.data.show_hero;
+  //        ^?
+}
+```
+
+To fetch only entries of one blueprint, use [`.whereBlueprint()`](/cms/statamic/querying#blueprint-filter),
+which narrows the result without `isBlueprint()`.
+
+The same field can have different types in different blueprints (`summary` is a textarea in
+`page` and an integer in `landing`); before narrowing, it's the union of both. Collections with
+one blueprint get a single type, e.g. `BlogEntry`.
+
+`.fields([...])` accepts the fields of every blueprint. Statamic returns a requested field that
+isn't in an entry's blueprint as `null`, and the result type says so.
+
+Terms don't include their blueprint, so a taxonomy with several blueprints gets one type: fields
+that only some blueprints have are optional, and differing types are combined.
 
 ## System fields
 

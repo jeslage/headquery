@@ -28,8 +28,8 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "collection": { "$ref": "#/$defs/resourceMap" },
-        "taxonomy": { "$ref": "#/$defs/resourceMap" },
+        "collection": { "$ref": "#/$defs/blueprintResourceMap" },
+        "taxonomy": { "$ref": "#/$defs/blueprintResourceMap" },
         "global": { "$ref": "#/$defs/resourceMap" },
         "navigation": {
           "type": "object",
@@ -59,12 +59,27 @@
       "properties": {
         "title": { "type": "string" },
         "fields": { "$ref": "#/$defs/fieldMap" },
-        "systemFilters": {
-          "description": "Handles allowed in API filters that are not blueprint fields (e.g. system fields like `date` or an asset's `basename`). Blueprint fields carry `filterable` instead.",
-          "type": "array",
-          "items": { "type": "string" },
-          "uniqueItems": true
+        "systemFilters": { "$ref": "#/$defs/systemFilters" }
+      }
+    },
+    "blueprintResourceMap": {
+      "type": "object",
+      "additionalProperties": { "$ref": "#/$defs/blueprintResource" }
+    },
+    "blueprintResource": {
+      "description": "A resource whose items each use one of several blueprints (Statamic: collections and taxonomies).",
+      "type": "object",
+      "required": ["blueprints"],
+      "additionalProperties": false,
+      "properties": {
+        "title": { "type": "string" },
+        "blueprints": {
+          "description": "Blueprints keyed by handle. Each item has exactly the fields of its blueprint.",
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": { "$ref": "#/$defs/blueprint" }
         },
+        "systemFilters": { "$ref": "#/$defs/systemFilters" },
         "structure": {
           "description": "Set for collections whose entries form a page tree (Statamic: structured collections).",
           "type": "object",
@@ -75,6 +90,21 @@
           }
         }
       }
+    },
+    "blueprint": {
+      "type": "object",
+      "required": ["fields"],
+      "additionalProperties": false,
+      "properties": {
+        "title": { "type": "string" },
+        "fields": { "$ref": "#/$defs/fieldMap" }
+      }
+    },
+    "systemFilters": {
+      "description": "Handles allowed in API filters that are not blueprint fields (e.g. system fields like `date` or an asset's `basename`). Blueprint fields carry `filterable` instead.",
+      "type": "array",
+      "items": { "type": "string" },
+      "uniqueItems": true
     },
     "navigation": {
       "description": "A navigation tree. `fields` are the navigation blueprint's fields, present on every page.",
@@ -129,6 +159,7 @@
         "to": { "enum": ["entry", "term", "user", "asset"] },
         "resources": { "type": "array", "items": { "type": "string" } },
         "sets": {
+          "description": "Sets keyed by handle: required for `blocks`; on `richtext` when the rich text contains sets (Statamic: Bard with sets).",
           "type": "object",
           "additionalProperties": { "$ref": "#/$defs/fieldMap" }
         }

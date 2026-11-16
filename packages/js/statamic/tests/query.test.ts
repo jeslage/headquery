@@ -2,6 +2,7 @@ import { describe, expect, expectTypeOf, it, vi } from "vitest";
 import {
   createStatamicClient,
   HeadqueryHttpError,
+  isBlueprint,
   type SiteHandle,
   type StatamicForm,
   type StatamicSite,
@@ -117,6 +118,32 @@ describe("collection entries", () => {
     cms.collections("blog").where("reading_time", 3);
     // @ts-expect-error unknown collection
     cms.collections("nope");
+  });
+});
+
+describe("isBlueprint", () => {
+  type Page = { blueprint: { handle: "page"; title: string }; summary: string | null };
+  type Landing = { blueprint: { handle: "landing"; title: string }; show_hero: boolean };
+
+  it("narrows a union of blueprint types by handle", () => {
+    const entry = { blueprint: { handle: "landing", title: "Landing" }, show_hero: true } as Page | Landing;
+    expect(isBlueprint(entry, "landing")).toBe(true);
+    expect(isBlueprint(entry, "page")).toBe(false);
+    if (isBlueprint(entry, "landing")) expectTypeOf(entry).toEqualTypeOf<Landing>();
+    // @ts-expect-error not a blueprint of this union
+    isBlueprint(entry, "article");
+  });
+});
+
+describe("whereBlueprint", () => {
+  it("filters with is for one blueprint and in for several", () => {
+    const loose = createStatamicClient({ baseUrl: "https://cms.test", fetch });
+    expect(loose.collections("pages").whereBlueprint("landing").url()).toBe(
+      "https://cms.test/api/collections/pages/entries?filter[blueprint:is]=landing",
+    );
+    expect(loose.collections("pages").whereBlueprint(["landing", "page"]).toRequest().query).toEqual({
+      "filter[blueprint:in]": "landing|page",
+    });
   });
 });
 
@@ -347,9 +374,10 @@ describe("navigation trees", () => {
 
     const picked = cms.navs("main").tree().fields(["title", "entry_id", "reading_time"]);
     type Page = Awaited<ReturnType<typeof picked.get>>["data"][number]["page"];
-    // reading_time only exists on entry pages, so link pages don't get it
+    // reading_time only exists on entry pages; with fields=, link pages get it as null
     expectTypeOf<Page>().toEqualTypeOf<
-      Pick<LinkPage, "title" | "entry_id"> | Pick<EntryPage, "title" | "entry_id" | "reading_time">
+      | (Pick<LinkPage, "title" | "entry_id"> & { reading_time: null })
+      | Pick<EntryPage, "title" | "entry_id" | "reading_time">
     >();
     const page = {} as Page;
     if (page.entry_id !== null) expectTypeOf(page.reading_time).toEqualTypeOf<number | null>();

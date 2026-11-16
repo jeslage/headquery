@@ -30,8 +30,8 @@ export interface IrSite {
 }
 
 export interface IrResources {
-  collection?: Record<string, IrResource>;
-  taxonomy?: Record<string, IrResource>;
+  collection?: Record<string, IrBlueprintResource>;
+  taxonomy?: Record<string, IrBlueprintResource>;
   global?: Record<string, IrResource>;
   navigation?: Record<string, IrNavigation>;
   assetContainer?: Record<string, IrResource>;
@@ -47,21 +47,37 @@ export const IR_RESOURCE_KINDS: readonly IrResourceKind[] = [
   "assetContainer",
 ];
 
+/** A resource with one blueprint (Statamic: global sets and asset containers). */
 export interface IrResource {
   /** Human-readable title from the CMS. */
   title?: string;
-  /** Fields keyed by handle. For collections this is the union of all entry blueprints. */
+  /** Fields keyed by handle. */
   fields: Record<string, IrField>;
   /**
    * Handles that may be used in API filters but are not blueprint fields, e.g. system fields
    * like `date` or an asset's `basename`. Blueprint fields carry `filterable` instead.
    */
   systemFilters?: string[];
+}
+
+/**
+ * A resource whose items each use one of several blueprints (Statamic: collections and
+ * taxonomies). Each item has exactly the fields of its blueprint.
+ */
+export interface IrBlueprintResource extends Omit<IrResource, "fields"> {
+  /** Blueprints keyed by handle (at least one). */
+  blueprints: Record<string, IrBlueprint>;
   /**
    * Set for collections whose entries form a page tree (Statamic: structured collections),
    * which can be fetched as a whole via the collection's tree endpoint.
    */
   structure?: IrStructure;
+}
+
+export interface IrBlueprint {
+  title?: string;
+  /** Fields keyed by handle. */
+  fields: Record<string, IrField>;
 }
 
 export interface IrStructure {
@@ -71,7 +87,7 @@ export interface IrStructure {
 }
 
 /** A navigation tree. `fields` are the navigation blueprint's fields, present on every page. */
-export interface IrNavigation extends Omit<IrResource, "systemFilters" | "structure"> {
+export interface IrNavigation extends Omit<IrResource, "systemFilters"> {
   /** Handles of collections whose entries can be linked as pages. */
   collections?: string[];
   maxDepth?: number;
@@ -96,7 +112,8 @@ export type IrField =
   | (IrFieldBase & { type: "object"; fields: Record<string, IrField> })
   | (IrFieldBase & { type: "relation"; to: IrRelationTarget; resources?: string[]; multiple?: boolean })
   | (IrFieldBase & { type: "asset"; multiple?: boolean })
-  | (IrFieldBase & { type: "richtext" })
+  /** Rich text: an HTML string, or with `sets` an array of text items and sets (Statamic: Bard). */
+  | (IrFieldBase & { type: "richtext"; sets?: Record<string, Record<string, IrField>> })
   | (IrFieldBase & { type: "blocks"; sets: Record<string, Record<string, IrField>> })
   | (IrFieldBase & { type: "unknown" });
 
@@ -135,8 +152,19 @@ export function assertIrSchema(input: unknown): asserts input is IrSchema {
     }
     if (!isObject(resources)) throw new IrSchemaError(`resources.${kind} must be an object of handle → resource`);
     for (const [handle, resource] of Object.entries(resources)) {
-      if (!isObject(resource) || !isObject(resource.fields)) {
-        throw new IrSchemaError(`Resource "${kind}.${handle}" must have fields`);
+      const name = `${kind}.${handle}`;
+      if (!isObject(resource)) throw new IrSchemaError(`Resource "${name}" must be an object`);
+      if (BLUEPRINT_KINDS.includes(kind)) {
+        const { blueprints } = resource;
+        if (!isObject(blueprints) || Object.keys(blueprints).length === 0) {
+          throw new IrSchemaError(`Resource "${name}" must have at least one blueprint`);
+        }
+        for (const [bp, blueprint] of Object.entries(blueprints)) {
+          if (!isObject(blueprint)) throw new IrSchemaError(`Blueprint "${name}.${bp}" must be an object`);
+          assertFields(blueprint.fields, `${name}.${bp}`);
+        }
+      } else {
+        assertFields(resource.fields, name);
       }
       const { systemFilters } = resource;
       if (systemFilters !== undefined && !(Array.isArray(systemFilters) && systemFilters.every(isString))) {
@@ -145,11 +173,18 @@ export function assertIrSchema(input: unknown): asserts input is IrSchema {
       if (resource.structure !== undefined && !isObject(resource.structure)) {
         throw new IrSchemaError(`Resource "${kind}.${handle}" structure must be an object`);
       }
-      for (const [field, def] of Object.entries(resource.fields)) {
-        if (!isObject(def) || typeof def.type !== "string") {
-          throw new IrSchemaError(`Field "${kind}.${handle}.${field}" must have a type`);
-        }
-      }
+    }
+  }
+}
+
+/** Kinds whose resources carry `blueprints` instead of `fields`. */
+const BLUEPRINT_KINDS: readonly string[] = ["collection", "taxonomy"];
+
+function assertFields(fields: unknown, name: string): void {
+  if (!isObject(fields)) throw new IrSchemaError(`"${name}" must have fields`);
+  for (const [field, def] of Object.entries(fields)) {
+    if (!isObject(def) || typeof def.type !== "string") {
+      throw new IrSchemaError(`Field "${name}.${field}" must have a type`);
     }
   }
 }

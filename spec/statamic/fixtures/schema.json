@@ -11,56 +11,100 @@
       "blog": {
         "title": "Blog",
         "systemFilters": ["taxonomy:tags"],
-        "fields": {
-          "title": { "type": "string", "required": true, "filterable": true, "cmsType": "text" },
-          "slug": { "type": "string", "required": true, "filterable": true, "cmsType": "slug" },
-          "date": { "type": "date", "withTime": false, "filterable": true, "cmsType": "date" },
-          "featured": { "type": "boolean", "filterable": true, "cmsType": "toggle" },
-          "reading_time": { "type": "number", "integer": true, "cmsType": "integer" },
-          "stage": { "type": "enum", "values": ["draft", "review", "live"], "cmsType": "select" },
-          "tags": {
-            "type": "relation",
-            "to": "term",
-            "resources": ["tags"],
-            "multiple": true,
-            "filterable": true,
-            "cmsType": "terms"
-          },
-          "author": { "type": "relation", "to": "user", "multiple": false, "cmsType": "users" },
-          "hero": { "type": "asset", "multiple": false, "cmsType": "assets" },
-          "content": { "type": "richtext", "cmsType": "bard" },
-          "sections": {
-            "type": "blocks",
-            "cmsType": "replicator",
-            "sets": {
-              "quote": {
-                "text": { "type": "string", "cmsType": "textarea" },
-                "cite": { "type": "string", "cmsType": "text" }
+        "blueprints": {
+          "blog": {
+            "title": "Blog",
+            "fields": {
+              "title": { "type": "string", "required": true, "filterable": true, "cmsType": "text" },
+              "slug": { "type": "string", "required": true, "filterable": true, "cmsType": "slug" },
+              "date": { "type": "date", "withTime": false, "filterable": true, "cmsType": "date" },
+              "featured": { "type": "boolean", "filterable": true, "cmsType": "toggle" },
+              "reading_time": { "type": "number", "integer": true, "cmsType": "integer" },
+              "stage": { "type": "enum", "values": ["draft", "review", "live"], "cmsType": "select" },
+              "tags": {
+                "type": "relation",
+                "to": "term",
+                "resources": ["tags"],
+                "multiple": true,
+                "filterable": true,
+                "cmsType": "terms"
               },
-              "gallery": {
-                "images": { "type": "asset", "multiple": true, "cmsType": "assets" }
-              }
+              "author": { "type": "relation", "to": "user", "multiple": false, "cmsType": "users" },
+              "hero": { "type": "asset", "multiple": false, "cmsType": "assets" },
+              "content": { "type": "richtext", "cmsType": "bard" },
+              "body": {
+                "type": "richtext",
+                "cmsType": "bard",
+                "sets": {
+                  "callout": {
+                    "text": { "type": "string", "cmsType": "textarea" },
+                    "tone": { "type": "enum", "values": ["info", "warning"], "cmsType": "select" }
+                  },
+                  "image": {
+                    "image": { "type": "asset", "multiple": false, "cmsType": "assets" }
+                  }
+                }
+              },
+              "sections": {
+                "type": "blocks",
+                "cmsType": "replicator",
+                "sets": {
+                  "quote": {
+                    "text": { "type": "string", "cmsType": "textarea" },
+                    "cite": { "type": "string", "cmsType": "text" }
+                  },
+                  "gallery": {
+                    "images": { "type": "asset", "multiple": true, "cmsType": "assets" }
+                  }
+                }
+              },
+              "seo": { "type": "unknown", "cmsType": "seo_pro" }
             }
-          },
-          "seo": { "type": "unknown", "cmsType": "seo_pro" }
+          }
         }
       },
       "pages": {
         "title": "Pages",
         "structure": { "maxDepth": 3, "expectsRoot": true },
-        "fields": {
-          "title": { "type": "string", "required": true, "filterable": true, "cmsType": "text" },
-          "summary": { "type": "string", "cmsType": "textarea" },
-          "slug": { "type": "string", "required": true, "cmsType": "slug" }
+        "systemFilters": ["blueprint"],
+        "blueprints": {
+          "landing": {
+            "title": "Landing",
+            "fields": {
+              "title": { "type": "string", "required": true, "filterable": true, "cmsType": "text" },
+              "summary": { "type": "number", "integer": true, "cmsType": "integer" },
+              "show_hero": { "type": "boolean", "cmsType": "toggle" },
+              "layout": { "type": "enum", "values": ["wide", "narrow"], "cmsType": "select" },
+              "features": {
+                "type": "array",
+                "cmsType": "grid",
+                "items": { "type": "object", "fields": { "label": { "type": "string", "cmsType": "text" } } }
+              },
+              "slug": { "type": "string", "required": true, "cmsType": "slug" }
+            }
+          },
+          "page": {
+            "title": "Page",
+            "fields": {
+              "title": { "type": "string", "required": true, "filterable": true, "cmsType": "text" },
+              "summary": { "type": "string", "cmsType": "textarea" },
+              "slug": { "type": "string", "required": true, "cmsType": "slug" }
+            }
+          }
         }
       }
     },
     "taxonomy": {
       "tags": {
         "title": "Tags",
-        "fields": {
-          "title": { "type": "string", "required": true, "filterable": true, "cmsType": "text" },
-          "slug": { "type": "string", "required": true, "cmsType": "slug" }
+        "blueprints": {
+          "tag": {
+            "title": "Tag",
+            "fields": {
+              "title": { "type": "string", "required": true, "filterable": true, "cmsType": "text" },
+              "slug": { "type": "string", "required": true, "cmsType": "slug" }
+            }
+          }
         }
       }
     },

@@ -132,6 +132,22 @@ export type TaxonomyFilter<Filterable extends string> = string extends Filterabl
     ? T
     : never;
 
+/**
+ * Blueprint handles of an item type: the literal `blueprint.handle` of generated entry types,
+ * `string` for items without literal handles (loose types, assets).
+ */
+export type BlueprintHandle<Item> = [BlueprintOf<Item>] extends [never]
+  ? string
+  : string extends BlueprintOf<Item>
+    ? string
+    : BlueprintOf<Item>;
+
+type BlueprintOf<Item> = Item extends { blueprint: { handle: infer H extends string } } ? H : never;
+
+/** The item types of these blueprints; unchanged without literal blueprint handles. */
+export type WithBlueprint<Item, H extends string> =
+  string extends BlueprintHandle<Item> ? Item : Extract<Item, { blueprint: { handle: H } }>;
+
 /** `"title"` sorts ascending, `"-title"` descending. Nested fields use `->` in Statamic. */
 export type SortField<F extends string> = F | `-${F}`;
 
@@ -237,8 +253,16 @@ export interface DataList<T> {
 /** Keys of any member of a union (`keyof` of a union only has the shared keys). */
 export type KeysOfUnion<T> = T extends unknown ? keyof T : never;
 
+/**
+ * The picked keys of one item type: the keys it has, plus `null` for picked keys it doesn't have
+ * (with `fields=`, Statamic returns a requested field that isn't in an item's blueprint as `null`).
+ */
+type PickMember<T, K extends PropertyKey> = [Exclude<K, keyof T>] extends [never]
+  ? Pick<T, Extract<K, keyof T>>
+  : Pick<T, Extract<K, keyof T>> & { [P in Exclude<K, keyof T>]: null };
+
 /** `Pick` applied to each union member, so e.g. nav link and entry pages stay distinguishable. */
-export type PickFromUnion<T, K extends PropertyKey> = T extends unknown ? Pick<T, Extract<K, keyof T>> : never;
+export type PickFromUnion<T, K extends PropertyKey> = T extends unknown ? PickMember<T, K> : never;
 
 /** `T` itself while all keys are picked (readable hovers), otherwise `PickFromUnion`. */
 export type PickedUnion<T, K extends PropertyKey> = [KeysOfUnion<T>] extends [K] ? T : PickFromUnion<T, K>;

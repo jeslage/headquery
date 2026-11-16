@@ -22,6 +22,40 @@ tabs:
                 - unorderedlist
                 - anchor
           -
+            handle: body
+            field:
+              type: bard
+              buttons:
+                - h2
+                - bold
+              sets:
+                main:
+                  display: Main
+                  sets:
+                    callout:
+                      display: Callout
+                      fields:
+                        -
+                          handle: text
+                          field:
+                            type: textarea
+                        -
+                          handle: tone
+                          field:
+                            type: select
+                            options:
+                              info: Info
+                              warning: Warning
+                    image:
+                      display: Image
+                      fields:
+                        -
+                          handle: image
+                          field:
+                            type: assets
+                            container: assets
+                            max_files: 1
+          -
             handle: sections
             field:
               type: replicator

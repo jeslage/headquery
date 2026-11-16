@@ -34,9 +34,18 @@ describe("spec/ir/schema-v1.json", () => {
     const ok = validate({
       schemaVersion: 1,
       cms: { name: "statamic" },
-      resources: { collection: { blog: { fields: { state: { type: "enum" } } } } },
+      resources: { collection: { blog: { blueprints: { blog: { fields: { state: { type: "enum" } } } } } } },
     });
     expect(ok).toBe(false);
+  });
+
+  it("requires blueprints on collections and taxonomies, and fields on the other kinds", () => {
+    const base = { schemaVersion: 1, cms: { name: "statamic" } };
+    const bp = { blueprints: { page: { title: "Page", fields: {} } } };
+    expect(validate({ ...base, resources: { collection: { pages: bp }, taxonomy: { tags: bp } } })).toBe(true);
+    expect(validate({ ...base, resources: { collection: { pages: { fields: {} } } } })).toBe(false);
+    expect(validate({ ...base, resources: { collection: { pages: { blueprints: {} } } } })).toBe(false);
+    expect(validate({ ...base, resources: { global: { settings: bp } } })).toBe(false);
   });
 
   it("rejects the old flat resources shape and unknown navigation properties", () => {

@@ -30,9 +30,18 @@ describe("assertIrSchema", () => {
       assertIrSchema({
         schemaVersion: 1,
         cms: { name: "x" },
-        resources: { collection: { blog: { fields: { title: {} } } } },
+        resources: { collection: { blog: { blueprints: { blog: { fields: { title: {} } } } } } },
       }),
-    ).toThrow(/collection\.blog\.title/);
+    ).toThrow(/collection\.blog\.blog\.title/);
+  });
+
+  it("requires at least one blueprint on collections and taxonomies", () => {
+    const schema = (resources: unknown) => ({ schemaVersion: 1, cms: { name: "x" }, resources });
+    expect(() => assertIrSchema(schema({ collection: { blog: { fields: {} } } }))).toThrow(/at least one blueprint/);
+    expect(() => assertIrSchema(schema({ taxonomy: { tags: { blueprints: {} } } }))).toThrow(/at least one blueprint/);
+    expect(() => assertIrSchema(schema({ global: { settings: { blueprints: { s: { fields: {} } } } } }))).toThrow(
+      /must have fields/,
+    );
   });
 
   it("rejects unknown resource kinds", () => {

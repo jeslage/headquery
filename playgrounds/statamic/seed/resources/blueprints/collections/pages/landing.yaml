@@ -1,0 +1,49 @@
+title: Landing
+tabs:
+  main:
+    display: Main
+    sections:
+      -
+        fields:
+          -
+            handle: title
+            field:
+              type: text
+              validate:
+                - required
+          -
+            handle: summary
+            field:
+              type: integer
+          -
+            handle: show_hero
+            field:
+              type: toggle
+          -
+            handle: layout
+            field:
+              type: select
+              options:
+                wide: Wide
+                narrow: Narrow
+          -
+            handle: features
+            field:
+              type: grid
+              fields:
+                -
+                  handle: label
+                  field:
+                    type: text
+  sidebar:
+    display: Sidebar
+    sections:
+      -
+        fields:
+          -
+            handle: slug
+            field:
+              type: slug
+              localizable: true
+              validate:
+                - required

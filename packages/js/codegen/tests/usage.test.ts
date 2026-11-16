@@ -1,14 +1,19 @@
-import { createStatamicClient, type SiteHandle, type StatamicSite } from "@headquery/statamic";
+import { createStatamicClient, isBlueprint, type SiteHandle, type StatamicSite } from "@headquery/statamic";
 import { describe, expectTypeOf, it } from "vitest";
 // Importing the generated snapshot registers its Schema via module augmentation.
 import type {
   AssetsAsset,
   BlogEntry,
   HqAsset,
+  HqBardText,
   HqEmptyOption,
+  HqNavEntry,
   HqOption,
   MainNavFields,
   MainNavPage,
+  PagesEntry,
+  PagesLandingEntry,
+  PagesPageEntry,
   PagesTreePage,
   SettingsGlobal,
   TagsTerm,
@@ -30,6 +35,30 @@ describe("generated types work with @headquery/statamic", () => {
     cms.collections("blog").where("reading_time", 3);
     // @ts-expect-error unknown collection
     cms.collections("products");
+  });
+
+  it("types Bard as HTML without sets and as text items and sets with sets", () => {
+    expectTypeOf<BlogEntry["content"]>().toEqualTypeOf<string | null>();
+
+    type Item = BlogEntry["body"][number];
+    expectTypeOf<Item["type"]>().toEqualTypeOf<"text" | "callout" | "image">();
+    expectTypeOf<Extract<Item, { type: "text" }>>().toEqualTypeOf<HqBardText>();
+    expectTypeOf<Extract<Item, { type: "callout" }>["text"]>().toEqualTypeOf<string | null>();
+    expectTypeOf<Extract<Item, { type: "image" }>["image"]>().toEqualTypeOf<HqAsset | null>();
+    expectTypeOf<Extract<Item, { type: "image" }>["id"]>().toEqualTypeOf<string | null>();
+
+    const render = (item: Item): string => {
+      switch (item.type) {
+        case "text":
+          return item.text;
+        case "callout":
+          return item.text ?? "";
+        case "image":
+          // @ts-expect-error image sets have no text
+          return item.text;
+      }
+    };
+    expectTypeOf(render).returns.toEqualTypeOf<string>();
   });
 
   it("includes Statamic's system fields, with blueprint fields taking precedence", () => {
@@ -97,12 +126,60 @@ describe("generated types work with @headquery/statamic", () => {
     cms.assets("videos");
   });
 
+  it("types collections with several blueprints as a union that isBlueprint() narrows", () => {
+    expectTypeOf<PagesEntry>().toEqualTypeOf<PagesLandingEntry | PagesPageEntry>();
+    expectTypeOf<PagesEntry["blueprint"]["handle"]>().toEqualTypeOf<"landing" | "page">();
+    expectTypeOf<BlogEntry["blueprint"]>().toEqualTypeOf<{ handle: "blog"; title: string }>();
+
+    const find = cms.collections("pages").find("contact");
+    expectTypeOf(find.get).returns.resolves.toEqualTypeOf<{ data: PagesEntry } | null>();
+    // Type checks only (never called):
+    (entry: PagesEntry) => {
+      // @ts-expect-error show_hero only exists on landing entries
+      entry.show_hero;
+      if (isBlueprint(entry, "landing")) {
+        expectTypeOf(entry.show_hero).toEqualTypeOf<boolean>();
+        expectTypeOf(entry.summary).toEqualTypeOf<number | null>();
+      } else {
+        expectTypeOf(entry.summary).toEqualTypeOf<string | null>();
+      }
+    };
+
+    // fields() offers the fields of every blueprint; entries without one get it as null
+    const picked = cms.collections("pages").fields(["title", "show_hero"]);
+    type Picked = Awaited<ReturnType<typeof picked.get>>["data"][number];
+    expectTypeOf<Picked>().toEqualTypeOf<
+      Pick<PagesLandingEntry, "title" | "show_hero"> | (Pick<PagesPageEntry, "title"> & { show_hero: null })
+    >();
+    cms.collections("pages").sort("-show_hero", "title").where("title", "contains", "a");
+
+    // whereBlueprint() filters by blueprint and narrows the result
+    const landing = cms.collections("pages").whereBlueprint("landing");
+    expectTypeOf(landing.get).returns.resolves.toHaveProperty("data").toEqualTypeOf<PagesLandingEntry[]>();
+    const both = cms.collections("pages").whereBlueprint(["landing", "page"]).fields(["title"]);
+    type Both = Awaited<ReturnType<typeof both.get>>["data"][number];
+    expectTypeOf<Both>().toEqualTypeOf<Pick<PagesLandingEntry, "title"> | Pick<PagesPageEntry, "title">>();
+    // @ts-expect-error unknown blueprint
+    cms.collections("pages").whereBlueprint("article");
+    // @ts-expect-error blueprint is not in the blog's allowed_filters
+    cms.collections("blog").whereBlueprint("blog");
+
+    // Navigations that link such a collection keep the union.
+    (page: HqNavEntry<PagesEntry, MainNavFields>) => {
+      if (isBlueprint(page, "landing")) expectTypeOf(page.show_hero).toEqualTypeOf<boolean>();
+    };
+  });
+
   it("types collection trees for structured collections only", () => {
     const tree = cms.collections("pages").tree().where("title", "contains", "About").maxDepth(2);
     type Item = Awaited<ReturnType<typeof tree.get>>["data"][number];
     expectTypeOf<Item["page"]>().toEqualTypeOf<PagesTreePage>();
     expectTypeOf<PagesTreePage["entry_id"]>().toEqualTypeOf<string>();
-    expectTypeOf<PagesTreePage["summary"]>().toEqualTypeOf<string | null>();
+    // summary is a textarea on `page` and an integer on `landing`
+    expectTypeOf<PagesTreePage["summary"]>().toEqualTypeOf<string | number | null>();
+    (page: PagesTreePage) => {
+      if (isBlueprint(page, "landing")) expectTypeOf(page.show_hero).toEqualTypeOf<boolean>();
+    };
 
     // @ts-expect-error blog is not a structured collection
     cms.collections("blog").tree;

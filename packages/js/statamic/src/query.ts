@@ -7,6 +7,7 @@ import {
   type RunOptions,
 } from "@headquery/core";
 import type {
+  BlueprintHandle,
   BooleanCondition,
   DataList,
   KeysOfUnion,
@@ -20,6 +21,7 @@ import type {
   SiteHandle,
   SortField,
   TaxonomyFilter,
+  WithBlueprint,
 } from "./types";
 
 /**
@@ -37,27 +39,33 @@ interface ListState {
   fields?: string[];
 }
 
-type FieldValue<Item, F> = F extends keyof Item
-  ? Item[F] extends Scalar | null | undefined
-    ? Exclude<Item[F], null | undefined>
-    : Scalar
-  : Scalar;
+/** Value type of a field; for a union of item types, the types of the members that have it. */
+type FieldValue<Item, F> =
+  F extends KeysOfUnion<Item>
+    ? Item extends unknown
+      ? F extends keyof Item
+        ? Item[F] extends Scalar | null | undefined
+          ? Exclude<Item[F], null | undefined>
+          : Scalar
+        : never
+      : never
+    : Scalar;
 
 /**
  * Fields `where()` accepts: the filterable fields of the item, or any field name when the
  * filters are open (`string`: users, whose filters may target fields the API doesn't return,
  * and clients without generated types).
  */
-type WhereField<Item, Filterable extends string> = string extends Filterable ? string : Filterable & keyof Item;
+type WhereField<Item, Filterable extends string> = string extends Filterable ? string : Filterable & KeysOfUnion<Item>;
 
 /**
  * Immutable list query for collection entries, taxonomy terms and assets.
  * Every builder call returns a new instance, so partial queries can be reused safely.
  */
-export class ListQuery<Item, Filterable extends string, Picked extends keyof Item = keyof Item>
-  implements Compilable<Paginated<Pick<Item, Picked>>>
+export class ListQuery<Item, Filterable extends string, Picked extends KeysOfUnion<Item> = KeysOfUnion<Item>>
+  implements Compilable<Paginated<PickedUnion<Item, Picked>>>
 {
-  declare readonly __result?: Paginated<Pick<Item, Picked>>;
+  declare readonly __result?: Paginated<PickedUnion<Item, Picked>>;
 
   constructor(
     private readonly client: CoreClient,
@@ -116,8 +124,21 @@ export class ListQuery<Item, Filterable extends string, Picked extends keyof Ite
     return this.taxonomy(taxonomy, "not", terms);
   }
 
+  /**
+   * Entries of these blueprints (`filter[blueprint:is]=landing`, `filter[blueprint:in]=a|b`), with
+   * the result narrowed to their types. Needs `blueprint` in the collection's `allowed_filters`.
+   */
+  whereBlueprint<const H extends BlueprintHandle<Item>>(
+    handles: "blueprint" extends Filterable ? H | H[] : never,
+  ): ListQuery<WithBlueprint<Item, H>, Filterable, Extract<Picked, KeysOfUnion<WithBlueprint<Item, H>>>> {
+    const filters = Array.isArray(handles)
+      ? addFilter(this.state.filters, "blueprint", "in", handles)
+      : addFilter(this.state.filters, "blueprint", "is", handles);
+    return new ListQuery(this.client, this.path, { ...this.state, filters });
+  }
+
   /** `sort=a,-b`. Later calls replace earlier ones. */
-  sort(...fields: Array<SortField<Extract<keyof Item, string>>>): ListQuery<Item, Filterable, Picked> {
+  sort(...fields: Array<SortField<Extract<KeysOfUnion<Item>, string>>>): ListQuery<Item, Filterable, Picked> {
     return this.with({ sort: fields });
   }
 
@@ -134,8 +155,11 @@ export class ListQuery<Item, Filterable extends string, Picked extends keyof Ite
     return this.with({ site: handle });
   }
 
-  /** Only return these fields; narrows the result type. */
-  fields<P extends keyof Item & string>(fields: P[]): ListQuery<Item, Filterable, P> {
+  /**
+   * Only return these fields; narrows the result type. Items whose blueprint lacks a requested
+   * field get it as `null`.
+   */
+  fields<P extends KeysOfUnion<Item> & string>(fields: P[]): ListQuery<Item, Filterable, P> {
     return new ListQuery<Item, Filterable, P>(this.client, this.path, { ...this.state, fields });
   }
 
@@ -154,12 +178,12 @@ export class ListQuery<Item, Filterable extends string, Picked extends keyof Ite
     return this.client.url(this.toRequest());
   }
 
-  get(options?: RunOptions): Promise<Paginated<Pick<Item, Picked>>> {
+  get(options?: RunOptions): Promise<Paginated<PickedUnion<Item, Picked>>> {
     return this.client.run(this, options);
   }
 
   /** First matching item or `null` (sends `limit=1`). */
-  async first(options?: RunOptions): Promise<Pick<Item, Picked> | null> {
+  async first(options?: RunOptions): Promise<PickedUnion<Item, Picked> | null> {
     const res = await this.limit(1).page(1).get(options);
     return res.data[0] ?? null;
   }
@@ -204,7 +228,7 @@ export class ResourceQuery<Item, Filterable extends string, TreePage = never> ex
    * One item by its key: entry id or slug, term slug, or asset path
    * (`GET {list path}/{key}`). Resolves to `null` instead of throwing when it doesn't exist.
    */
-  find(key: string): SingleQuery<Item, keyof Item, true> {
+  find(key: string): SingleQuery<Item, KeysOfUnion<Item>, true> {
     return new SingleQuery(this.core, `${this.base}/${this.encodeKey(key)}`, { orNull: true });
   }
 }
@@ -220,10 +244,10 @@ interface SingleState {
  * Single resource (one entry, term, asset or global set). With `OrNull` (from `find()`),
  * `get()` resolves to `null` when the API answers 404.
  */
-export class SingleQuery<Item, Picked extends keyof Item = keyof Item, OrNull extends boolean = false>
-  implements Compilable<Single<Pick<Item, Picked>>>
+export class SingleQuery<Item, Picked extends KeysOfUnion<Item> = KeysOfUnion<Item>, OrNull extends boolean = false>
+  implements Compilable<Single<PickedUnion<Item, Picked>>>
 {
-  declare readonly __result?: Single<Pick<Item, Picked>>;
+  declare readonly __result?: Single<PickedUnion<Item, Picked>>;
 
   constructor(
     private readonly client: CoreClient,
@@ -236,8 +260,11 @@ export class SingleQuery<Item, Picked extends keyof Item = keyof Item, OrNull ex
     return new SingleQuery(this.client, this.path, { ...this.state, site: handle });
   }
 
-  /** Only return these fields; narrows the result type. */
-  fields<P extends keyof Item & string>(fields: P[]): SingleQuery<Item, P, OrNull> {
+  /**
+   * Only return these fields; narrows the result type. A requested field that isn't in the
+   * item's blueprint is `null`.
+   */
+  fields<P extends KeysOfUnion<Item> & string>(fields: P[]): SingleQuery<Item, P, OrNull> {
     return new SingleQuery<Item, P, OrNull>(this.client, this.path, { ...this.state, fields });
   }
 
@@ -252,7 +279,7 @@ export class SingleQuery<Item, Picked extends keyof Item = keyof Item, OrNull ex
     return this.client.url(this.toRequest());
   }
 
-  async get(options?: RunOptions): Promise<Single<Pick<Item, Picked>> | (OrNull extends true ? null : never)> {
+  async get(options?: RunOptions): Promise<Single<PickedUnion<Item, Picked>> | (OrNull extends true ? null : never)> {
     try {
       return await this.client.run(this, options);
     } catch (e) {
