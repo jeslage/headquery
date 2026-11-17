@@ -30,6 +30,9 @@ export interface HqAsset {
   permalink: string;
   api_url: string;
   alt: string | null;
+  width: HqAssetBase["width"];
+  height: HqAssetBase["height"];
+  focus_css: HqAssetBase["focus_css"];
   [key: string]: unknown;
 }
 
@@ -57,6 +60,9 @@ export interface HqLinkAsset {
   permalink: string;
   api_url: string;
   alt: string | null;
+  width: HqAssetBase["width"];
+  height: HqAssetBase["height"];
+  focus_css: HqAssetBase["focus_css"];
 }
 
 export interface HqRelatedEntry {

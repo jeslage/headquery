@@ -30,6 +30,13 @@ describe("spec/ir/schema-v1.json", () => {
     expect(validate({ ...base, sites: ["default"] })).toBe(false);
   });
 
+  it("accepts assetKeys as unique non-empty strings", () => {
+    const base = { schemaVersion: 1, cms: { name: "statamic" }, resources: {} };
+    expect(validate({ ...base, assetKeys: ["width", "focus_css"] })).toBe(true);
+    expect(validate({ ...base, assetKeys: ["width", "width"] })).toBe(false);
+    expect(validate({ ...base, assetKeys: [""] })).toBe(false);
+  });
+
   it("rejects an enum field without values", () => {
     const ok = validate({
       schemaVersion: 1,

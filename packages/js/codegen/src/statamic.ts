@@ -5,6 +5,9 @@ export interface StatamicGenerateOptions {
   moduleName?: string;
 }
 
+/** Placeholder in HELPERS for the extra keys of shallow assets (IR `assetKeys`), see `assetKeyLines()`. */
+const ASSET_KEYS = "\0assetKeys\0";
+
 // Shapes below were checked against Statamic 6 REST API responses (playgrounds/statamic).
 const HELPERS = `
 /** Text between the sets of a Bard field with sets: the HTML of its paragraphs, headings, lists, … */
@@ -33,6 +36,7 @@ export interface HqAsset {
   permalink: string;
   api_url: string;
   alt: string | null;
+${ASSET_KEYS}
   [key: string]: unknown;
 }
 
@@ -60,6 +64,7 @@ export interface HqLinkAsset {
   permalink: string;
   api_url: string;
   alt: string | null;
+${ASSET_KEYS}
 }
 
 export interface HqRelatedEntry {
@@ -409,7 +414,21 @@ export function generateStatamic(schema: IrSchema, options: StatamicGenerateOpti
     "}",
   ].join("\n");
 
-  return `${[header, HELPERS, ...out, schemaType, augmentation].join("\n\n")}\n`;
+  const helpers = HELPERS.replaceAll(`${ASSET_KEYS}\n`, assetKeyLines(schema));
+
+  return `${[header, helpers, ...out, schemaType, augmentation].join("\n\n")}\n`;
+}
+
+/**
+ * Extra keys of shallow assets (asset fields and asset links), e.g. from the addon's
+ * \`ShallowAsset::extend()\`. Keys of the full asset are typed from \`HqAssetBase\`, others are \`unknown\`.
+ */
+function assetKeyLines(schema: IrSchema): string {
+  const base: readonly string[] = BASE_KEYS.HqAssetBase;
+  return (schema.assetKeys ?? [])
+    .filter((k) => !["id", "url", "permalink", "api_url", "alt"].includes(k))
+    .map((k) => `  ${key(k)}: ${base.includes(k) ? `HqAssetBase[${JSON.stringify(k)}]` : "unknown"};\n`)
+    .join("");
 }
 
 /** `sites: "default" | "de";` in the CMS's order; nothing for schemas exported without sites. */

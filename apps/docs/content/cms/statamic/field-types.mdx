@@ -10,7 +10,7 @@ How the addon maps Statamic fieldtypes to the types that
 | `toggle` | `boolean` (never null) |
 | `date` | ISO `string` |
 | `select`, `button_group`, `radio`, `checkboxes` | `HqOption<"a" \| "b">` (`{ key, value, label }`; all `null` when empty) |
-| `assets` | `HqAsset` or `HqAsset[]` (`max_files`) |
+| `assets` | `HqAsset` or `HqAsset[]` (`max_files`), see [asset fields](#asset-fields) |
 | `entries`, `terms`, `users` | `HqRelatedEntry`, `HqRelatedTerm`, `HqUser` |
 | `grid`, `replicator` | arrays of typed rows/sets (`[]` when empty), sets as [named types](#sets) |
 | `link` | `HqLinkUrl \| HqLinkEntry \| HqLinkAsset` (never null), see [Link](#link) |
@@ -142,6 +142,39 @@ isn't in an entry's blueprint as `null`, and the result type says so.
 
 Terms don't include their blueprint, so a taxonomy with several blueprints gets one type: fields
 that only some blueprints have are optional, and differing types are combined.
+
+## Asset fields [#asset-fields]
+
+Asset fields (and links to assets) return a *shallow* asset: Statamic only includes
+`id`, `url`, `permalink`, `api_url` and `alt`. To get more keys of the asset, e.g. `width`,
+`height` and `focus_css` for an image loader, extend the shallow keys in a service provider:
+
+```php
+// app/Providers/AppServiceProvider.php
+use Headquery\Statamic\Assets\ShallowAsset;
+
+public function register(): void
+{
+    ShallowAsset::extend(['width', 'height', 'focus_css']);
+}
+```
+
+This binds Statamic's asset class to one that adds the keys. If your project already binds its own
+asset class, `extend()` leaves it alone; add the `HasExtendedShallowKeys` trait to that class instead:
+
+```php
+use Headquery\Statamic\Assets\HasExtendedShallowKeys;
+use Statamic\Assets\Asset as StatamicAsset;
+
+class Asset extends StatamicAsset
+{
+    use HasExtendedShallowKeys;
+}
+```
+
+The schema export lists the extra keys (`assetKeys`), whichever way they were added, and codegen
+adds them to `HqAsset` and `HqLinkAsset`: keys of the full asset are typed from `HqAssetBase`
+(`width: number | null`), others (e.g. a container blueprint field) as `unknown`.
 
 ## System fields
 

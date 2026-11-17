@@ -19,6 +19,11 @@ export interface IrSchema {
    * installs export their one site. Absent in schemas exported before sites were added.
    */
   sites?: Record<string, IrSite>;
+  /**
+   * Keys an asset carries when it is referenced from another item (asset fields, asset links)
+   * beyond the CMS's default, e.g. `width` (Statamic: extra shallow asset keys). Absent means the default.
+   */
+  assetKeys?: string[];
   /** Resources grouped by kind, each keyed by handle. Handles only need to be unique within a kind. */
   resources: IrResources;
 }
@@ -148,6 +153,12 @@ export function assertIrSchema(input: unknown): asserts input is IrSchema {
     for (const [handle, site] of Object.entries(input.sites)) {
       if (!isObject(site)) throw new IrSchemaError(`Site "${handle}" must be an object`);
     }
+  }
+  if (
+    input.assetKeys !== undefined &&
+    !(Array.isArray(input.assetKeys) && input.assetKeys.every((k) => typeof k === "string" && k !== ""))
+  ) {
+    throw new IrSchemaError("assetKeys must be an array of non-empty strings");
   }
   if (!isObject(input.resources)) throw new IrSchemaError("Schema is missing resources");
   for (const [kind, resources] of Object.entries(input.resources)) {
