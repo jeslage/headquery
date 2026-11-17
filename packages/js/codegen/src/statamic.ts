@@ -421,13 +421,25 @@ export function generateStatamic(schema: IrSchema, options: StatamicGenerateOpti
 
 /**
  * Extra keys of shallow assets (asset fields and asset links), e.g. from the addon's
- * \`ShallowAsset::extend()\`. Keys of the full asset are typed from \`HqAssetBase\`, others are \`unknown\`.
+ * \`ShallowAsset::extend()\`. A blueprint field of an asset container is typed from that container's
+ * asset type (several containers: their union, \`| null\` when some container lacks the field); keys of
+ * the full asset from \`HqAssetBase\`; anything else is \`unknown\`.
  */
 function assetKeyLines(schema: IrSchema): string {
   const base: readonly string[] = BASE_KEYS.HqAssetBase;
+  const containers = Object.entries(schema.resources.assetContainer ?? {}).sort(([a], [b]) =>
+    a < b ? -1 : a > b ? 1 : 0,
+  );
   return (schema.assetKeys ?? [])
     .filter((k) => !["id", "url", "permalink", "api_url", "alt"].includes(k))
-    .map((k) => `  ${key(k)}: ${base.includes(k) ? `HqAssetBase[${JSON.stringify(k)}]` : "unknown"};\n`)
+    .map((k) => {
+      const owners = containers
+        .filter(([, c]) => k in c.fields)
+        .map(([h]) => `${pascal(h)}Asset[${JSON.stringify(k)}]`);
+      let type = base.includes(k) ? `HqAssetBase[${JSON.stringify(k)}]` : "unknown";
+      if (owners.length) type = [...owners, ...(owners.length < containers.length ? ["null"] : [])].join(" | ");
+      return `  ${key(k)}: ${type};\n`;
+    })
     .join("");
 }
 

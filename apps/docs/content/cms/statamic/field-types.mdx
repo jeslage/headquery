@@ -173,8 +173,11 @@ class Asset extends StatamicAsset
 ```
 
 The schema export lists the extra keys (`assetKeys`), whichever way they were added, and codegen
-adds them to `HqAsset` and `HqLinkAsset`: keys of the full asset are typed from `HqAssetBase`
-(`width: number | null`), others (e.g. a container blueprint field) as `unknown`.
+adds them to `HqAsset` and `HqLinkAsset`. Blueprint fields of an asset container are typed from that
+container's asset type (`tone: AssetsAsset["tone"]`; with several containers the union, plus `null`
+when a container doesn't have the field), so the container must be enabled in the API
+(`resources.assets`). Other keys of the full asset are typed from `HqAssetBase`
+(`width: number | null`), anything else as `unknown`.
 
 ## System fields
 
