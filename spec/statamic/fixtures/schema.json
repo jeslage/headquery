@@ -6,6 +6,7 @@
     "default": { "name": "English", "locale": "en_US" },
     "de": { "name": "Deutsch", "locale": "de_DE" }
   },
+  "assetKeys": ["width", "height", "focus_css"],
   "resources": {
     "collection": {
       "blog": {

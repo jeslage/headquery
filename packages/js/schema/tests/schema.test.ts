@@ -25,6 +25,13 @@ describe("assertIrSchema", () => {
     expect(() => assertIrSchema({ ...base, sites: { de: "de_DE" } })).toThrow(/Site "de"/);
   });
 
+  it("accepts assetKeys as a list of strings", () => {
+    const base = { schemaVersion: 1, cms: { name: "x" }, resources: {} };
+    expect(() => assertIrSchema({ ...base, assetKeys: ["width", "height"] })).not.toThrow();
+    expect(() => assertIrSchema({ ...base, assetKeys: "width" })).toThrow(/assetKeys/);
+    expect(() => assertIrSchema({ ...base, assetKeys: [""] })).toThrow(/assetKeys/);
+  });
+
   it("rejects fields without a type", () => {
     expect(() =>
       assertIrSchema({

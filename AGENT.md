@@ -119,6 +119,9 @@ Notes:
   blueprint with a literal `blueprint.handle` and a union per collection (narrow with
   `isBlueprint()`, TS can't narrow on nested properties); terms have no `blueprint` key, so a
   taxonomy gets one type with optional fields for fields that only some blueprints have.
+- `assetKeys` (optional, top level): keys that asset references (asset fields, asset links) carry beyond
+  the CMS default (Statamic: shallow keys besides `id url permalink api_url alt`). Codegen adds them to
+  `HqAsset`/`HqLinkAsset`, typed from `HqAssetBase` when known, `unknown` otherwise.
 - Field types: `string number boolean date enum array object relation asset richtext blocks link unknown`.
   `link` carries `targets` (`entry`, `asset`): what the link can point to besides a URL.
   `richtext` carries `sets` when the rich text contains sets (Bard with sets), same shape as `blocks.sets`.
@@ -187,7 +190,10 @@ does not understand.
 - Addon pieces: `FieldMapper` (pure, unit-tested; maps fieldtype+config → IR),
   `SchemaExporter` (walks collections/taxonomies/globals/navs, respects `statamic.api.resources`
   and `allowed_filters`), `ExportSchemaCommand` (`php please headquery:schema --out=…`),
-  `SchemaController` + `AuthorizeSchemaRequest` (`GET /api/headquery/schema`).
+  `SchemaController` + `AuthorizeSchemaRequest` (`GET /api/headquery/schema`),
+  `Assets\ShallowAsset::extend([...])` (binds `Contracts\Assets\Asset` to `Assets\Asset` unless the project
+  bound its own class, which can use `HasExtendedShallowKeys`; re-bound in `bootAddon()` because
+  `Statamic::repository()` binds unconditionally). The exporter reads the effective keys via `Asset::make()`.
 - Schema endpoint security: off unless `HEADQUERY_SCHEMA_ROUTE=true` **and**
   `HEADQUERY_SCHEMA_TOKEN` is set; 404 otherwise, 401 on wrong token; `hash_equals`
   comparison; ETag/304 support. Never weaken these defaults.
@@ -236,7 +242,8 @@ drops its subtree. Unstructured collections 404. Nav trees ignore `filter[...]`.
 collections carry `structure: { maxDepth?, expectsRoot? }` in the IR; codegen emits `{Name}TreePage`.
 Assets from `/assets/...` carry all `AugmentedAsset` keys (`HqAssetBase`) plus blueprint fields;
 `width height ratio` are `null` for non-images but `orientation` is `"square"`; `folder` is `/` at
-the root. Asset _fields_ on entries are shallow (`id url permalink api_url alt`, `HqAsset`).
+the root. Asset _fields_ on entries are shallow (`id url permalink api_url alt`, `HqAsset`), from
+`Asset::shallowAugmentedArrayKeys()`; link fields use the same keys (`toShallowAugmentedArray()`).
 The asset path route accepts literal slashes and `%2F`.
 Bard without sets returns an HTML string (`null` when empty). With sets (IR `richtext.sets`; not with
 `save_html`) it returns an array of `{ type: "text", text: "<p>…</p>" }` items and sets

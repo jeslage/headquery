@@ -337,7 +337,8 @@ logo?.data.is_image;
 Assets include Statamic's system fields (`HqAssetBase`: `path`, `basename`, `folder`, `url`,
 `size_bytes`, `width`, `height`, `mime_type`, …) plus the container blueprint's fields.
 `width`, `height` and `ratio` are `null` for files that aren't images or videos. Asset
-*fields* on entries are smaller (`HqAsset`: `id`, `url`, `permalink`, `api_url`, `alt`).
+*fields* on entries are smaller (`HqAsset`: `id`, `url`, `permalink`, `api_url`, `alt`), unless you
+[add keys](/cms/statamic/field-types#asset-fields) with `ShallowAsset::extend()`.
 
 ## Users
 

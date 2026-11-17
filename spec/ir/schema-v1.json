@@ -23,6 +23,12 @@
       "type": "object",
       "additionalProperties": { "$ref": "#/$defs/site" }
     },
+    "assetKeys": {
+      "description": "Keys an asset carries when it is referenced from another item (asset fields, asset links) beyond the CMS's default. Statamic: shallow asset keys besides `id url permalink api_url alt`, e.g. `width`. Optional: absent means the default.",
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true
+    },
     "resources": {
       "description": "Resources grouped by kind; each kind maps handle → resource. Handles only need to be unique within a kind.",
       "type": "object",

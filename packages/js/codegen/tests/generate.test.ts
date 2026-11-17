@@ -26,6 +26,15 @@ describe("generate (statamic)", () => {
     expect(generate({ ...base, sites: {} })).not.toContain("sites:");
   });
 
+  it("adds extra shallow asset keys (assetKeys) to HqAsset and HqLinkAsset", () => {
+    const base = { schemaVersion: 1, cms: { name: "statamic" }, resources: {} };
+    const out = generate({ ...base, assetKeys: ["width", "caption", "alt", "my-key"] });
+    const expected =
+      '  alt: string | null;\n  width: HqAssetBase["width"];\n  caption: unknown;\n  "my-key": unknown;\n';
+    expect(out.split(expected)).toHaveLength(3);
+    expect(generate(base)).not.toContain("width: HqAssetBase");
+  });
+
   it("merges the blueprints of a taxonomy: fields of some blueprints are optional, types combined", () => {
     const out = generate({
       schemaVersion: 1,
