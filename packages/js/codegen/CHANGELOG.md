@@ -1,5 +1,11 @@
 # @headquery/codegen
 
+## 0.7.0
+
+### Minor Changes
+
+- 04499ab: Extra shallow asset keys (`assetKeys`) that are blueprint fields of an asset container are now typed from the container's asset type instead of `unknown`, e.g. `tone: AssetsAsset["tone"]` on `HqAsset` and `HqLinkAsset`. With several containers the type is their union, plus `null` when a container doesn't have the field.
+
 ## 0.6.0
 
 ### Minor Changes
