@@ -39,6 +39,7 @@ describe("generated types work with @headquery/statamic", () => {
     expectTypeOf<HqAsset["width"]>().toEqualTypeOf<number | null>();
     expectTypeOf<HqAsset["focus_css"]>().toEqualTypeOf<string>();
     expectTypeOf<HqLinkAsset["height"]>().toEqualTypeOf<number | null>();
+    expectTypeOf<HqAsset["credit"]>().toEqualTypeOf<AssetsAsset["credit"]>();
     expectTypeOf<BlogEntry["stage"]>().toEqualTypeOf<HqOption<"draft" | "review" | "live"> | HqEmptyOption>();
     expectTypeOf<BlogEntry["featured"]>().toEqualTypeOf<boolean>();
 

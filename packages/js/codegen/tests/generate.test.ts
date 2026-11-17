@@ -35,6 +35,23 @@ describe("generate (statamic)", () => {
     expect(generate(base)).not.toContain("width: HqAssetBase");
   });
 
+  it("types extra shallow asset keys that are blueprint fields from the asset containers", () => {
+    const out = generate({
+      schemaVersion: 1,
+      cms: { name: "statamic" },
+      assetKeys: ["tone", "credit"],
+      resources: {
+        assetContainer: {
+          images: { fields: { tone: { type: "enum", values: ["light", "dark"] }, credit: { type: "string" } } },
+          files: { fields: { credit: { type: "string" } } },
+        },
+      },
+    });
+    expect(out).toContain(
+      '  tone: ImagesAsset["tone"] | null;\n  credit: FilesAsset["credit"] | ImagesAsset["credit"];\n',
+    );
+  });
+
   it("merges the blueprints of a taxonomy: fields of some blueprints are optional, types combined", () => {
     const out = generate({
       schemaVersion: 1,

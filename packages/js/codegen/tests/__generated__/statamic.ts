@@ -33,6 +33,7 @@ export interface HqAsset {
   width: HqAssetBase["width"];
   height: HqAssetBase["height"];
   focus_css: HqAssetBase["focus_css"];
+  credit: AssetsAsset["credit"];
   [key: string]: unknown;
 }
 
@@ -63,6 +64,7 @@ export interface HqLinkAsset {
   width: HqAssetBase["width"];
   height: HqAssetBase["height"];
   focus_css: HqAssetBase["focus_css"];
+  credit: AssetsAsset["credit"];
 }
 
 export interface HqRelatedEntry {
@@ -366,6 +368,8 @@ export type MainNavPage =
 export interface AssetsAsset extends HqAssetBase {
   /** Description of the image — CMS field type: `text` */
   alt: string | null;
+  /** CMS field type: `text` */
+  credit: string | null;
 }
 
 export interface Schema {

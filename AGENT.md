@@ -121,7 +121,9 @@ Notes:
   taxonomy gets one type with optional fields for fields that only some blueprints have.
 - `assetKeys` (optional, top level): keys that asset references (asset fields, asset links) carry beyond
   the CMS default (Statamic: shallow keys besides `id url permalink api_url alt`). Codegen adds them to
-  `HqAsset`/`HqLinkAsset`, typed from `HqAssetBase` when known, `unknown` otherwise.
+  `HqAsset`/`HqLinkAsset`: container blueprint fields as `{Container}Asset["k"]` (union over containers,
+  `| null` if some lack it; shallow values are augmented like on the full asset), else `HqAssetBase["k"]`,
+  else `unknown`.
 - Field types: `string number boolean date enum array object relation asset richtext blocks link unknown`.
   `link` carries `targets` (`entry`, `asset`): what the link can point to besides a URL.
   `richtext` carries `sets` when the rich text contains sets (Bard with sets), same shape as `blocks.sets`.

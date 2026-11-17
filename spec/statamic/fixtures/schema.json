@@ -6,7 +6,7 @@
     "default": { "name": "English", "locale": "en_US" },
     "de": { "name": "Deutsch", "locale": "de_DE" }
   },
-  "assetKeys": ["width", "height", "focus_css"],
+  "assetKeys": ["width", "height", "focus_css", "credit"],
   "resources": {
     "collection": {
       "blog": {
@@ -139,7 +139,8 @@
         "title": "Assets",
         "systemFilters": ["basename", "folder"],
         "fields": {
-          "alt": { "type": "string", "filterable": true, "cmsType": "text", "description": "Description of the image" }
+          "alt": { "type": "string", "filterable": true, "cmsType": "text", "description": "Description of the image" },
+          "credit": { "type": "string", "cmsType": "text" }
         }
       }
     },
