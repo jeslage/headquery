@@ -112,7 +112,8 @@ export interface HqEntryBase {
   locale: string;
   origin_id: string | null;
   order: number | null;
-  mount: unknown;
+  /** The collection mounted on this entry (`null` otherwise). Localizations carry their origin's mount. */
+  mount: { title: string; handle: string } | null;
   is_entry: true;
   blueprint: { title: string; handle: string };
   collection: { title: string; handle: string };

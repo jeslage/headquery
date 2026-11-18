@@ -35,6 +35,8 @@ describe("generated types work with @headquery/statamic", () => {
       .returns.resolves.toHaveProperty("data")
       .toEqualTypeOf<Array<Pick<BlogEntry, "title" | "hero">>>();
     expectTypeOf<BlogEntry["hero"]>().toEqualTypeOf<HqAsset | null>();
+    expectTypeOf<PagesEntry["mount"]>().toEqualTypeOf<{ title: string; handle: string } | null>();
+    expectTypeOf<PagesTreePage["mount"]>().toEqualTypeOf<{ title: string; handle: string } | null>();
     // Extra shallow asset keys from the fixture's assetKeys.
     expectTypeOf<HqAsset["width"]>().toEqualTypeOf<number | null>();
     expectTypeOf<HqAsset["focus_css"]>().toEqualTypeOf<string>();

@@ -345,6 +345,16 @@ describe.skipIf(!baseUrl)(`Statamic playground (${baseUrl})`, () => {
       expect(data.every((n) => n.children.length === 0)).toBe(true);
     });
 
+    it("returns the collection mounted on an entry as mount, also on localizations", async () => {
+      // seed: blog is mounted on About
+      const { data } = await pages.tree().fields(["title", "mount"]).get();
+      expect(data.map((n) => n.page.mount)).toEqual([null, { title: "Blog", handle: "blog" }, null]);
+      expect(data[1]?.children[0]?.page.mount).toBeNull();
+      const de = await pages.tree().site("de").fields(["title", "mount"]).get();
+      expect(de.data.map((n) => n.page.mount)).toEqual([null, { title: "Blog", handle: "blog" }]);
+      expectTypeOf(data[0]!.page.mount).toEqualTypeOf<{ title: string; handle: string } | null>();
+    });
+
     it("filters per level: a non-matching parent drops its subtree", async () => {
       expect(titles((await pages.tree().where("title", "contains", "About").get()).data)).toEqual(["About"]);
       expect((await pages.tree().where("title", "Team").get()).data).toEqual([]);
