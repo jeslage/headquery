@@ -185,6 +185,9 @@ System fields Statamic adds to every entry, term, global set and asset (`id`, `u
 `permalink`, …) come from `HqEntryBase`, `HqTermBase`, `HqGlobalBase` and `HqAssetBase`.
 Blueprint fields with the same handle take precedence.
 
+An entry's `mount` is the collection mounted on it (`{ title, handle }`, `null` for every other
+entry). Localizations carry their origin's mount.
+
 ## Filterable fields
 
 Fields listed in `allowed_filters` (see [Getting started](/cms/statamic/getting-started#rest-api))

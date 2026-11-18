@@ -217,6 +217,8 @@ select-like fields return `{ key, value, label }` (all `null` when empty, `[]` w
 toggles are always boolean; grid/replicator/multi relations return `[]`, but
 list/taggable/table return `null` when empty; assets use `max_files` (not `max_items`).
 System fields of entries/terms/globals are modelled as `HqEntryBase`/`HqTermBase`/`HqGlobalBase`.
+An entry's `mount` is the collection mounted on it as `{ title, handle }` (`null` otherwise; localizations
+fall back to the origin's mount); the seed mounts `blog` on About.
 Fields of another blueprint are absent from an entry (single, list, collection tree); with `fields=`,
 a requested field the item doesn't have is `null` (lists, single items, collection and nav trees).
 Terms have no `blueprint` key. `filter[blueprint]` (any condition, `in` with `|`) works with `blueprint`
