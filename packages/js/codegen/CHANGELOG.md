@@ -1,5 +1,11 @@
 # @headquery/codegen
 
+## 0.7.1
+
+### Patch Changes
+
+- 2c05750: Type `mount` on entries as the mounted collection (`{ title, handle } | null`) instead of `unknown`.
+
 ## 0.7.0
 
 ### Minor Changes
